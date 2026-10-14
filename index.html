@@ -191,7 +191,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 <header class="top">
   <div class="top-linha">
     <div>
-      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v9</span></div>
+      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v10</span></div>
       <h1 id="titulo">Análise de Corte e Religação</h1>
     </div>
     <div class="filtros" id="filtros" hidden>
@@ -262,7 +262,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 
 <script>
 "use strict";
-const VERSAO_SITE = "v9-20261014";
+const VERSAO_SITE = "v10-20261014";
 
 // ===================== utilidades =====================
 const $ = (id) => document.getElementById(id);
@@ -443,7 +443,7 @@ function linhasDe(col) {                                     // {col: [..]} -> [
 
 function carregaDados(d) {
   DADOS = d; R = d.regras;
-  CORTES = linhasDe(d.cortes).map((c) => ({ ...c, mes: (c.mes_corte || "").slice(0, 7), ativa_os: !c.data_religacao && c.mes_religacao === R.textos.ativa }));
+  CORTES = linhasDe(d.cortes).map((c) => ({ ...c, mes: (c.mes_corte || "").slice(0, 7), ativa_os: !c.data_religacao && ("religou_sem_os" in c ? !!c.religou_sem_os : c.mes_religacao === R.textos.ativa) }));
   VISAO.lista = null;
   SALDO = linhasDe(d.saldo);
   ULTIMO_MES = [...CORTES.map((c) => (c.data_religacao || c.data || "").slice(0, 7)), ...linhasDe(d.eventos || {}).map((e) => (e.data || "").slice(0, 7))].filter(Boolean).sort().pop() || "";
@@ -485,7 +485,8 @@ let VISAO = { on: null, lista: null };
 function cortesBase() {
   const on = $("fAtivas").checked;
   if (VISAO.lista && VISAO.on === on) return VISAO.lista;
-  VISAO = { on, lista: on ? CORTES.map((c) => (c.ativa_os ? { ...c, regua: ROT_ATIVA_OS, permanencia: ROT_PERM_ATIVA } : c)) : CORTES };
+  // ligado: todo corte que religou sem OS sai de "Sem Religação" e vai para a coluna "Ativa" (não aparece nas duas)
+  VISAO = { on, lista: on ? CORTES.map((c) => (c.ativa_os ? { ...c, mes_religacao: R.textos.ativa, regua: ROT_ATIVA_OS, permanencia: ROT_PERM_ATIVA } : c)) : CORTES };
   return VISAO.lista;
 }
 function periodo(f) { if (!f.de || !f.ate) return ""; return f.de === f.ate ? mesRot(f.de) : `${mesRot(f.de)} a ${mesRot(f.ate)}`; }
@@ -677,7 +678,7 @@ function abaCruzada({ f, cortes: todos, per }) {
   const topo = kpis([
     { rot: "Cortes no período", val: fmtN(cortes.length), det: CTL.posCruzada === "todos" ? "com e sem pós-corte" : (CTL.posCruzada === "com" ? "só com pós-corte" : "só sem pós-corte") },
     { rot: "Religaram", val: fmtN(totRel), det: cortes.length ? fmtP(totRel / cortes.length) + " dos cortes" : "-", ajuda: "Cortes com OS de religação Finalizada antes do próximo corte da matrícula." },
-    { rot: "Ativa (sem OS de religação)", val: fmtN(nAtiva), det: f.ativas ? "contam como religadas" : "cadastro mostra ATIVA", ajuda: "Sem OS de religação, mas o cadastro mostra a ligação ATIVA no último corte da matrícula." },
+    { rot: "Ativa (sem OS de religação)", val: fmtN(nAtiva), det: f.ativas ? "contam como religadas" : "cadastro mostra ATIVA", ajuda: f.ativas ? "Sem OS de religação, mas a ligação está ATIVA no cadastro ou foi cortada de novo depois: conta como religada." : "Sem OS de religação, mas o cadastro mostra a ligação ATIVA no último corte da matrícula." },
     { rot: "Sem religação", val: fmtN(nSem), det: cortes.length ? fmtP(nSem / cortes.length) + " dos cortes" : "-", neg: nSem > 0 },
     { rot: "Mediana até religar", val: diasRel.length ? nf0.format(mediana(diasRel)) + " dias" : "-", det: "só quem religou", ajuda: "Dias entre o corte e a religação (religação no mesmo dia conta 0)." },
   ]);
@@ -905,7 +906,7 @@ function explicacao() {
   <li><b>Situação</b> e <b>economias</b>: da planilha de cadastro (<code>SIT_LIG</code>, <code>TOTAL_ECO</code>), referência mais recente da matrícula. A situação só vale se essa referência for do mês do corte ou depois; com cadastro mais antigo que o corte, ela é calculada (ATIVA se houve religação, senão CORTADA) — coluna <i>Origem da situação</i> na planilha calculada. Matrículas são comparadas sem zeros à esquerda.</li>
   <li><b>Mês da religação</b>: o mês da religação; sem religação, <b>Ativa</b> quando o cadastro mostra a ligação ATIVA e este é o último corte da matrícula, senão <b>Sem Religação</b>.</li></ul>
   <h3>Filtro “Ativas = religadas”</h3>
-  <p>Desligado (padrão): corte sem OS de religação é “Sem Religação”, mesmo que a ligação esteja ATIVA no cadastro (aparece na coluna <b>Ativa</b>). Ligado: esse corte passa a contar como <b>religado</b> em todas as abas — fica fora de “sem a 1ª visita” e de “sem religação”, entra no % religado, na régua (<b>${esc(ROT_ATIVA_OS)}</b>), na permanência (<b>${esc(ROT_PERM_ATIVA)}</b>) e, no saldo, como religação no mês do corte. Como não há data de religação, esses casos não entram nos cálculos de dias nem na mediana.</p>
+  <p>Desligado (padrão): corte sem OS de religação é “Sem Religação”, mesmo que a ligação esteja ATIVA no cadastro (aparece na coluna <b>Ativa</b>). Ligado: o corte sem OS de religação cuja ligação está ATIVA no cadastro, <b>ou que foi seguido de outro corte da mesma matrícula</b> (para ser cortada de novo, a ligação foi religada no meio), passa a contar como <b>religado sem OS</b> em todas as abas, na coluna <b>Ativa</b> e nunca em “Sem Religação” — fica fora de “sem a 1ª visita” e de “sem religação”, entra no % religado, na régua (<b>${esc(ROT_ATIVA_OS)}</b>), na permanência (<b>${esc(ROT_PERM_ATIVA)}</b>) e, no saldo, como religação no mês do corte. Como não há data de religação, esses casos não entram nos cálculos de dias nem na mediana.</p>
   <h3>Régua de cobrança</h3>
   <ul><li>Religou: <b>${esc(rg.religado_apos_pos)}</b> se a religação foi no dia do pós-corte ou depois; senão <b>${esc(rg.religado)}</b>.</li>
   <li>Não religou e teve pós-corte: <b>${esc(rg.com_pos)}</b>.</li>

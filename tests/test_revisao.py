@@ -108,3 +108,16 @@ def test_leitura_guardada_corrompida_e_descartada(tmp_path, monkeypatch):
 
 def test_versao_do_cache_depende_das_regras_de_leitura():
     assert cache_arquivos.VERSAO.startswith(cache_arquivos.BASE + "-") and len(cache_arquivos.VERSAO.split("-")[1]) == 8
+
+
+def test_religou_sem_os_inclui_corte_seguido_de_outro_corte(tmp_path):
+    _ativ(tmp_path, [["R", "1", "100", CORTE, "05/02/26", "Finalizada", "A"],      # cortada de novo em maio: religou no meio sem OS
+                     ["R", "2", "100", CORTE, "05/05/26", "Finalizada", "A"],
+                     ["R", "3", "200", CORTE, "05/02/26", "Finalizada", "A"],      # ATIVA no cadastro, único corte
+                     ["R", "4", "300", CORTE, "05/02/26", "Finalizada", "A"]])     # CORTADA: segue sem religação
+    _cad(tmp_path, [["01/06/2026", "100", "X", "CORTADA", "RES", "1", "A"], ["01/06/2026", "200", "Y", "ATIVA", "RES", "1", "A"],
+                    ["01/06/2026", "300", "Z", "CORTADA", "RES", "1", "A"]])
+    a = Analise(str(tmp_path)); d = a.executar("2026-06-10")
+    c = a.cortes.sort_values(["matricula", "data"])
+    assert c["religou_sem_os"].tolist() == [True, False, True, False]
+    assert "religou_sem_os" in d["cortes"]
