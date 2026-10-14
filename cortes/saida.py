@@ -13,7 +13,7 @@ COLUNAS_CORTES = {
     "data_religacao": "data_religacao", "mes_religacao": "mes_religacao", "tipo_religacao": "tipo_religacao",
     "data_pos": "data_pos", "mes_pos": "mes_pos", "status_pos": "status_pos", "obs_pos": "obs_pos",
     "data_pos_finalizada": "data_pos_finalizada", "regua": "regua", "dias": "dias", "dias_cortado": "dias_cortado",
-    "permanencia": "permanencia", "situacao": "situacao", "id": "id", "arquivo": "arquivo",
+    "permanencia": "permanencia", "situacao": "situacao", "situacao_fonte": "situacao_fonte", "id": "id", "arquivo": "arquivo",
 }
 
 # eventos do saldo (corte, religação, implantação) para abrir os clientes por trás de cada número
@@ -32,7 +32,7 @@ NOMES_EXCEL = {
     "data_pos": "Data Pós Corte", "mes_pos": "Mês Pós Corte", "status_pos": "Status 1ª visita pós corte",
     "obs_pos": "Observação pós corte", "data_pos_finalizada": "Data 1º pós corte Finalizado",
     "regua": "Regua de Cobrança", "dias": "Dias", "dias_cortado": "Dias cortado (até hoje)",
-    "permanencia": "Permanencia", "situacao": "Situação", "id": "ID da Atividade", "arquivo": "Arquivo",
+    "permanencia": "Permanencia", "situacao": "Situação", "situacao_fonte": "Origem da situação", "id": "ID da Atividade", "arquivo": "Arquivo",
 }
 
 

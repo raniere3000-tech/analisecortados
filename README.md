@@ -18,6 +18,7 @@ navegador baixa o Python (cerca de 30 MB), que depois fica em cache.
 | Arquivo | Como é reconhecido | Usado para |
 |---|---|---|
 | Atividades | nome começa com `Atividades-` (vários arquivos, em qualquer subpasta) | cortes, religações, implantações e vistorias pós-corte |
+| Religação LISC | colunas `Matrícula`, `Serviço Executado`, `Dt. Execução` (título acima do cabeçalho é ignorado) | religações LISC: cada O.S. com Dt. Execução vira religação Finalizada; só valem as cidades (`Nome da Localidade`) que aparecem nas atividades |
 | Cadastro | colunas `NUM_LIGACAO`, `SIT_LIG`, `TOTAL_ECO` (cabeçalho pode estar abaixo de um título) | situação atual (ATIVA/CORTADA), economias, cliente |
 | Descrição serviço (opcional) | colunas `SERVICO` e `CATEGORIA` | código do serviço → categoria; sem ela vale `cortes/catalogo_servicos.json` |
 

@@ -25,8 +25,8 @@ TXT = REGRAS["textos"]
 
 # ===== Limpeza dos campos =====
 def matricula(serie):
-    """Só os dígitos (101877734.0 -> 101877734); vazio vira NaN."""
-    s = serie.astype("string").str.strip().str.replace(r"\.0+$", "", regex=True).str.replace(r"\D", "", regex=True)
+    """Só os dígitos, sem zeros à esquerda (101877734.0 e 0101877734 -> 101877734); vazio vira NaN."""
+    s = serie.astype("string").str.strip().str.replace(r"\.0+$", "", regex=True).str.replace(r"\D", "", regex=True).str.lstrip("0")
     return s.where(s.str.len() > 0).astype(object)
 
 
@@ -42,6 +42,13 @@ def datas(serie):
         ano = partes[2].astype(int)
         ano = ano.where(ano >= 100, ano + 2000)
         saida[br] = pd.to_datetime(dict(year=ano, month=partes[1].astype(int), day=partes[0].astype(int)), errors="coerce")
+    mm_aaaa = s.str.fullmatch(r"\d{1,2}/\d{4}", na=False)           # 09/2026 (referência do cadastro)
+    if mm_aaaa.any():
+        p = s[mm_aaaa].str.extract(r"(\d{1,2})/(\d{4})")
+        saida[mm_aaaa] = pd.to_datetime(dict(year=p[1].astype(int), month=p[0].astype(int), day=1), errors="coerce")
+    aaaamm = s.str.fullmatch(r"20\d{2}(0[1-9]|1[0-2])", na=False)      # 202609
+    if aaaamm.any():
+        saida[aaaamm] = pd.to_datetime(s[aaaamm] + "01", format="%Y%m%d", errors="coerce")
     num = s.str.fullmatch(r"\d{5}(\.\d+)?", na=False)
     if num.any():
         saida[num] = pd.to_datetime("1899-12-30") + pd.to_timedelta(s[num].astype(float).astype(int), unit="D")
@@ -51,7 +58,8 @@ def datas(serie):
 def valor_br(serie):
     """'R$ 1.234,56' -> 1234.56; 'R$' sozinho ou vazio -> NaN."""
     s = serie.astype("string").str.replace(r"[^\d,.\-]", "", regex=True)
-    s = s.where(~s.str.contains(",", na=False), s.str.replace(".", "", regex=False).str.replace(",", ".", regex=False))
+    milhar = s.str.fullmatch(r"-?\d{1,3}(\.\d{3})+", na=False)          # "R$ 1.234" (sem centavos)
+    s = s.where(~(s.str.contains(",", na=False) | milhar), s.str.replace(".", "", regex=False).str.replace(",", ".", regex=False))
     return pd.to_numeric(s, errors="coerce")
 
 
@@ -96,6 +104,13 @@ def classifica(ativ, cat):
     df["categoria"] = info.map(lambda i: i["categoria"] if isinstance(i, dict) else None)
     descricao = info.map(lambda i: f"{i['abertura']} {i['descricao']}" if isinstance(i, dict) else None)
     df["tipo"] = descricao.fillna(texto).map(tipo_servico)
+    if "fonte" in df.columns:                      # planilha de religação LISC: só entra como religação
+        lisc = df["fonte"].eq("religacao_lisc").to_numpy(dtype=bool)
+        religa = texto.map(normaliza).str.contains("RELIGA", na=False).to_numpy(dtype=bool)
+        df.loc[lisc & df["categoria"].isna().to_numpy() & religa, "categoria"] = CAT["religacao"]
+        padrao = lisc & df["categoria"].eq(CAT["religacao"]).to_numpy(dtype=bool) & df["tipo"].eq(REGRAS["tipos"]["outros"]).to_numpy(dtype=bool)
+        df.loc[padrao, "tipo"] = REGRAS["religacao_lisc"]["tipo_padrao"]
+        df.loc[lisc & df["categoria"].ne(CAT["religacao"]).fillna(True).to_numpy(dtype=bool), "categoria"] = None   # corte/vistoria na LISC não conta
     return df
 
 
@@ -107,11 +122,28 @@ def prepara_atividades(ativ, cat):
     df["status"] = df["status"].astype("string").str.strip()
     df["valor_debito"] = valor_br(df["valor_debito"])
     antes = len(df)
+    # a mesma O.S. pode vir em mais de um arquivo (reprogramada, exportada de novo): vale a Finalizada e, depois, a mais recente
+    df = df.assign(_nao_fin=df["status"].ne(REGRAS["status"]["finalizada"]).fillna(True).astype(bool))
+    df = df.sort_values(["_nao_fin", "data"], ascending=[True, False], na_position="last", kind="stable").drop(columns="_nao_fin")
     com_id = df["id"].notna() & (df["id"].astype("string").str.strip() != "")
     df = pd.concat([df[com_id].drop_duplicates(subset="id"), df[~com_id].drop_duplicates(subset=[c for c in df.columns if c != "arquivo"])])
     duplicadas = antes - len(df)
     df = classifica(df, cat)
     return df.reset_index(drop=True), duplicadas
+
+
+def filtra_lisc_por_cidade(ativ):
+    """Planilhas de religação LISC: só valem as cidades que aparecem nos arquivos de atividades
+    (comparação sem acento e sem diferença de maiúsculas). Devolve (atividades, linhas tiradas)."""
+    if "fonte" not in ativ.columns:
+        return ativ, 0
+    lisc = ativ["fonte"].eq("religacao_lisc").fillna(False)
+    if not lisc.any():
+        return ativ, 0
+    cidade = ativ["cidade"].map(lambda c: normaliza(c) if isinstance(c, str) and c.strip() else None)
+    validas = set(cidade[~lisc].dropna())
+    fora = lisc & ~cidade.isin(validas)
+    return ativ[~fora].reset_index(drop=True), int(fora.sum())
 
 
 # ===== Cadastro =====
@@ -199,9 +231,13 @@ def monta_cortes(ativ, cad, hoje=None):
     for col, extras in (("data_religacao", ["tipo_religacao", "id_religacao"]),
                         ("data_pos", ["status_pos", "id_pos", "parecer_pos"]),
                         ("data_pos_finalizada", [])):
-        fora = janela.notna() & df[col].notna() & (df[col] >= janela)
+        # religação no mesmo dia do próximo corte fica com o corte anterior (o novo corte veio depois dela)
+        fora = janela.notna() & df[col].notna() & ((df[col] > janela) if col == "data_religacao" else (df[col] >= janela))
         df.loc[fora, [col] + extras] = None
         df[col] = pd.to_datetime(df[col])
+    usada = df["data_religacao"].notna() & df.duplicated(subset=["matricula", "data_religacao"], keep="first")
+    df.loc[usada, ["data_religacao", "tipo_religacao", "id_religacao"]] = None   # uma religação vale para um corte só
+    df["data_religacao"] = pd.to_datetime(df["data_religacao"])
 
     religado = df["data_religacao"].notna()
     com_pos = df["data_pos"].notna()
@@ -225,12 +261,20 @@ def monta_cortes(ativ, cad, hoje=None):
 
     ult = ultimo_cadastro(cad)
     if ult is not None:
-        df["situacao"] = df["matricula"].map(ult["SIT_LIG"]).fillna(TXT["sem_cadastro"])
+        # a situação do cadastro só vale se a referência dele for do mês do corte ou depois; com cadastro mais antigo
+        # que o corte, a situação é calculada: ATIVA se houve religação, senão CORTADA
+        no_cad = df["matricula"].isin(ult.index)
+        ref = df["matricula"].map(ult["ref"])
+        vale = no_cad & (ref.isna() | (ref >= df["mes_corte"]))
+        calculada = np.where(df["data_religacao"].notna(), "ATIVA", "CORTADA")
+        df["situacao"] = np.where(vale, df["matricula"].map(ult["SIT_LIG"]).astype(object), np.where(no_cad, calculada, TXT["sem_cadastro"]))
+        df["situacao_fonte"] = np.where(vale, "cadastro", np.where(no_cad, "calculada (cadastro anterior ao corte)", ""))
         df["cliente"] = df["matricula"].map(ult["NOM_CLIENTE"])
         df["sub_categoria"] = df["matricula"].map(ult["SUB_CATEGORIA"])
         df["cidade"] = df["cidade"].fillna(df["matricula"].map(ult["CIDADE"]))
     else:
         df["situacao"] = TXT["sem_cadastro"]
+        df["situacao_fonte"] = ""
         df["cliente"] = None
         df["sub_categoria"] = None
     df["economias"], _ = economias(df, cad)
@@ -254,6 +298,8 @@ def monta_saldo(ativ, cad):
     ev = ev.sort_values(["matricula", "data", "categoria", "_p"]).drop_duplicates(subset=["matricula", "data", "categoria"])
     ev = ev.drop(columns="_p").reset_index(drop=True)
     ev["economias"], ev["sem_cadastro"] = economias(ev, cad)
+    if cad is not None:                            # cidade vazia vem do cadastro, como nos cortes
+        ev["cidade"] = ev["cidade"].fillna(ev["matricula"].map(ultimo_cadastro(cad)["CIDADE"]))
     ev["sinal"] = np.where(ev["categoria"] == CAT["corte"], -1, 1)
     ev["mes"] = mes(ev["data"])
     ev.loc[ev["categoria"] == CAT["implantacao"], "tipo"] = "LNA"

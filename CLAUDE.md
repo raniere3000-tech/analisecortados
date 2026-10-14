@@ -5,8 +5,9 @@
   para o mesmo número (só o `v5`). A mensagem do commit começa com essa versão (ex.: `v2: ...`).
 - Rode `python -m pytest tests -q` antes de enviar.
 - Arquivo novo no pacote `cortes/` precisa entrar em `ARQUIVOS_PY` no `analisador.worker.js` (um teste confere).
-- Mudou a leitura dos arquivos (colunas lidas, tipos)? Aumente `VERSAO` em `cortes/cache_arquivos.py`, senão o
-  navegador reaproveita leituras antigas guardadas.
+- Mudou o código da leitura dos arquivos (colunas lidas, tipos)? Aumente `BASE` em `cortes/cache_arquivos.py`, senão o
+  navegador reaproveita leituras antigas guardadas. Mudanças nas partes de leitura do `regras.json` (`arquivos`,
+  `colunas_atividades`, `religacao_lisc`) já mudam a versão sozinhas.
 - Regras de negócio (faixas da régua e da permanência, status, prioridade de tipos) ficam em `cortes/regras.json`.
 - Nunca suba planilhas com dados de clientes (`*.xlsx`, `*.csv` estão no `.gitignore`).
 - **Publicação autorizada:** o dono do repositório autorizou atualizar a `main` sempre. Depois de rodar os testes,

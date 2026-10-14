@@ -4,6 +4,7 @@
 - Atividades: todo arquivo cujo nome começa com "Atividades-" (em qualquer subpasta).
 - Cadastro: planilha com as colunas NUM_LIGACAO, SIT_LIG e TOTAL_ECO.
 - Catálogo: planilha com as colunas SERVICO e CATEGORIA (a "Descrição serviço"); sem ela vale a cópia do site.
+- Religação LISC: relatório de O.S. com as colunas Matrícula, Serviço Executado e Dt. Execução (vem em arquivos separados).
 Cada arquivo é reduzido às colunas usadas; o resultado pode vir guardado de uma análise anterior (cache_arquivos).
 """
 import html
@@ -76,12 +77,12 @@ def _motor(caminho):
 # Alguns sistemas gravam o .xlsx com workbook.xml e sheet1.xml soltos na raiz do zip (sem a pasta "xl/") e todas as
 # células como texto (t="str"). São arquivos de ~20 MB de XML (centenas de colunas) dos quais só usamos algumas colunas:
 # ler só elas é muito mais rápido que carregar tudo no pandas. Qualquer coisa fora do padrão volta para a leitura normal.
-_CEL_CAB = re.compile(rb'<c r="([A-Z]+)1"[^>]*>(.*?)</c>', re.S)
+_CEL_CAB = re.compile(rb'<c r="([A-Z]+)1"[^>]*?(?:/>|>(.*?)</c>)', re.S)       # aceita célula vazia <c r="B1" s="1"/>
 _VALOR = re.compile(rb"<v>(.*?)</v>|<t[^>]*>(.*?)</t>", re.S)
 
 
 def _texto_celula(interno):
-    m = _VALOR.search(interno or "")
+    m = _VALOR.search(interno or b"")
     if not m:
         return None
     v = (m.group(1) if m.group(1) is not None else m.group(2)).decode("utf-8", "replace")
@@ -89,10 +90,27 @@ def _texto_celula(interno):
     return v if v != "" else None
 
 
+_ULTIMO_PLANO = {"chave": None, "xml": None}
+
+
 def _planilha_plana(caminho):
-    """XML (bytes) da 1ª planilha de um .xlsx plano, ou None se o arquivo não for desse formato."""
+    """XML (bytes) da 1ª planilha de um .xlsx plano, ou None se o arquivo não for desse formato.
+    Guarda o último lido: o mesmo arquivo é aberto para achar o tipo, o cabeçalho e os dados."""
     if not caminho.lower().endswith((".xlsx", ".xlsm")):
         return None
+    try:
+        st = os.stat(caminho)
+        chave = (os.path.abspath(caminho), st.st_size, st.st_mtime)
+    except OSError:
+        return None
+    if _ULTIMO_PLANO["chave"] == chave:
+        return _ULTIMO_PLANO["xml"]
+    xml = _abre_plana(caminho)
+    _ULTIMO_PLANO.update(chave=chave, xml=xml)
+    return xml
+
+
+def _abre_plana(caminho):
     try:
         with zipfile.ZipFile(caminho) as z:
             nomes = {n.replace("\\", "/").lstrip("/").lower(): n for n in z.namelist()}
@@ -156,10 +174,32 @@ def diagnostico(caminho):
         return f"não foi possível abrir: {erro}"
 
 
+def _separador(caminho, enc):
+    """; , ou tab: o que aparece em mais linhas entre as 30 primeiras (a 1ª pode ser um título)."""
+    with open(caminho, encoding=enc) as f:
+        linhas = [f.readline() for _ in range(30)]
+    return max([";", ",", "\t"], key=lambda sep: (sum(1 for l in linhas if sep in l), sum(l.count(sep) for l in linhas)))
+
+
+def _amostra_csv(caminho, max_linhas):
+    """Primeiras linhas do CSV como tabela, mesmo com um título de uma coluna só acima do cabeçalho."""
+    import csv
+    for enc in ("utf-8-sig", "latin-1"):
+        try:
+            sep = _separador(caminho, enc)
+            with open(caminho, encoding=enc, newline="") as f:
+                linhas = [l for _, l in zip(range(max_linhas), csv.reader(f, delimiter=sep))]
+            largura = max((len(l) for l in linhas), default=0)
+            return pd.DataFrame([[(c if c.strip() else None) for c in l] + [None] * (largura - len(l)) for l in linhas])
+        except UnicodeDecodeError:
+            continue
+    raise ValueError(f"Não foi possível ler o CSV {os.path.basename(caminho)}")
+
+
 def _le_csv(caminho, **kw):
     for enc in ("utf-8-sig", "latin-1"):
         try:
-            return pd.read_csv(caminho, sep=None, engine="python", dtype=str, encoding=enc, **kw)
+            return pd.read_csv(caminho, sep=_separador(caminho, enc), engine="python", dtype=str, encoding=enc, **kw)
         except UnicodeDecodeError:
             continue
     raise ValueError(f"Não foi possível ler o CSV {os.path.basename(caminho)}")
@@ -168,17 +208,19 @@ def _le_csv(caminho, **kw):
 def _cabecalho(caminho, max_linhas=30):
     """(linha do cabeçalho, nomes das colunas) — o cabeçalho pode estar abaixo de um título."""
     xml = None if caminho.lower().endswith(".csv") else _planilha_plana(caminho)
-    if xml is not None and _cabecalho_plano(xml):
+    if xml is not None and sum(1 for n in _cabecalho_plano(xml).values() if n) >= 3:   # cabeçalho na linha 1 (sem título acima)
         return 0, [n for _, n in sorted(_cabecalho_plano(xml).items(), key=lambda kv: (len(kv[0]), kv[0]))]
     if caminho.lower().endswith(".csv"):
-        df = _le_csv(caminho, header=None, nrows=max_linhas)
+        df = _amostra_csv(caminho, max_linhas)
     else:
         df = pd.read_excel(_fonte(caminho), header=None, dtype=str, nrows=max_linhas, engine=_motor(caminho))
-    melhor, cheias = 0, -1
+    conhecidos = _nomes_conhecidos()
+    melhor, nota = 0, (-1, -1)
     for i in range(len(df)):
-        n = int(df.iloc[i].notna().sum())
-        if n > cheias:
-            melhor, cheias = i, n
+        valores = df.iloc[i]
+        n = (sum(1 for v in valores.dropna() if normaliza(v) in conhecidos), int(valores.notna().sum()))
+        if n > nota:
+            melhor, nota = i, n
     return melhor, [str(c).strip() for c in df.iloc[melhor].tolist()] if len(df) else []
 
 
@@ -191,7 +233,7 @@ def _le_colunas(caminho, linha, colunas):
     alvo = {normaliza(c): c for c in colunas}
     usar = lambda c: normaliza(c) in alvo  # noqa: E731
     if caminho.lower().endswith(".csv"):
-        df = _le_csv(caminho, header=linha, usecols=usar)
+        df = _le_csv(caminho, skiprows=linha, header=0, usecols=usar)     # pula o título acima do cabeçalho
     else:
         df = pd.read_excel(_fonte(caminho), header=linha, dtype=str, usecols=usar, engine=_motor(caminho))
     df.columns = [alvo[normaliza(c)] for c in df.columns]
@@ -202,13 +244,23 @@ def _le_colunas(caminho, linha, colunas):
     return df[colunas]
 
 
+def _nomes_conhecidos():
+    """Nomes de coluna que o painel procura (para achar a linha do cabeçalho)."""
+    arq = REGRAS["arquivos"]
+    nomes = list(REGRAS["colunas_atividades"].values()) + list(REGRAS["religacao_lisc"]["colunas"].values())
+    nomes += arq["colunas_cadastro"] + arq["colunas_catalogo"] + COLUNAS_CADASTRO + COLUNAS_CATALOGO
+    return {normaliza(n) for n in nomes}
+
+
 def tipo_arquivo(caminho):
-    """'atividades', 'cadastro', 'catalogo' ou None (arquivo que não é usado)."""
+    """'atividades', 'religacao_lisc', 'cadastro', 'catalogo' ou None (arquivo que não é usado)."""
     arq = REGRAS["arquivos"]
     if os.path.basename(caminho).lower().startswith(arq["prefixo_atividades"].lower()):
         return "atividades"
     _, nomes = _cabecalho(caminho)
     nomes = {normaliza(n) for n in nomes}
+    if all(normaliza(c) in nomes for c in arq["colunas_religacao_lisc"]):
+        return "religacao_lisc"
     if all(normaliza(c) in nomes for c in arq["colunas_cadastro"]):
         return "cadastro"
     if all(normaliza(c) in nomes for c in arq["colunas_catalogo"]):
@@ -222,7 +274,27 @@ def le_atividades(caminho):
     df = _le_colunas(caminho, linha, colunas)
     df.columns = list(REGRAS["colunas_atividades"].keys())
     df = df.dropna(how="all")
+    df["fonte"] = "atividades"
     return df
+
+
+def le_religacao_lisc(caminho):
+    """Relatório de religação LISC no mesmo formato das atividades: cada O.S. com Dt. Execução é uma religação Finalizada."""
+    linha, _ = _cabecalho(caminho)
+    col = REGRAS["religacao_lisc"]["colunas"]
+    df = _le_colunas(caminho, linha, list(col.values()))
+    df.columns = list(col.keys())
+    df = df.dropna(subset=["matricula"])
+    os_ = df["os"].astype("string").str.strip().str.replace(r"\.0$", "", regex=True)
+    ano = df["ano"].astype("string").str.strip().str.replace(r"\.0$", "", regex=True)
+    data_ok = df["data"].notna() & (df["data"].astype("string").str.strip() != "")
+    saida = pd.DataFrame({c: None for c in REGRAS["colunas_atividades"]}, index=df.index)
+    saida["id"] = ("OS " + os_ + "/" + ano.fillna("")).where(os_.notna() & (os_ != ""))
+    for c in ("recurso", "matricula", "servico", "data", "cidade"):
+        saida[c] = df[c]
+    saida["status"] = pd.Series("Finalizada", index=df.index).where(data_ok)
+    saida["fonte"] = "religacao_lisc"
+    return saida.reset_index(drop=True)
 
 
 def le_cadastro(caminho):
@@ -235,7 +307,8 @@ def le_catalogo(caminho):
     return _le_colunas(caminho, linha, COLUNAS_CATALOGO).dropna(subset=["SERVICO"])
 
 
-LEITORES = {"atividades": le_atividades, "cadastro": le_cadastro, "catalogo": le_catalogo}
+LEITORES = {"atividades": le_atividades, "religacao_lisc": le_religacao_lisc, "cadastro": le_cadastro, "catalogo": le_catalogo}
+DESTINO = {"atividades": "atividades", "religacao_lisc": "atividades", "cadastro": "cadastro", "catalogo": "catalogo"}
 
 
 def le_pasta(pasta, progresso=None):
@@ -252,7 +325,10 @@ def le_pasta(pasta, progresso=None):
             guardado = cache_arquivos.carrega(caminho)
             if guardado is not None:
                 tipo, df = guardado
+            elif cache_arquivos.em_cache(caminho):           # a leitura guardada não abriu e o arquivo não veio
+                raise ValueError("a leitura guardada deste arquivo não abriu; ela foi descartada — clique em ↻ Atualizar")
             else:
+                cache_arquivos.materializa(caminho)
                 tipo = tipo_arquivo(caminho)
                 df = LEITORES[tipo](caminho) if tipo else None
                 cache_arquivos.guarda(caminho, (tipo, df))
@@ -260,11 +336,14 @@ def le_pasta(pasta, progresso=None):
             relatorio.append({"arquivo": rel, "tipo": "erro", "linhas": 0,
                               "obs": f"{str(erro)[:150]} | {diagnostico(caminho)}"[:400]})
             continue
+        finally:
+            cache_arquivos.libera(caminho)
+            _ULTIMO_PLANO.update(chave=None, xml=None)
         if tipo is None:
-            relatorio.append({"arquivo": rel, "tipo": "não usado", "linhas": 0, "obs": "não é atividades, cadastro nem catálogo"})
+            relatorio.append({"arquivo": rel, "tipo": "não usado", "linhas": 0, "obs": "não é atividades, religação LISC, cadastro nem catálogo"})
             continue
         df = df.assign(arquivo=rel)
-        partes[tipo].append(df)
+        partes[DESTINO[tipo]].append(df)
         relatorio.append({"arquivo": rel, "tipo": tipo, "linhas": int(len(df)),
                           "obs": "já lido antes" if cache_arquivos.em_cache(caminho) else ""})
     junta = lambda lista: pd.concat(lista, ignore_index=True) if lista else None  # noqa: E731

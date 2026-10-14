@@ -9,14 +9,20 @@ CACHE_DIR/meta.json diz, para cada arquivo (caminho relativo à pasta), o id e s
 Sem meta.json (linha de comando, testes) tudo é lido do arquivo.
 """
 import gzip
+import hashlib
 import json
 import os
 import pickle
 
-VERSAO = "1"            # mude quando a leitura dos arquivos mudar: o que foi guardado com outra versão é descartado
+from .config import REGRAS
+
+# mude BASE quando a leitura dos arquivos mudar; a parte de regras.json que define a leitura entra sozinha na versão
+BASE = "3"
+_LEITURA = {k: REGRAS.get(k) for k in ("arquivos", "colunas_atividades", "religacao_lisc")}
+VERSAO = BASE + "-" + hashlib.sha1(json.dumps(_LEITURA, sort_keys=True, ensure_ascii=False).encode()).hexdigest()[:8]
 CACHE_DIR = os.environ.get("CORTES_CACHE", "/cache")
 
-_estado = {"pasta": None, "meta": {}}
+_estado = {"pasta": None, "meta": {}, "invalidos": []}
 
 
 def configura(pasta):
@@ -30,12 +36,15 @@ def configura(pasta):
                 meta = dados.get("arquivos") or {}
         except (OSError, ValueError):
             meta = {}
-    _estado.update(pasta=os.path.abspath(pasta), meta=meta)
+    _estado.update(pasta=os.path.abspath(pasta), meta=meta, invalidos=[])
+
+
+def _rel(caminho):
+    return os.path.relpath(os.path.abspath(caminho), _estado["pasta"] or "").replace(os.sep, "/")
 
 
 def _info(caminho):
-    rel = os.path.relpath(os.path.abspath(caminho), _estado["pasta"] or "").replace(os.sep, "/")
-    return _estado["meta"].get(rel)
+    return _estado["meta"].get(_rel(caminho))
 
 
 def em_cache(caminho):
@@ -52,8 +61,39 @@ def carrega(caminho):
     if not os.path.exists(arq):
         i["em_cache"] = False
         return None
-    with gzip.open(arq, "rb") as f:
-        return pickle.load(f)
+    try:
+        with gzip.open(arq, "rb") as f:
+            return pickle.load(f)
+    except Exception:                                       # arquivo guardado corrompido ou de outra versão do pandas
+        _estado["invalidos"].append(i["id"])
+        return None
+
+
+def invalidos():
+    """ids das leituras guardadas que não abriram: o site apaga do navegador."""
+    return list(_estado["invalidos"])
+
+
+def _js():
+    try:
+        import js  # noqa: F401  (só existe no navegador, Pyodide)
+        return js if hasattr(js, "materializa") else None
+    except ImportError:
+        return None
+
+
+def materializa(caminho):
+    """No navegador o arquivo só é copiado para a memória do Python na hora de ser lido (o site deixa um vazio no lugar)."""
+    js = _js()
+    if js is not None:
+        js.materializa(_rel(caminho))
+
+
+def libera(caminho):
+    """Depois de lido, o arquivo volta a ocupar 0 bytes (com ~250 arquivos a memória do navegador acabaria)."""
+    js = _js()
+    if js is not None:
+        js.libera(_rel(caminho))
 
 
 def guarda(caminho, resultado):

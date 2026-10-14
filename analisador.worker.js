@@ -130,11 +130,16 @@ async function faseAnalisar(arquivos) {
   try { db = await abreBanco(); } catch (e) { avisa("log", { linha: "Aviso: sem acesso ao armazenamento do navegador; todos os arquivos serão lidos." }); }
   const meta = {}, atuais = new Set();
   let reaproveitados = 0;
+  // Cada arquivo só é copiado para a memória do Python na hora de ser lido (cortes/cache_arquivos.py chama
+  // materializa/libera): com ~250 arquivos, copiar tudo antes estourava a memória do navegador.
+  const pendentes = new Map();
+  self.materializa = (rel) => { const f = pendentes.get(rel); if (f) FS.writeFile(`${PASTA}/${rel}`, new Uint8Array(new FileReaderSync().readAsArrayBuffer(f))); };
+  self.libera = (rel) => { if (pendentes.has(rel)) FS.writeFile(`${PASTA}/${rel}`, new Uint8Array(0)); };
   for (const arq of arquivos) {
     const partes = arq.nome.split("/").filter((p) => p && p !== "." && p !== "..");   // mantém as subpastas
     const rel = partes.join("/");
     if (partes.length > 1) FS.mkdirTree(`${PASTA}/${partes.slice(0, -1).join("/")}`);
-    const id = await idArquivo(`${versao}|${rel}|${arq.tamanho}|${arq.modificado || 0}`);
+    const id = await idArquivo(`${versao}|${PYODIDE_VERSAO}|${rel}|${arq.tamanho}|${arq.modificado || 0}`);   // outra versão do Python não reaproveita
     atuais.add(id);
     let guardado = null;
     if (db && arq.modificado) { try { guardado = await bancoLe(db, id); } catch (e) { guardado = null; } }
@@ -144,7 +149,8 @@ async function faseAnalisar(arquivos) {
       meta[rel] = { id, em_cache: true };
       reaproveitados++;
     } else {
-      FS.writeFile(`${PASTA}/${rel}`, new Uint8Array(await arq.arquivo.arrayBuffer()));
+      FS.writeFile(`${PASTA}/${rel}`, new Uint8Array(0));        // vazio por enquanto: o conteúdo vem em materializa()
+      pendentes.set(rel, arq.arquivo);
       meta[rel] = { id, em_cache: false };
     }
   }
@@ -154,6 +160,10 @@ async function faseAnalisar(arquivos) {
   const json = analisar(PASTA, (pct, texto) => avisa("progresso", { pct, texto }));
   analisar.destroy();
   const dados = JSON.parse(json);
+  pendentes.clear();
+  if (db && dados.cache_invalido && dados.cache_invalido.length) {            // leituras guardadas que não abriram: apaga
+    try { await bancoTransacao(db, (st) => dados.cache_invalido.forEach((id) => st.delete(id))); } catch (e) { /* tenta na próxima */ }
+  }
   if (db) {
     try { dados.cacheMB = await guardaLeituras(FS, db, meta, versao, atuais); }
     catch (e) { avisa("log", { linha: "Aviso: não foi possível guardar os arquivos lidos para a próxima vez (" + e.message + ")." }); }
