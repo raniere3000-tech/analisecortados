@@ -84,3 +84,56 @@ def test_arquivo_invalido_mostra_diagnostico(tmp_path):
     assert all(a["tipo"] == "erro" for a in obs.values())
     assert "0 bytes" in obs["Atividades-vazio.xlsx"]["obs"]
     assert "não é um arquivo zip" in obs["Atividades-texto.xlsx"]["obs"]
+
+
+def _xlsx_plano(destino, linhas, cabecalho):
+    """.xlsx como o de alguns sistemas: workbook.xml e sheet1.xml soltos na raiz do zip, células t="str"."""
+    import zipfile
+    from xml.sax.saxutils import escape
+
+    def letra(i):
+        return chr(ord("A") + i)
+
+    def celula(i, n, v):
+        return f'<c r="{letra(i)}{n}" t="str" s="0"><v>{escape(v)}</v></c>'
+
+    linhas_xml = ['<row r="1">' + "".join(celula(i, 1, c) for i, c in enumerate(cabecalho)) + "</row>"]
+    for n, linha in enumerate(linhas, start=2):
+        linhas_xml.append(f'<row r="{n}">' + "".join(celula(i, n, v) for i, v in enumerate(linha)) + "</row>")
+    with zipfile.ZipFile(destino, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("[Content_Types].xml", '<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"/>')
+        z.writestr("_rels/", "")
+        z.writestr("_rels/.rels", '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="workbook.xml"/></Relationships>')
+        z.writestr("_rels/workbook.xml.rels", '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="sheet1.xml"/></Relationships>')
+        z.writestr("workbook.xml", '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Page 1" sheetId="1" r:id="rId1"/></sheets></workbook>')
+        z.writestr("styles.xml", '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"/>')
+        z.writestr("sheet1.xml", '<?xml version="1.0"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>'
+                   + "".join(linhas_xml) + "</sheetData></worksheet>")
+
+
+def test_xlsx_plano_sem_pasta_xl_e_lido(tmp_path):
+    from cortes.config import REGRAS
+    cab = ["Recurso", "ID da Atividade", "Matrícula", "Código/Descrição", "Data", "Status da Atividade", "Cidade", "Coluna extra"]
+    linhas = [["D11 - A & B", "1", "100", "109001-CORTE DE ÁGUA NO CAVALETE - DÉBITO", "01/04/26", "Finalizada", "APERIBE", "x"],
+              ["D11", "2", "200", "111001-RELIGAÇÃO DE ÁGUA NO CAVALETE - DÉBITO", "02/04/26", "Finalizada", "", "y"]]
+    _xlsx_plano(tmp_path / "Atividades-plano.xlsx", linhas, cab)
+    lido = leitura.le_pasta(str(tmp_path))
+    assert lido["arquivos"][0]["tipo"] == "atividades" and lido["arquivos"][0]["linhas"] == 2, lido["arquivos"]
+    df = lido["atividades"]
+    assert df["recurso"].tolist() == ["D11 - A & B", "D11"]          # &amp; volta a "&"
+    assert df["matricula"].tolist() == ["100", "200"]
+    assert df["cidade"].isna().tolist() == [False, True]             # célula vazia vira vazio
+    assert df["valor_debito"].isna().all()                           # coluna que não existe no arquivo
+    assert list(df.columns[:12]) == list(REGRAS["colunas_atividades"].keys())
+
+
+def test_xlsx_plano_alimenta_o_painel(tmp_path):
+    from cortes import Analise
+    cab = ["Recurso", "ID da Atividade", "Matrícula", "Código/Descrição", "Data", "Status da Atividade", "Cidade"]
+    linhas = [["R", "1", "100", "109001-CORTE DE ÁGUA NO CAVALETE - DÉBITO", "01/04/26", "Finalizada", "APERIBE"],
+              ["R", "2", "100", "111001-RELIGAÇÃO DE ÁGUA NO CAVALETE - DÉBITO", "03/04/26", "Finalizada", "APERIBE"]]
+    _xlsx_plano(tmp_path / "Atividades-plano.xlsx", linhas, cab)
+    analise = Analise(str(tmp_path))
+    analise.executar("2026-04-10")
+    c = analise.cortes.iloc[0]
+    assert len(analise.cortes) == 1 and c["dias"] == 2 and c["regua"] == "Religado" and c["tipo"] == "CAVALETE"
