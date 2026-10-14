@@ -54,3 +54,33 @@ def test_cache_reaproveita_leitura(pasta, tmp_path, monkeypatch):
     lido = leitura.le_pasta(pasta)
     linha = [a for a in lido["arquivos"] if a["arquivo"] == rel][0]
     assert linha["obs"] == "já lido antes" and linha["linhas"] == 2
+
+
+def _regrava_zip(origem, destino, renomeia):
+    import zipfile
+    with zipfile.ZipFile(origem) as zin, zipfile.ZipFile(destino, "w", zipfile.ZIP_DEFLATED) as zout:
+        for info in zin.infolist():
+            zout.writestr(renomeia(info.filename), zin.read(info.filename))
+
+
+def test_xlsx_com_nomes_internos_fora_do_padrao_e_lido(pasta, tmp_path):
+    import shutil
+    origem = os.path.join(pasta, "Atividades-CENTRALIZADA - IN 01_01_26.xlsx")
+    for nome, renomeia in (("barra", lambda n: "/" + n), ("contrabarra", lambda n: n.replace("/", "\\"))):
+        sub = tmp_path / nome
+        sub.mkdir()
+        _regrava_zip(origem, sub / "Atividades-teste.xlsx", renomeia)
+        lido = leitura.le_pasta(str(sub))
+        assert lido["arquivos"][0]["tipo"] == "atividades", lido["arquivos"]
+        assert lido["arquivos"][0]["linhas"] == 17
+    shutil.rmtree(tmp_path / "barra")
+
+
+def test_arquivo_invalido_mostra_diagnostico(tmp_path):
+    (tmp_path / "Atividades-vazio.xlsx").write_bytes(b"")
+    (tmp_path / "Atividades-texto.xlsx").write_bytes(b"isto nao e um xlsx")
+    lido = leitura.le_pasta(str(tmp_path))
+    obs = {a["arquivo"]: a for a in lido["arquivos"]}
+    assert all(a["tipo"] == "erro" for a in obs.values())
+    assert "0 bytes" in obs["Atividades-vazio.xlsx"]["obs"]
+    assert "não é um arquivo zip" in obs["Atividades-texto.xlsx"]["obs"]

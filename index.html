@@ -73,7 +73,7 @@ code { background: var(--total); padding: 0 4px; border-radius: 3px; }
 </head>
 <body>
 <header>
-  <h1>Análise de Corte e Religação <span id="versao">v1-20261014</span></h1>
+  <h1>Análise de Corte e Religação <span id="versao">v2-20261014</span></h1>
   <span id="pastaNome"></span>
   <div class="acoes">
     <button id="btnConectar" class="principal">📁 Conectar pasta</button>
@@ -126,7 +126,7 @@ code { background: var(--total); padding: 0 4px; border-radius: 3px; }
 
 <script>
 "use strict";
-const VERSAO_SITE = "v1-20261014";
+const VERSAO_SITE = "v2-20261014";
 
 // ===================== utilidades =====================
 const $ = (id) => document.getElementById(id);
@@ -215,6 +215,8 @@ function carregaDados(d) {
   preenche($("fRecurso"), unicos([...CORTES.map((c) => c.recurso), ...SALDO.map((s) => s.recurso)]));
   preenche($("fTipo"), unicos(CORTES.map((c) => c.tipo)));
   $("inicio").style.display = "none"; $("painel").style.display = "block";
+  const erros = d.arquivos.filter((a) => a.tipo === "erro").length;
+  aviso(erros ? `${erros} arquivo(s) não puderam ser lidos e ficaram de fora dos números. Veja o motivo na aba Dados, em “Arquivos da pasta”.` : "");
   desenha();
 }
 ["fDe", "fAte", "fCidade", "fRecurso", "fTipo"].forEach((id) => $(id).addEventListener("change", (e) => { e.target.dataset.escolhido = "1"; desenha(); }));
@@ -467,7 +469,7 @@ function novoWorker() {
     else if (m.tipo === "progresso") progresso(m.pct, m.texto);
     else if (m.tipo === "log") { $("log").textContent += m.linha + "\n"; }
     else if (m.tipo === "resultado") {
-      escondeProgresso(); aviso("");
+      escondeProgresso();
       carregaDados(m.dados);
     } else if (m.tipo === "excel") {
       escondeProgresso(); const b = $("btnExcel"); if (b) b.disabled = false;

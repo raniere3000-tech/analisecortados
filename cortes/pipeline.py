@@ -46,6 +46,7 @@ class Analise:
             "Atividades repetidas entre arquivos (contadas uma vez)": int(duplicadas),
             "Atividades sem data ou matrícula": int((ativ["data"].isna() | ativ["matricula"].isna()).sum()),
             "Catálogo de serviços": origem_cat,
+            "Arquivos que não puderam ser lidos": sum(1 for a in self.arquivos if a["tipo"] == "erro"),
             "Cadastro": (f"{len(cad):,} linhas; referência mais recente {cad['ref'].max():%m/%Y}".replace(",", ".")
                          if cad is not None and cad["ref"].notna().any() else ("sem planilha de cadastro na pasta" if cad is None else f"{len(cad)} linhas")),
             "Cortes (matrícula + data)": int(len(self.cortes)),

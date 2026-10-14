@@ -6,9 +6,11 @@
 - Catálogo: planilha com as colunas SERVICO e CATEGORIA (a "Descrição serviço"); sem ela vale a cópia do site.
 Cada arquivo é reduzido às colunas usadas; o resultado pode vir guardado de uma análise anterior (cache_arquivos).
 """
+import io
 import os
 import re
 import unicodedata
+import zipfile
 
 import pandas as pd
 
@@ -38,6 +40,46 @@ def lista_arquivos(pasta):
     return sorted(achados)
 
 
+def _fonte(caminho):
+    """Caminho do arquivo — ou, se for um .xlsx com nomes internos fora do padrão (começando com "/" ou usando "\\",
+    comum em arquivos gravados por certos sistemas), uma cópia em memória com os nomes corrigidos."""
+    if not caminho.lower().endswith((".xlsx", ".xlsm")):
+        return caminho
+    try:
+        with zipfile.ZipFile(caminho) as z:
+            nomes = z.namelist()
+            limpos = [n.replace("\\", "/").lstrip("/") for n in nomes]
+            if limpos == nomes:
+                return caminho
+            saida = io.BytesIO()
+            with zipfile.ZipFile(saida, "w", zipfile.ZIP_DEFLATED) as nova:
+                for original, limpo in zip(nomes, limpos):
+                    if limpo and not limpo.endswith("/"):
+                        nova.writestr(limpo, z.read(original))
+    except zipfile.BadZipFile:
+        return caminho                                   # o pandas dá a mensagem; o diagnóstico explica
+    saida.seek(0)
+    return saida
+
+
+def diagnostico(caminho):
+    """Texto curto para entender um arquivo que não abriu: tamanho, início e nomes internos."""
+    try:
+        tamanho = os.path.getsize(caminho)
+        with open(caminho, "rb") as f:
+            inicio = f.read(8)
+        partes = [f"{tamanho} bytes", "início " + inicio.hex()]
+        if zipfile.is_zipfile(caminho):
+            with zipfile.ZipFile(caminho) as z:
+                nomes = z.namelist()
+            partes.append(f"{len(nomes)} partes: " + ", ".join(nomes[:6]))
+        else:
+            partes.append("não é um arquivo zip/.xlsx válido (vazio, cortado ou ainda não baixado do OneDrive?)")
+        return "; ".join(partes)
+    except OSError as erro:
+        return f"não foi possível abrir: {erro}"
+
+
 def _le_csv(caminho, **kw):
     for enc in ("utf-8-sig", "latin-1"):
         try:
@@ -52,7 +94,7 @@ def _cabecalho(caminho, max_linhas=30):
     if caminho.lower().endswith(".csv"):
         df = _le_csv(caminho, header=None, nrows=max_linhas)
     else:
-        df = pd.read_excel(caminho, header=None, dtype=str, nrows=max_linhas)
+        df = pd.read_excel(_fonte(caminho), header=None, dtype=str, nrows=max_linhas)
     melhor, cheias = 0, -1
     for i in range(len(df)):
         n = int(df.iloc[i].notna().sum())
@@ -68,7 +110,7 @@ def _le_colunas(caminho, linha, colunas):
     if caminho.lower().endswith(".csv"):
         df = _le_csv(caminho, header=linha, usecols=usar)
     else:
-        df = pd.read_excel(caminho, header=linha, dtype=str, usecols=usar)
+        df = pd.read_excel(_fonte(caminho), header=linha, dtype=str, usecols=usar)
     df.columns = [alvo[normaliza(c)] for c in df.columns]
     df = df.loc[:, ~df.columns.duplicated()]
     for c in colunas:
@@ -132,7 +174,8 @@ def le_pasta(pasta, progresso=None):
                 df = LEITORES[tipo](caminho) if tipo else None
                 cache_arquivos.guarda(caminho, (tipo, df))
         except Exception as erro:  # um arquivo com problema não para a análise
-            relatorio.append({"arquivo": rel, "tipo": "erro", "linhas": 0, "obs": str(erro)[:200]})
+            relatorio.append({"arquivo": rel, "tipo": "erro", "linhas": 0,
+                              "obs": f"{str(erro)[:150]} | {diagnostico(caminho)}"[:400]})
             continue
         if tipo is None:
             relatorio.append({"arquivo": rel, "tipo": "não usado", "linhas": 0, "obs": "não é atividades, cadastro nem catálogo"})
