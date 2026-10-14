@@ -14,4 +14,5 @@ def test_worker_carrega_todos_os_arquivos_do_pacote():
 def test_versao_do_site_igual_no_cabecalho():
     html = open(os.path.join(RAIZ, "index.html"), encoding="utf-8").read()
     versao = re.search(r'const VERSAO_SITE = "([^"]+)"', html).group(1)
-    assert f'<span id="versao">{versao}</span>' in html
+    assert re.fullmatch(r"v\d+-\d{8}", versao)
+    assert f'id="versao">{versao.split("-")[0]}</span>' in html       # o selo mostra só o número (v4)
