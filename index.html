@@ -30,6 +30,8 @@ body { margin:0; background:var(--bg); color:var(--ink); font-family:"Segoe UI",
 .fsel select { max-width:102px; text-overflow:ellipsis; border:1px solid rgba(255,255,255,.35); border-radius:8px; background:rgba(255,255,255,.1); color:#fff; padding:5px 6px; font:inherit; font-size:12px; font-weight:400; text-transform:none; letter-spacing:0; }
 .fsel select option { color:#111; }
 .fsel[data-f=de] select, .fsel[data-f=ate] select { max-width:132px; }
+.fsel[data-f=ativas] { cursor:pointer; }
+.fsel input[type=checkbox] { accent-color:#16a5b8; width:14px; height:14px; margin:0; cursor:pointer; }
 .btn-top { padding:5px 8px; border-radius:8px; font:inherit; font-size:12px; cursor:pointer; background:rgba(255,255,255,.12); color:#fff; border:1px solid rgba(255,255,255,.3); text-decoration:none; white-space:nowrap; }
 .btn-top:hover:not(:disabled) { background:rgba(255,255,255,.22); }
 .btn-top:disabled { opacity:.6; cursor:wait; }
@@ -189,7 +191,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 <header class="top">
   <div class="top-linha">
     <div>
-      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v6</span></div>
+      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v7</span></div>
       <h1 id="titulo">Análise de Corte e Religação</h1>
     </div>
     <div class="filtros" id="filtros" hidden>
@@ -198,6 +200,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
       <label class="fsel" data-f="cidade"><span>Cidade</span><select id="fCidade" aria-label="Cidade"></select></label>
       <label class="fsel" data-f="recurso"><span>Recurso</span><select id="fRecurso" aria-label="Recurso"></select></label>
       <label class="fsel" data-f="tipo"><span>Tipo de corte</span><select id="fTipo" aria-label="Tipo de corte"></select></label>
+      <label class="fsel" data-f="ativas" title="Liga: a ligação cortada que está ATIVA no cadastro conta como religada, mesmo sem OS de religação"><input type="checkbox" id="fAtivas" aria-label="Ativas contam como religadas"><span>Ativas = religadas</span></label>
       <button type="button" class="btn-top" id="btnLimpar">Limpar</button>
     </div>
     <div class="ferramentas">
@@ -258,7 +261,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 
 <script>
 "use strict";
-const VERSAO_SITE = "v6-20261014";
+const VERSAO_SITE = "v7-20261014";
 
 // ===================== utilidades =====================
 const $ = (id) => document.getElementById(id);
@@ -350,6 +353,8 @@ function kpis(lista) {
 // ===================== gráficos (Chart.js) =====================
 const COR = { marinho: "#1A2740", azul: "#394D73", azulMed: "#176b9c", ciano: "#16a5b8", ant: "#A7B5CB", laranja: "#E8710A", laranjaEsc: "#9a3412", laranjaCl: "#F3B27A", grade: "#dbe4ec" };
 const GRAFICOS = {};
+COR.cianCl = "#8fd3dc";
+const ROT_ATIVA_OS = "Ativa sem OS de religação", ROT_PERM_ATIVA = "Ativa sem OS";   // rótulos quando "Ativas = religadas" está ligado
 let imprimindo = false;
 
 // rótulos de dados em todas as barras (plugin do guia): dentro da faixa quando cabe, em cima quando não empilhada
@@ -437,7 +442,8 @@ function linhasDe(col) {                                     // {col: [..]} -> [
 
 function carregaDados(d) {
   DADOS = d; R = d.regras;
-  CORTES = linhasDe(d.cortes).map((c) => ({ ...c, mes: (c.mes_corte || "").slice(0, 7) }));
+  CORTES = linhasDe(d.cortes).map((c) => ({ ...c, mes: (c.mes_corte || "").slice(0, 7), ativa_os: !c.data_religacao && c.mes_religacao === R.textos.ativa }));
+  VISAO.lista = null;
   SALDO = linhasDe(d.saldo);
   EVENTOS = linhasDe(d.eventos || {}).map((e) => ({ ...e, mes: (e.data || "").slice(0, 7) }));
   const meses = unicos([...CORTES.map((c) => c.mes), ...SALDO.map((s) => s.mes)]);
@@ -457,6 +463,7 @@ function carregaDados(d) {
       const v = HASH_PENDENTE[k], sel = $(id);
       if (v != null && [...sel.options].some((o) => o.value === v)) { sel.value = v; sel.dataset.escolhido = "1"; }
     }
+    if (HASH_PENDENTE.ativas != null) $("fAtivas").checked = HASH_PENDENTE.ativas === "1";
     if (HASH_PENDENTE.aba && FILTROS_DA_ABA[HASH_PENDENTE.aba]) abaAtual = HASH_PENDENTE.aba;
     HASH_PENDENTE = null;
   }
@@ -467,10 +474,18 @@ function carregaDados(d) {
   desenha();
 }
 
-function filtro() { return { de: $("fDe").value, ate: $("fAte").value, cidade: $("fCidade").value, recurso: $("fRecurso").value, tipo: $("fTipo").value }; }
+function filtro() { return { de: $("fDe").value, ate: $("fAte").value, cidade: $("fCidade").value, recurso: $("fRecurso").value, tipo: $("fTipo").value, ativas: $("fAtivas").checked }; }
+// "Ativas = religadas": o corte sem OS de religação cuja ligação está ATIVA no cadastro passa a valer como religado (sem data)
+let VISAO = { on: null, lista: null };
+function cortesBase() {
+  const on = $("fAtivas").checked;
+  if (VISAO.lista && VISAO.on === on) return VISAO.lista;
+  VISAO = { on, lista: on ? CORTES.map((c) => (c.ativa_os ? { ...c, regua: ROT_ATIVA_OS, permanencia: ROT_PERM_ATIVA } : c)) : CORTES };
+  return VISAO.lista;
+}
 function periodo(f) { if (!f.de || !f.ate) return ""; return f.de === f.ate ? mesRot(f.de) : `${mesRot(f.de)} a ${mesRot(f.ate)}`; }
 function cortesFiltrados(f) {
-  return CORTES.filter((c) => (!f.de || c.mes >= f.de) && (!f.ate || c.mes <= f.ate) && (!f.cidade || c.cidade === f.cidade) && (!f.recurso || c.recurso === f.recurso) && (!f.tipo || c.tipo === f.tipo));
+  return cortesBase().filter((c) => (!f.de || c.mes >= f.de) && (!f.ate || c.mes <= f.ate) && (!f.cidade || c.cidade === f.cidade) && (!f.recurso || c.recurso === f.recurso) && (!f.tipo || c.tipo === f.tipo));
 }
 function mesesEntre(de, ate) {
   const out = []; if (!de || !ate) return out;
@@ -484,6 +499,10 @@ function setFiltro(ids, valor, rotulo) {
   setTimeout(() => { desenha(); toast(`Filtro aplicado: ${rotulo}. Clique em Limpar para voltar.`); }, 0);   // fora do evento do gráfico (que será refeito)
 }
 ["fDe", "fAte", "fCidade", "fRecurso", "fTipo"].forEach((id) => $(id).addEventListener("change", (e) => { e.target.dataset.escolhido = "1"; CTL.verTodos = false; desenha(); }));
+$("fAtivas").addEventListener("change", (e) => {
+  guarda("cortes_ativas", e.target.checked); CTL.verTodos = false; desenha();
+  toast(e.target.checked ? "Ativas = religadas: ligações ATIVAS no cadastro, sem OS de religação, contam como religadas." : "Ativas = religadas desligado.");
+});
 $("btnLimpar").addEventListener("click", () => {
   ["fCidade", "fRecurso", "fTipo"].forEach((id) => { $(id).value = ""; });
   ["fDe", "fAte"].forEach((id) => { delete $(id).dataset.escolhido; });
@@ -494,6 +513,7 @@ $("btnLimpar").addEventListener("click", () => {
 // ===================== abas e desenho (só a aba aberta; gráficos só quando a aba aparece) =====================
 const FILTROS_DA_ABA = { saldo: ["de", "ate", "cidade", "recurso"], cruzada: ["de", "ate", "cidade", "recurso", "tipo"], pos: ["de", "ate", "cidade", "recurso", "tipo"], perm: ["de", "ate", "cidade", "recurso", "tipo"], dados: ["de", "ate", "cidade", "recurso", "tipo"] };
 const ABAS = ["saldo", "cruzada", "pos", "perm", "dados"];
+Object.keys(FILTROS_DA_ABA).forEach((k) => FILTROS_DA_ABA[k].push("ativas"));      // o filtro vale para todas as abas
 let abaAtual = "saldo", CTX = null; const sujo = {}; const MEM = {};
 
 function ativaAba(aba) {
@@ -511,7 +531,7 @@ function desenha() {
   DET.length = 0;
   ABAS.forEach((a) => { sujo[a] = true; });
   $("titulo").textContent = "Análise de Corte e Religação" + (CTX.per ? " — " + CTX.per : "");
-  $("soImpressao").textContent = "Análise de Corte e Religação" + (CTX.per ? " — " + CTX.per : "") + (f.cidade ? " · " + f.cidade : "") + (f.recurso ? " · " + f.recurso : "") + (f.tipo ? " · " + f.tipo : "");
+  $("soImpressao").textContent = "Análise de Corte e Religação" + (CTX.per ? " — " + CTX.per : "") + (f.cidade ? " · " + f.cidade : "") + (f.recurso ? " · " + f.recurso : "") + (f.tipo ? " · " + f.tipo : "") + (f.ativas ? " · Ativas = religadas" : "");
   ativaAba(abaAtual);
 }
 const RENDER = { saldo: abaSaldo, cruzada: abaCruzada, pos: abaPos, perm: abaPermanencia, dados: abaDados };
@@ -552,17 +572,20 @@ function abaSaldo({ f, per }) {
   const corte = grupo(C.corte, "(−) Corte", -1, true);
   const relig = grupo(C.religacao, "(+) Religação", 1, true);
   const lna = grupo(C.implantacao, "(+) Implantação de ligação de água", 1, false);
-  const saldo = meses.map((_, i) => corte[i] + relig[i] + lna[i]);
+  const ativasOs = f.ativas ? cortesBase().filter((c) => c.ativa_os && (!f.de || c.mes >= f.de) && (!f.ate || c.mes <= f.ate) && (!f.cidade || c.cidade === f.cidade) && (!f.recurso || c.recurso === f.recurso)) : [];
+  const ativaMes = meses.map((m) => { const l = ativasOs.filter((c) => c.mes === m); return campo === "economias" ? soma(l.map((c) => c.economias)) : l.length; });
+  if (f.ativas) linhas.push({ classe: "grupo", celulas: ["(+) Ativa sem OS de religação", ...ativaMes.map((v, i) => num(v, false, regDet(`Ativa sem OS — ${mesRot(meses[i])}`, () => ativasOs.filter((c) => c.mes === meses[i]), "cortes"))), num(soma(ativaMes), false, regDet(`Ativa sem OS — ${per}`, () => ativasOs, "cortes"))] });
+  const saldo = meses.map((_, i) => corte[i] + relig[i] + lna[i] + ativaMes[i]);
   let acc = 0; const acumulado = saldo.map((v) => (acc += v));
   linhas.push({ classe: "linha-total", celulas: ["Saldo do mês", ...saldo.map((v) => num(v, true)), num(soma(saldo), true)] });
   linhas.push({ classe: "linha-total", celulas: ["Saldo acumulado", ...acumulado.map((v) => num(v, true)), num(acc, true)] });
 
   const semCad = soma(ev.map((s) => s.sem_cadastro));
-  const totCorte = -soma(corte), totRelig = soma(relig), totLna = soma(lna), totSaldo = soma(saldo);
+  const totCorte = -soma(corte), totRelig = soma(relig) + soma(ativaMes), totLna = soma(lna), totSaldo = soma(saldo);
   const unidade = campo === "economias" ? "economias" : "ligações";
   const topo = kpis([
     { rot: "Cortes", val: fmtN(totCorte), det: unidade, ajuda: "OS de corte Finalizadas, uma por matrícula e dia." },
-    { rot: "Religações", val: fmtN(totRelig), det: unidade, ajuda: "OS de religação Finalizadas (inclui autorreligação)." },
+    { rot: "Religações", val: fmtN(totRelig), det: f.ativas ? `${unidade} · inclui ${fmtN(soma(ativaMes))} ativas sem OS` : unidade, ajuda: "OS de religação Finalizadas (inclui autorreligação)." + (f.ativas ? " Com “Ativas = religadas”, soma também as ligações ATIVAS no cadastro sem OS de religação, no mês do corte." : "") },
     { rot: "Implantações (LNA)", val: fmtN(totLna), det: unidade, ajuda: "Implantação de ligação de água Finalizada." },
     { rot: "Saldo do período", val: fmtN(totSaldo), det: "−corte + religação + implantação", neg: totSaldo < 0, ajuda: "Saldo = −corte + religação + implantação de ligação de água." },
     { rot: "Religação ÷ corte", val: totCorte ? fmtP(totRelig / totCorte) : "-", det: "no período", ajuda: "Quantas religações para cada corte no período." },
@@ -579,6 +602,7 @@ function abaSaldo({ f, per }) {
           barra("Corte", corte, COR.laranja, { stack: "a", empilhado: true, order: 3 }),
           barra("Religação", relig, COR.marinho, { stack: "a", empilhado: true, order: 3 }),
           barra("Implantação (LNA)", lna, COR.ciano, { stack: "a", empilhado: true, order: 3 }),
+          ...(f.ativas ? [barra("Ativa sem OS", ativaMes, COR.cianCl, { stack: "a", empilhado: true, order: 3, corTexto: "#1f2d3d" })] : []),
           { type: "line", label: "Saldo do mês", data: saldo, borderColor: COR.azul, backgroundColor: "#fff", pointBorderColor: COR.azul, pointBackgroundColor: "#fff", pointRadius: 4, borderWidth: 2, tension: 0, rotulos: false, order: 1 },
           { type: "line", label: "Saldo acumulado", data: acumulado, borderColor: COR.azulMed, borderDash: [6, 4], pointRadius: 0, borderWidth: 2, tension: 0, rotulos: false, order: 2 },
         ],
@@ -603,7 +627,7 @@ function filtraPos(cortes, modo) {
   if (modo === "sem") return cortes.filter((c) => !c.data_pos);
   return cortes;
 }
-function abaCruzada({ cortes: todos, per }) {
+function abaCruzada({ f, cortes: todos, per }) {
   const T = R.textos, cortes = filtraPos(todos, CTL.posCruzada), pct = CTL.modoCruzada === "pct";
   const mesesCorte = unicos(cortes.map((c) => c.mes));
   const mesesRel = unicos(cortes.map((c) => c.mes_religacao).filter((m) => /^\d{4}-\d{2}$/.test(m)));
@@ -621,7 +645,7 @@ function abaCruzada({ cortes: todos, per }) {
       if (pct) { c.txt = v === 0 ? "-" : fmtP(share); }
       return c;
     });
-    const relig = tot - doTot(T.ativa).length - doTot(T.sem_religacao).length;
+    const relig = tot - (f.ativas ? 0 : doTot(T.ativa).length) - doTot(T.sem_religacao).length;     // com "Ativas = religadas", Ativa conta como religado
     return { classe, celulas: [rot, ...celulas, pct ? pCel(1) : nCel(tot, `${rot} — todos os cortes`, () => lista), pCel(tot ? relig / tot : null)] };
   };
   const linhas = mesesCorte.map((m) => linha(cortes.filter((c) => c.mes === m), mesRot(m)));
@@ -642,12 +666,12 @@ function abaCruzada({ cortes: todos, per }) {
     return { label: mesCurto(m), data: Array.from({ length: maxK + 1 }, (_, j) => (j > lim ? null : +(l.filter((c) => c.data_religacao && idxMes(c.data_religacao.slice(0, 7)) - idxMes(m) <= j).length / t * 100).toFixed(1))),
       borderColor: paleta[paleta.length - coortes.length + k] || COR.marinho, backgroundColor: paleta[paleta.length - coortes.length + k] || COR.marinho, borderWidth: k === coortes.length - 1 ? 3 : 2, pointRadius: 3, tension: 0, rotulos: false, fmt: (v) => nf1.format(v) + "%" };
   });
-  const totRel = cortes.filter((c) => c.data_religacao).length, nAtiva = cortes.filter((c) => c.mes_religacao === T.ativa).length, nSem = cortes.filter((c) => c.mes_religacao === T.sem_religacao).length;
+  const nAtiva = cortes.filter((c) => c.mes_religacao === T.ativa).length, totRel = cortes.filter((c) => c.data_religacao).length + (f.ativas ? nAtiva : 0), nSem = cortes.filter((c) => c.mes_religacao === T.sem_religacao).length;
   const diasRel = cortes.filter((c) => c.data_religacao).map((c) => c.dias);
   const topo = kpis([
     { rot: "Cortes no período", val: fmtN(cortes.length), det: CTL.posCruzada === "todos" ? "com e sem pós-corte" : (CTL.posCruzada === "com" ? "só com pós-corte" : "só sem pós-corte") },
     { rot: "Religaram", val: fmtN(totRel), det: cortes.length ? fmtP(totRel / cortes.length) + " dos cortes" : "-", ajuda: "Cortes com OS de religação Finalizada antes do próximo corte da matrícula." },
-    { rot: "Ativa (sem OS de religação)", val: fmtN(nAtiva), det: "cadastro mostra ATIVA", ajuda: "Sem OS de religação, mas o cadastro mostra a ligação ATIVA no último corte da matrícula." },
+    { rot: "Ativa (sem OS de religação)", val: fmtN(nAtiva), det: f.ativas ? "contam como religadas" : "cadastro mostra ATIVA", ajuda: "Sem OS de religação, mas o cadastro mostra a ligação ATIVA no último corte da matrícula." },
     { rot: "Sem religação", val: fmtN(nSem), det: cortes.length ? fmtP(nSem / cortes.length) + " dos cortes" : "-", neg: nSem > 0 },
     { rot: "Mediana até religar", val: diasRel.length ? nf0.format(mediana(diasRel)) + " dias" : "-", det: "só quem religou", ajuda: "Dias entre o corte e a religação (religação no mesmo dia conta 0)." },
   ]);
@@ -674,13 +698,13 @@ function abaCruzada({ cortes: todos, per }) {
 }
 
 // ===================== aba Pós-corte =====================
-const COR_REGUA = (rg) => ({ [rg.faixas[0].nome]: COR.laranjaCl, [rg.faixas[1].nome]: COR.laranja, [rg.faixas[2].nome]: COR.laranjaEsc, [rg.com_pos]: COR.ciano, [rg.religado_apos_pos]: COR.azulMed, [rg.religado]: COR.marinho });
-function abaPos({ cortes: todos, per }) {
+const COR_REGUA = (rg) => ({ [ROT_ATIVA_OS]: COR.cianCl, [rg.faixas[0].nome]: COR.laranjaCl, [rg.faixas[1].nome]: COR.laranja, [rg.faixas[2].nome]: COR.laranjaEsc, [rg.com_pos]: COR.ciano, [rg.religado_apos_pos]: COR.azulMed, [rg.religado]: COR.marinho });
+function abaPos({ f, cortes: todos, per }) {
   const rg = R.regua, T = R.textos, sit = CTL.sitPos;
   const cortes = sit ? todos.filter((c) => c.situacao === sit) : todos;
   const meses = unicos(cortes.map((c) => c.mes));
   const semPos = rg.faixas.map((f) => f.nome);
-  const ordem = [...semPos, rg.com_pos, rg.religado_apos_pos, rg.religado];
+  const ordem = [...semPos, rg.com_pos, rg.religado_apos_pos, rg.religado, ...(f.ativas ? [ROT_ATIVA_OS] : [])];
   const sem = cortes.filter((c) => semPos.includes(c.regua));
   const sucesso = R.status.pos_corte_sem_sucesso;
   const cores = COR_REGUA(rg);
@@ -767,11 +791,12 @@ function abaPos({ cortes: todos, per }) {
 }
 
 // ===================== aba Permanência =====================
-function abaPermanencia({ cortes: todos, per }) {
+function abaPermanencia({ f, cortes: todos, per }) {
+  const ativasOn = f.ativas;
   const P = R.permanencia, cortes = filtraPos(todos, CTL.posPerm), pct = CTL.modoPerm === "pct";
-  const faixas = [...P.faixas.map((f) => f.nome), P.sem_religacao];
+  const faixas = [...P.faixas.map((x) => x.nome), ...(ativasOn ? [ROT_PERM_ATIVA] : []), P.sem_religacao];
   const tipos = ordenaTipos(unicos(cortes.map((c) => c.tipo)));
-  const coresFaixa = [COR.marinho, COR.azul, COR.azulMed, COR.ciano, COR.ant, COR.laranja, COR.laranjaEsc];
+  const coresFaixa = [COR.marinho, COR.azul, COR.azulMed, COR.ciano, COR.ant, COR.laranja, ...(ativasOn ? [COR.cianCl] : []), COR.laranjaEsc];
   const linha = (lista, rot, classe) => {
     const t = lista.length, cel = faixas.map((f) => { const s = lista.filter((c) => c.permanencia === f); const c = nCel(pct ? (t ? s.length / t : 0) : s.length, `${rot} — ${f}`, () => s); if (pct) c.txt = s.length ? fmtP(s.length / t) : "-"; return c; });
     return { classe, celulas: [rot, ...cel, pct ? pCel(1) : nCel(t, `${rot} — todos`, () => lista)] };
@@ -781,7 +806,8 @@ function abaPermanencia({ cortes: todos, per }) {
 
   const ind = (lista) => {
     const rel = lista.filter((c) => c.data_religacao), dias = rel.map((c) => c.dias), ate15 = rel.filter((c) => c.dias <= P.faixas[0].ate).length;
-    return { n: lista.length, pRel: lista.length ? rel.length / lista.length : null, p15: lista.length ? ate15 / lista.length : null, med: mediana(dias) };
+    const ativaOs = ativasOn ? lista.filter((c) => c.ativa_os).length : 0;       // religadas sem data: contam no % religado, não nos dias
+    return { n: lista.length, pRel: lista.length ? (rel.length + ativaOs) / lista.length : null, p15: lista.length ? ate15 / lista.length : null, med: mediana(dias) };
   };
   const p = (v) => ({ v, txt: fmtP(v), classe: "num" }), md = (v) => ({ v, txt: v == null ? "-" : nf0.format(v), classe: "num" });
   const grupos = [...tipos.map((t) => [t, todos.filter((c) => c.tipo === t)]), ["Total", todos]];
@@ -863,6 +889,8 @@ function explicacao() {
   <li><b>Pós-corte</b>: 1ª vistoria pós-corte (${esc(S.pos_corte_aceitos.join(" ou "))}) na mesma janela. Se ela foi <i>${esc(S.pos_corte_sem_sucesso)}</i>, a observação mostra que a visita foi sem sucesso, e a coluna <i>Data 1º pós corte Finalizado</i> mostra se houve uma visita com sucesso depois.</li>
   <li><b>Situação</b> e <b>economias</b>: da planilha de cadastro (<code>SIT_LIG</code>, <code>TOTAL_ECO</code>), referência mais recente da matrícula.</li>
   <li><b>Mês da religação</b>: o mês da religação; sem religação, <b>Ativa</b> quando o cadastro mostra a ligação ATIVA e este é o último corte da matrícula, senão <b>Sem Religação</b>.</li></ul>
+  <h3>Filtro “Ativas = religadas”</h3>
+  <p>Desligado (padrão): corte sem OS de religação é “Sem Religação”, mesmo que a ligação esteja ATIVA no cadastro (aparece na coluna <b>Ativa</b>). Ligado: esse corte passa a contar como <b>religado</b> em todas as abas — fica fora de “sem a 1ª visita” e de “sem religação”, entra no % religado, na régua (<b>${esc(ROT_ATIVA_OS)}</b>), na permanência (<b>${esc(ROT_PERM_ATIVA)}</b>) e, no saldo, como religação no mês do corte. Como não há data de religação, esses casos não entram nos cálculos de dias nem na mediana.</p>
   <h3>Régua de cobrança</h3>
   <ul><li>Religou: <b>${esc(rg.religado_apos_pos)}</b> se a religação foi no dia do pós-corte ou depois; senão <b>${esc(rg.religado)}</b>.</li>
   <li>Não religou e teve pós-corte: <b>${esc(rg.com_pos)}</b>.</li>
@@ -991,7 +1019,7 @@ function atualizaHash() {
   if (!DADOS) return;
   const f = filtro(), p = new URLSearchParams();
   p.set("aba", abaAtual);
-  for (const [k, v] of Object.entries(f)) if (v) p.set(k, v);
+  for (const [k, v] of Object.entries(f)) if (v) p.set(k, k === "ativas" ? "1" : v);
   try { history.replaceState(null, "", "#" + p.toString()); } catch (e) { /* sem histórico */ }
 }
 
@@ -1121,6 +1149,7 @@ $("inputPasta").addEventListener("change", (e) => {
   analisa(arquivos); e.target.value = "";
 });
 
+$("fAtivas").checked = le("cortes_ativas", false) === true;
 HASH_PENDENTE = lerHash();
 (async () => {
   if (!("showDirectoryPicker" in window)) return;
