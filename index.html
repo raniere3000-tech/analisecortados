@@ -191,7 +191,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 <header class="top">
   <div class="top-linha">
     <div>
-      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v8</span></div>
+      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v9</span></div>
       <h1 id="titulo">Análise de Corte e Religação</h1>
     </div>
     <div class="filtros" id="filtros" hidden>
@@ -262,7 +262,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 
 <script>
 "use strict";
-const VERSAO_SITE = "v8-20261014";
+const VERSAO_SITE = "v9-20261014";
 
 // ===================== utilidades =====================
 const $ = (id) => document.getElementById(id);
@@ -880,7 +880,10 @@ function abaDados() {
 }
 function ligaDados() {
   const b = $("btnExcel"); if (!b) return;
-  b.onclick = () => { b.disabled = true; mostraProgresso("Gerando a planilha…"); worker.postMessage({ fase: "excel" }); };
+  b.onclick = () => {
+    if (!analiseNoWorker) { toast("A planilha fica disponível quando a leitura da pasta terminar.", true); return; }   // painel mostrando a última leitura guardada
+    b.disabled = true; mostraProgresso("Gerando a planilha…"); worker.postMessage({ fase: "excel" });
+  };
   $("btnLimparCache").onclick = () => { if (!confirm("Apagar as leituras guardadas neste navegador? A próxima análise vai ler todos os arquivos de novo.")) return; if (!worker) novoWorker(); worker.postMessage({ fase: "limparCache" }); };
   $("btnCsvCortes").onclick = () => {
     const cols = Object.keys(DADOS.cortes).filter((k) => k !== "mes");
@@ -1061,7 +1064,7 @@ window.addEventListener("afterprint", () => {
 });
 
 // ===================== pasta, progresso e worker =====================
-let worker = null, pastaHandle = null, inicioAnalise = 0, pastaNome = "";
+let worker = null, pastaHandle = null, inicioAnalise = 0, pastaNome = "", statusOcioso = "", analiseNoWorker = false;
 const ETAPAS = ["Preparar o Python", "Ler os arquivos", "Classificar as atividades", "Cruzar cortes e religações", "Montar o painel"];
 function etapaDe(pct) { return pct == null ? 0 : pct < 70 ? 1 : pct < 80 ? 2 : pct < 97 ? 3 : 4; }
 function mostraEtapas(atual) {
@@ -1077,11 +1080,13 @@ function novoWorker() {
     if (m.tipo === "etapa") progresso(null, m.texto);
     else if (m.tipo === "progresso") progresso(m.pct, m.texto);
     else if (m.tipo === "log") { $("log").textContent += m.linha + "\n"; $("detalhes").hidden = false; }
+    else if (m.tipo === "pronto") { if (!inicioAnalise) status(statusOcioso); }
     else if (m.tipo === "resultado") {
-      escondeProgresso(); carregaDados(m.dados);
+      escondeProgresso(); carregaDados(m.dados); analiseNoWorker = true;
       const n = m.dados.arquivos.filter((a) => a.tipo !== "erro" && a.tipo !== "não usado").length;
-      status(`Pasta: ${pastaNome} — ${n} arquivo(s) lidos às ${new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`);
+      status(statusOcioso = `Pasta: ${pastaNome} — ${n} arquivo(s) lidos às ${new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`);
       toast("Painel atualizado — " + n + " arquivo(s) lidos");
+      guardaUltimo(m.dados);
     } else if (m.tipo === "cacheLimpo") {
       toast("Leituras guardadas apagadas. Clique em ↻ Atualizar para ler tudo de novo.");
     } else if (m.tipo === "excel") {
@@ -1148,6 +1153,7 @@ async function lePastaHandle() {
     }
     pastaNome = pastaHandle.name;
     status("Listando os arquivos…");
+    $("btnConectar2").onclick = null; $("btnConectar2").textContent = "📁 Conectar pasta";
     analisa(await arquivosDaPasta(pastaHandle));
   } catch (e) { aviso("Não foi possível ler a pasta: " + e.message); habilita(true); }
 }
@@ -1159,7 +1165,7 @@ async function conecta() {
   } else $("inputPasta").click();                            // Firefox/Safari: escolha comum de pasta (sem Atualizar)
 }
 $("btnConectar").addEventListener("click", conecta);
-$("btnConectar2").addEventListener("click", conecta);
+$("btnConectar2").addEventListener("click", (e) => { if (!$("btnConectar2").onclick) conecta(e); });
 $("btnAtualizar").addEventListener("click", () => { if (pastaHandle) lePastaHandle(); });
 $("inputPasta").addEventListener("change", (e) => {
   const arquivos = [...e.target.files].filter((f) => EXT.test(f.name) && !f.name.startsWith("~$")).map((f) => ({
@@ -1170,10 +1176,42 @@ $("inputPasta").addEventListener("change", (e) => {
 
 $("fAtivas").checked = le("cortes_ativas", false) === true;
 HASH_PENDENTE = lerHash();
+// ===== ao abrir a página: mostra a última leitura e já começa a ler a pasta de novo =====
+async function guardaUltimo(dados) {                      // último resultado, para aparecer na hora ao reabrir a página
+  try { const db = await bancoPasta(); db.transaction("pasta", "readwrite").objectStore("pasta").put({ dados, pasta: pastaNome, quando: Date.now() }, "ultimo"); } catch (e) { /* sem armazenamento */ }
+}
+async function leUltimo() {
+  try { const db = await bancoPasta(); return await new Promise((ok) => { const r = db.transaction("pasta").objectStore("pasta").get("ultimo"); r.onsuccess = () => ok(r.result || null); r.onerror = () => ok(null); }); }
+  catch (e) { return null; }
+}
+function esperaUmClique() {                               // o navegador só pede a permissão da pasta depois de um clique ou tecla
+  const tenta = (e) => {
+    if (e.target.closest && e.target.closest("#btnConectar, #btnConectar2, #btnAtualizar, input, select, a")) return;   // esses botões já fazem a leitura
+    document.removeEventListener("pointerdown", tenta, true); document.removeEventListener("keydown", tenta, true);
+    if (!inicioAnalise) lePastaHandle();
+  };
+  document.addEventListener("pointerdown", tenta, true); document.addEventListener("keydown", tenta, true);
+}
 (async () => {
+  if (window.Worker) { novoWorker(); worker.postMessage({ fase: "preparar" }); }          // o Python já começa a baixar
   if (!("showDirectoryPicker" in window)) return;
   pastaHandle = await pastaGuardada();
-  if (pastaHandle) { status("Pasta guardada: " + pastaHandle.name + " — clique em ↻ Atualizar"); habilita(true); }
+  if (!pastaHandle) return;
+  pastaNome = pastaHandle.name; habilita(true);
+  const ultimo = await leUltimo();
+  if (ultimo && ultimo.dados && ultimo.pasta === pastaHandle.name) {
+    try {
+      carregaDados(ultimo.dados);
+      status(statusOcioso = `Pasta: ${pastaNome} — mostrando a leitura de ${new Date(ultimo.quando).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}`);
+    } catch (e) { /* formato antigo: espera a leitura nova */ }
+  }
+  let permissao = "prompt";
+  try { permissao = await pastaHandle.queryPermission({ mode: "read" }); } catch (e) { /* navegador sem consulta */ }
+  if (permissao === "granted") { lePastaHandle(); return; }                               // permissão salva: lê sem clique
+  status(statusOcioso = (DADOS ? statusOcioso + " · " : "") + `Clique em qualquer lugar da página para atualizar a pasta “${pastaNome}”`);
+  const b = $("btnConectar2"); if (b && !DADOS) b.textContent = `▶ Carregar a pasta “${pastaNome}”`;
+  if (b && !DADOS) b.onclick = (e) => { e.stopPropagation(); lePastaHandle(); };
+  esperaUmClique();
 })();
 </script>
 </body>

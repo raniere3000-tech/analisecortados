@@ -9,6 +9,11 @@ Abra o site (GitHub Pages deste repositório) no **Chrome ou Edge**, clique em *
 SharePoint sincronizada no computador pelo OneDrive. As subpastas também são lidas. Depois de colocar arquivos novos
 na pasta, clique em **↻ Atualizar**: arquivos que não mudaram não são lidos de novo (a leitura fica guardada no navegador).
 
+**Ao abrir ou atualizar a página**, o painel mostra na hora a última leitura e já começa a ler a pasta de novo (o Python
+começa a baixar assim que a página abre). Se o navegador guardou a permissão da pasta (no Chrome/Edge, escolha
+"Permitir em todas as visitas" quando ele perguntar), a leitura começa sozinha; senão, basta um clique em qualquer
+lugar da página.
+
 O processamento roda no navegador: o site executa o pacote Python `cortes/` com o [Pyodide](https://pyodide.org)
 (`analisador.worker.js` + `executor_web.py`). Os arquivos não são enviados para nenhum servidor. Na primeira vez, o
 navegador baixa o Python (cerca de 30 MB), que depois fica em cache.

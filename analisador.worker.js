@@ -216,6 +216,10 @@ async function limpaCache() {
 
 self.onmessage = async (evento) => {
   const { fase, arquivos } = evento.data;
+  if (fase === "preparar") {                         // ao abrir a página: adianta o download do Python enquanto a pasta não vem
+    try { await iniciaPyodide(); avisa("pronto", {}); } catch (e) { avisa("log", { linha: "Aviso: " + (e.message || e) }); }
+    return;
+  }
   try {
     if (fase === "limparCache") await limpaCache();
     else if (fase === "excel") await faseExcel();
