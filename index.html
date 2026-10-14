@@ -1,0 +1,559 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Análise de Corte e Religação</title>
+<style>
+:root {
+  --fundo: #f4f6f9; --cartao: #fff; --texto: #1d2733; --suave: #5d6b7a; --borda: #dde3ea;
+  --primaria: #0f4c75; --primaria-clara: #e3eef7; --cabecalho: #12405f; --neg: #b3261e; --pos: #1b7f3b;
+  --total: #eef3f8; --destaque: #fff6d6;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font: 14px/1.45 "Segoe UI", system-ui, -apple-system, sans-serif; background: var(--fundo); color: var(--texto); }
+header { background: var(--cabecalho); color: #fff; padding: 12px 20px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+header h1 { font-size: 18px; margin: 0 12px 0 0; font-weight: 600; }
+#versao { font-size: 11px; opacity: .7; }
+header .acoes { display: flex; gap: 8px; flex-wrap: wrap; margin-left: auto; align-items: center; }
+button, select { font: inherit; }
+button { border: 1px solid var(--borda); background: var(--cartao); color: var(--texto); border-radius: 6px; padding: 6px 12px; cursor: pointer; }
+button:hover:not(:disabled) { border-color: var(--primaria); }
+button:disabled { opacity: .5; cursor: default; }
+header button { background: rgba(255,255,255,.12); color: #fff; border-color: rgba(255,255,255,.35); }
+header button.principal { background: #fff; color: var(--cabecalho); font-weight: 600; }
+#pastaNome { font-size: 12px; opacity: .85; }
+main { padding: 16px 20px 40px; max-width: 1600px; margin: 0 auto; }
+#progresso { display: none; background: var(--cartao); border: 1px solid var(--borda); border-radius: 8px; padding: 12px 16px; margin-bottom: 14px; }
+#progresso .barra { height: 8px; background: var(--primaria-clara); border-radius: 4px; overflow: hidden; margin-top: 8px; }
+#progresso .barra div { height: 100%; width: 0; background: var(--primaria); transition: width .3s; }
+#aviso { display: none; border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; background: #fdecea; color: var(--neg); border: 1px solid #f5c6c2; white-space: pre-wrap; }
+#inicio { background: var(--cartao); border: 1px solid var(--borda); border-radius: 8px; padding: 20px 24px; }
+#inicio h2 { margin-top: 0; font-size: 17px; }
+#inicio li { margin: 4px 0; }
+#painel { display: none; }
+.filtros { display: flex; flex-wrap: wrap; gap: 14px; align-items: end; background: var(--cartao); border: 1px solid var(--borda); border-radius: 8px; padding: 10px 14px; margin-bottom: 12px; }
+.filtros label { display: flex; flex-direction: column; font-size: 12px; color: var(--suave); gap: 3px; }
+.filtros select { min-width: 130px; padding: 4px 6px; border: 1px solid var(--borda); border-radius: 5px; background: #fff; }
+nav.abas { display: flex; gap: 4px; flex-wrap: wrap; border-bottom: 2px solid var(--borda); margin-bottom: 14px; }
+nav.abas button { border: none; border-radius: 6px 6px 0 0; background: transparent; padding: 8px 14px; color: var(--suave); font-weight: 600; }
+nav.abas button.ativa { background: var(--cartao); color: var(--primaria); box-shadow: inset 0 -3px 0 var(--primaria); }
+.aba { display: none; }
+.aba.ativa { display: block; }
+.bloco { background: var(--cartao); border: 1px solid var(--borda); border-radius: 8px; padding: 14px 16px; margin-bottom: 14px; }
+.bloco h3 { margin: 0 0 4px; font-size: 15px; }
+.bloco .nota { color: var(--suave); font-size: 12.5px; margin: 0 0 10px; }
+.bloco .topo { display: flex; justify-content: space-between; align-items: start; gap: 10px; flex-wrap: wrap; }
+.controles { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; font-size: 12.5px; color: var(--suave); }
+.controles select { padding: 3px 6px; border: 1px solid var(--borda); border-radius: 5px; }
+.rolagem { overflow-x: auto; }
+table { border-collapse: collapse; font-size: 12.5px; white-space: nowrap; }
+th, td { padding: 4px 9px; border-bottom: 1px solid var(--borda); text-align: right; }
+th { background: var(--cabecalho); color: #fff; font-weight: 600; position: sticky; top: 0; }
+th:first-child, td:first-child { text-align: left; }
+td.txt { text-align: left; }
+tr.total td { background: var(--total); font-weight: 700; }
+tr.sub td:first-child { padding-left: 22px; color: var(--suave); }
+tr.grupo td { font-weight: 600; }
+tr.saldo td { background: var(--destaque); font-weight: 700; }
+td.neg { color: var(--neg); }
+td.pos { color: var(--pos); }
+td.vazio { color: #b0b9c3; }
+.csv { font-size: 11.5px; padding: 3px 8px; }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-bottom: 14px; }
+.kpi { background: var(--cartao); border: 1px solid var(--borda); border-radius: 8px; padding: 10px 14px; }
+.kpi .rot { font-size: 12px; color: var(--suave); }
+.kpi .val { font-size: 22px; font-weight: 700; }
+.kpi .det { font-size: 11.5px; color: var(--suave); }
+.explica h4 { margin: 14px 0 4px; font-size: 13.5px; }
+.explica p, .explica li { font-size: 13px; margin: 3px 0; }
+code { background: var(--total); padding: 0 4px; border-radius: 3px; }
+#log { font: 11px/1.4 monospace; color: var(--suave); max-height: 120px; overflow: auto; white-space: pre-wrap; margin-top: 6px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Análise de Corte e Religação <span id="versao">v1-20261014</span></h1>
+  <span id="pastaNome"></span>
+  <div class="acoes">
+    <button id="btnConectar" class="principal">📁 Conectar pasta</button>
+    <button id="btnAtualizar" disabled title="Relê a mesma pasta (Chrome e Edge)">↻ Atualizar</button>
+    <input type="file" id="inputPasta" webkitdirectory directory multiple hidden>
+  </div>
+</header>
+<main>
+  <div id="progresso"><span id="progTexto">Preparando…</span><div class="barra"><div id="progBarra"></div></div><div id="log"></div></div>
+  <div id="aviso"></div>
+
+  <section id="inicio">
+    <h2>Como usar</h2>
+    <ol>
+      <li>Clique em <b>Conectar pasta</b> e escolha a pasta do SharePoint sincronizada no computador (OneDrive). As subpastas também são lidas.</li>
+      <li>Na pasta precisam estar:
+        <ul>
+          <li>os arquivos de atividades — o nome começa com <code>Atividades-</code> (pode haver vários; atividade repetida entre arquivos conta uma vez, pelo <i>ID da Atividade</i>);</li>
+          <li>a planilha de <b>cadastro</b> (colunas <code>NUM_LIGACAO</code>, <code>SIT_LIG</code>, <code>TOTAL_ECO</code>…), de onde vêm a situação atual e as economias;</li>
+          <li>opcional: a planilha <b>Descrição serviço</b> (colunas <code>SERVICO</code> e <code>CATEGORIA</code>); sem ela, o site usa a própria cópia.</li>
+        </ul></li>
+      <li>Depois de colocar arquivos novos na pasta, clique em <b>Atualizar</b>. Arquivos que não mudaram não são lidos de novo.</li>
+    </ol>
+    <p class="nota">Tudo roda no navegador: os arquivos não são enviados para nenhum servidor. Na primeira vez, o navegador baixa o Python (cerca de 30 MB), que depois fica em cache.</p>
+  </section>
+
+  <section id="painel">
+    <div class="filtros">
+      <label>Mês inicial<select id="fDe"></select></label>
+      <label>Mês final<select id="fAte"></select></label>
+      <label>Cidade<select id="fCidade"></select></label>
+      <label>Recurso<select id="fRecurso"></select></label>
+      <label>Tipo de corte<select id="fTipo"></select></label>
+      <button id="btnLimpar">Limpar filtros</button>
+    </div>
+    <nav class="abas">
+      <button data-aba="saldo" class="ativa">Saldo de economias</button>
+      <button data-aba="cruzada">Corte × Religação</button>
+      <button data-aba="pos">Pós-corte</button>
+      <button data-aba="perm">Permanência</button>
+      <button data-aba="dados">Dados</button>
+    </nav>
+    <div id="aba-saldo" class="aba ativa"></div>
+    <div id="aba-cruzada" class="aba"></div>
+    <div id="aba-pos" class="aba"></div>
+    <div id="aba-perm" class="aba"></div>
+    <div id="aba-dados" class="aba"></div>
+  </section>
+</main>
+
+<script>
+"use strict";
+const VERSAO_SITE = "v1-20261014";
+
+// ===================== utilidades =====================
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const nf0 = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 });
+const nf2 = new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmtN = (v) => (v == null || v === "" ? "" : nf0.format(v));
+const fmtP = (v) => (v == null || !isFinite(v) ? "-" : nf0.format(v * 100) + "%");
+const mesRot = (m) => (/^\d{4}-\d{2}/.test(m || "") ? `01/${m.slice(5, 7)}/${m.slice(0, 4)}` : m);
+const dataRot = (d) => (/^\d{4}-\d{2}-\d{2}/.test(d || "") ? `${d.slice(8, 10)}/${d.slice(5, 7)}/${d.slice(0, 4)}` : (d || ""));
+const soma = (arr) => arr.reduce((a, b) => a + (b || 0), 0);
+const mediana = (arr) => { if (!arr.length) return null; const s = [...arr].sort((a, b) => a - b), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
+const unicos = (arr) => [...new Set(arr.filter((v) => v != null && v !== ""))].sort();
+
+function aviso(texto) { const a = $("aviso"); a.textContent = texto || ""; a.style.display = texto ? "block" : "none"; }
+
+// Tabelas: guardam os dados para o botão CSV
+const TABELAS = {};
+function tabela(id, cabecalho, linhas, opcoes = {}) {
+  TABELAS[id] = { cabecalho, linhas: linhas.map((l) => l.celulas.map((c) => (c && typeof c === "object" ? c.csv ?? c.v : c))) };
+  const th = cabecalho.map((c) => `<th>${esc(c)}</th>`).join("");
+  const corpo = linhas.map((l) => `<tr class="${l.classe || ""}">${l.celulas.map((c, i) => celula(c, i, opcoes)).join("")}</tr>`).join("");
+  return `<div class="rolagem"><table id="t-${id}"><thead><tr>${th}</tr></thead><tbody>${corpo}</tbody></table></div>`;
+}
+function celula(c, i, opcoes) {
+  if (c && typeof c === "object") return `<td class="${c.classe || ""}">${esc(c.txt ?? c.v)}</td>`;
+  if (typeof c === "number") {
+    const txt = opcoes.pct && i > 0 ? fmtP(c) : fmtN(c);
+    return `<td class="${c === 0 ? "vazio" : ""}">${txt}</td>`;
+  }
+  return `<td class="${i === 0 ? "" : "txt"}">${esc(c)}</td>`;
+}
+function botaoCsv(id, nome) { return `<button class="csv" data-csv="${id}" data-nome="${esc(nome)}">⬇ Excel (CSV)</button>`; }
+function baixaCsv(cabecalho, linhas, nome) {
+  const q = (v) => { if (v == null) return ""; if (typeof v === "number") return String(v).replace(".", ","); const s = String(v); return /[;"\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+  const texto = "\ufeff" + [cabecalho, ...linhas].map((l) => l.map(q).join(";")).join("\r\n");
+  baixa(new Blob([texto], { type: "text/csv;charset=utf-8" }), nomeArquivo(nome) + ".csv");
+}
+function nomeArquivo(nome) {                              // sem acento e sem caracteres proibidos no Windows
+  return nome.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[\\/:*?"<>|]/g, "_").trim() || "tabela";
+}
+function baixa(blob, nome) {
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = nome;
+  document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+}
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-csv]");
+  if (b && TABELAS[b.dataset.csv]) baixaCsv(TABELAS[b.dataset.csv].cabecalho, TABELAS[b.dataset.csv].linhas, b.dataset.nome);
+});
+function bloco(titulo, nota, conteudo, idCsv, controles = "") {
+  return `<div class="bloco"><div class="topo"><div><h3>${esc(titulo)}</h3>${nota ? `<p class="nota">${nota}</p>` : ""}</div>
+    <div class="controles">${controles}${idCsv ? botaoCsv(idCsv, titulo) : ""}</div></div>${conteudo}</div>`;
+}
+function seletor(id, opcoes, valor) {
+  return `<select data-ctl="${id}">${opcoes.map(([v, t]) => `<option value="${esc(v)}"${v === valor ? " selected" : ""}>${esc(t)}</option>`).join("")}</select>`;
+}
+
+// ===================== estado =====================
+let DADOS = null, CORTES = [], SALDO = [], R = null;
+const CTL = { medidaSaldo: "economias", posCruzada: "todos", modoCruzada: "qtd", sitPos: "CORTADA", posPerm: "todos", modoPerm: "qtd" };
+document.addEventListener("change", (e) => {
+  const c = e.target.closest("[data-ctl]");
+  if (c) { CTL[c.dataset.ctl] = c.value; desenha(); }
+});
+
+function linhasDe(col) {                                  // {col: [..]} -> [{col: v}]
+  const chaves = Object.keys(col), n = chaves.length ? col[chaves[0]].length : 0, out = new Array(n);
+  for (let i = 0; i < n; i++) { const o = {}; for (const k of chaves) o[k] = col[k][i]; out[i] = o; }
+  return out;
+}
+
+function carregaDados(d) {
+  DADOS = d; R = d.regras;
+  CORTES = linhasDe(d.cortes).map((c) => ({ ...c, mes: (c.mes_corte || "").slice(0, 7) }));
+  SALDO = linhasDe(d.saldo);
+  const meses = unicos([...CORTES.map((c) => c.mes), ...SALDO.map((s) => s.mes)]);
+  const preenche = (sel, valores, todos = true) => {
+    const atual = sel.value;
+    sel.innerHTML = (todos ? `<option value="">Todos</option>` : "") + valores.map((v) => `<option value="${esc(v)}">${esc(v.match(/^\d{4}-\d{2}$/) ? mesRot(v) : v)}</option>`).join("");
+    if ([...sel.options].some((o) => o.value === atual)) sel.value = atual;
+  };
+  preenche($("fDe"), meses, false); preenche($("fAte"), meses, false);
+  if (!meses.includes($("fDe").value) || !$("fDe").dataset.escolhido) $("fDe").value = meses[0] || "";
+  if (!meses.includes($("fAte").value) || !$("fAte").dataset.escolhido) $("fAte").value = meses[meses.length - 1] || "";
+  preenche($("fCidade"), unicos([...CORTES.map((c) => c.cidade), ...SALDO.map((s) => s.cidade)]));
+  preenche($("fRecurso"), unicos([...CORTES.map((c) => c.recurso), ...SALDO.map((s) => s.recurso)]));
+  preenche($("fTipo"), unicos(CORTES.map((c) => c.tipo)));
+  $("inicio").style.display = "none"; $("painel").style.display = "block";
+  desenha();
+}
+["fDe", "fAte", "fCidade", "fRecurso", "fTipo"].forEach((id) => $(id).addEventListener("change", (e) => { e.target.dataset.escolhido = "1"; desenha(); }));
+$("btnLimpar").addEventListener("click", () => {
+  ["fCidade", "fRecurso", "fTipo"].forEach((id) => { $(id).value = ""; });
+  ["fDe", "fAte"].forEach((id) => { delete $(id).dataset.escolhido; });
+  const op = $("fDe").options; $("fDe").value = op.length ? op[0].value : ""; $("fAte").value = op.length ? op[op.length - 1].value : "";
+  desenha();
+});
+
+function filtro() {
+  return { de: $("fDe").value, ate: $("fAte").value, cidade: $("fCidade").value, recurso: $("fRecurso").value, tipo: $("fTipo").value };
+}
+function cortesFiltrados(f = filtro()) {
+  return CORTES.filter((c) => (!f.de || c.mes >= f.de) && (!f.ate || c.mes <= f.ate) && (!f.cidade || c.cidade === f.cidade)
+    && (!f.recurso || c.recurso === f.recurso) && (!f.tipo || c.tipo === f.tipo));
+}
+function mesesEntre(de, ate) {
+  const out = []; if (!de || !ate) return out;
+  let [a, m] = de.split("-").map(Number); const [a2, m2] = ate.split("-").map(Number);
+  while (a < a2 || (a === a2 && m <= m2)) { out.push(`${a}-${String(m).padStart(2, "0")}`); m++; if (m > 12) { m = 1; a++; } }
+  return out;
+}
+
+document.querySelectorAll("nav.abas button").forEach((b) => b.addEventListener("click", () => {
+  document.querySelectorAll("nav.abas button").forEach((x) => x.classList.toggle("ativa", x === b));
+  document.querySelectorAll(".aba").forEach((x) => x.classList.toggle("ativa", x.id === "aba-" + b.dataset.aba));
+}));
+
+function desenha() {
+  if (!DADOS) return;
+  const f = filtro(), cortes = cortesFiltrados(f);
+  $("aba-saldo").innerHTML = abaSaldo(f);
+  $("aba-cruzada").innerHTML = abaCruzada(cortes);
+  $("aba-pos").innerHTML = abaPos(cortes);
+  $("aba-perm").innerHTML = abaPermanencia(cortes);
+  $("aba-dados").innerHTML = abaDados(cortes);
+}
+
+// ===================== aba Saldo =====================
+const ORDEM_TIPOS = ["CAVALETE", "LISC", "RAMAL", "REDE", "AUTORELIGAÇÃO", "CORTE INDEVIDO", "OUTROS"];
+const ordenaTipos = (t) => [...t].sort((a, b) => (ORDEM_TIPOS.indexOf(a) + 99 * (ORDEM_TIPOS.indexOf(a) < 0)) - (ORDEM_TIPOS.indexOf(b) + 99 * (ORDEM_TIPOS.indexOf(b) < 0)) || a.localeCompare(b));
+
+function abaSaldo(f) {
+  const C = R.categorias, campo = CTL.medidaSaldo === "economias" ? "economias" : "qtd";
+  const ev = SALDO.filter((s) => (!f.de || s.mes >= f.de) && (!f.ate || s.mes <= f.ate) && (!f.cidade || s.cidade === f.cidade) && (!f.recurso || s.recurso === f.recurso));
+  const meses = mesesEntre(f.de, f.ate);
+  const valor = (cat, tipo, mes) => soma(ev.filter((s) => s.categoria === cat && (!tipo || s.tipo === tipo) && s.mes === mes).map((s) => s[campo]));
+  const linhas = [];
+  const grupo = (cat, rotulo, sinal, comTipos) => {
+    const vals = meses.map((m) => sinal * valor(cat, null, m));
+    linhas.push({ classe: "grupo", celulas: [rotulo, ...vals.map((v) => num(v)), num(soma(vals))] });
+    if (comTipos) ordenaTipos(unicos(ev.filter((s) => s.categoria === cat).map((s) => s.tipo))).forEach((t) => {
+      const v = meses.map((m) => sinal * valor(cat, t, m));
+      linhas.push({ classe: "sub", celulas: [t, ...v.map((x) => num(x)), num(soma(v))] });
+    });
+    return vals;
+  };
+  const num = (v) => ({ v, txt: v === 0 ? "-" : fmtN(v), classe: v < 0 ? "neg" : (v === 0 ? "vazio" : "") });
+  const corte = grupo(C.corte, "(−) Corte", -1, true);
+  const relig = grupo(C.religacao, "(+) Religação", 1, true);
+  const lna = grupo(C.implantacao, "(+) Implantação de ligação de água", 1, false);
+  const saldo = meses.map((_, i) => corte[i] + relig[i] + lna[i]);
+  let acc = 0; const acumulado = saldo.map((v) => (acc += v));
+  const sal = (v) => ({ v, txt: fmtN(v), classe: v < 0 ? "neg" : "pos" });
+  linhas.push({ classe: "saldo", celulas: ["Saldo do mês", ...saldo.map(sal), sal(soma(saldo))] });
+  linhas.push({ classe: "total", celulas: ["Saldo acumulado", ...acumulado.map(sal), sal(acc)] });
+
+  const semCad = soma(ev.map((s) => s.sem_cadastro));
+  const totCorte = -soma(corte), totRelig = soma(relig), totLna = soma(lna);
+  const unidade = campo === "economias" ? "economias" : "ligações";
+  const kpis = `<div class="kpis">
+    ${kpi("Cortes", totCorte, unidade)}${kpi("Religações", totRelig, unidade)}${kpi("Implantações (LNA)", totLna, unidade)}
+    ${kpi("Saldo do período", soma(saldo), "−corte + religação + implantação")}
+    ${kpi("Religação ÷ corte", null, "no período", totCorte ? fmtP(totRelig / totCorte) : "-")}</div>`;
+  const nota = `Só OS <b>Finalizadas</b>; cada matrícula conta uma vez por dia e categoria. Economias = <code>TOTAL_ECO</code> do cadastro do mês da OS (sem esse mês, o mais recente).`
+    + (semCad ? ` <b>${fmtN(semCad)}</b> evento(s) sem cadastro contam 1 economia.` : "") + ` O filtro <i>Tipo de corte</i> não se aplica aqui: a abertura por tipo já aparece nas linhas.`;
+  const ctl = `Medida ${seletor("medidaSaldo", [["economias", "Economias"], ["qtd", "Ligações (OS)"]], CTL.medidaSaldo)}`;
+  return kpis + bloco("Saldo de economias por mês", nota, tabela("saldo", ["Mês", ...meses.map(mesRot), "Total"], linhas), "saldo", ctl);
+}
+function kpi(rot, v, det, txt) { return `<div class="kpi"><div class="rot">${esc(rot)}</div><div class="val">${txt ?? fmtN(v)}</div><div class="det">${esc(det)}</div></div>`; }
+
+// ===================== aba Corte × Religação =====================
+function filtraPos(cortes, modo) {
+  if (modo === "com") return cortes.filter((c) => c.data_pos);
+  if (modo === "sem") return cortes.filter((c) => !c.data_pos);
+  return cortes;
+}
+function abaCruzada(todos) {
+  const T = R.textos, cortes = filtraPos(todos, CTL.posCruzada), pct = CTL.modoCruzada === "pct";
+  const mesesCorte = unicos(cortes.map((c) => c.mes));
+  const mesesRel = unicos(cortes.map((c) => c.mes_religacao).filter((m) => /^\d{4}-\d{2}$/.test(m)));
+  const colunas = [T.ativa, T.sem_religacao, ...mesesRel];
+  const linhas = mesesCorte.map((m) => {
+    const doMes = cortes.filter((c) => c.mes === m), tot = doMes.length;
+    const vals = colunas.map((col) => doMes.filter((c) => c.mes_religacao === col).length);
+    const relig = tot - vals[0] - vals[1];
+    return { celulas: [mesRot(m), ...vals.map((v) => (pct ? (tot ? v / tot : 0) : v)), pct ? 1 : tot, { v: tot ? relig / tot : null, txt: fmtP(tot ? relig / tot : null) }] };
+  });
+  const tot = cortes.length, vt = colunas.map((col) => cortes.filter((c) => c.mes_religacao === col).length);
+  const reltot = tot - vt[0] - vt[1];
+  linhas.push({ classe: "total", celulas: ["Total Geral", ...vt.map((v) => (pct ? (tot ? v / tot : 0) : v)), pct ? 1 : tot, { v: tot ? reltot / tot : null, txt: fmtP(tot ? reltot / tot : null) }] });
+  const ctl = `Pós-corte ${seletor("posCruzada", [["todos", "Todos"], ["com", "Com pós-corte"], ["sem", "Sem pós-corte"]], CTL.posCruzada)}
+    Mostrar ${seletor("modoCruzada", [["qtd", "Quantidade"], ["pct", "% do mês do corte"]], CTL.modoCruzada)}`;
+  const nota = `Cada corte (matrícula + data, OS Finalizada) na linha do mês em que foi feito e na coluna do mês da 1ª religação depois dele (antes do próximo corte da mesma matrícula). <b>Ativa</b>: não há OS de religação, mas o cadastro mostra a ligação ATIVA (só no último corte da matrícula). <b>Sem Religação</b>: sem OS de religação e não ATIVA no cadastro.`;
+  return bloco("Cortes realizados × mês da religação", nota,
+    tabela("cruzada", ["Mês do Corte", ...colunas.map(mesRot), "Total Geral", "% religado"], linhas, { pct }), "cruzada", ctl);
+}
+
+// ===================== aba Pós-corte =====================
+function abaPos(todos) {
+  const rg = R.regua, T = R.textos, sit = CTL.sitPos;
+  const cortes = sit ? todos.filter((c) => c.situacao === sit) : todos;
+  const meses = unicos(cortes.map((c) => c.mes));
+  const semPos = rg.faixas.map((f) => f.nome);
+  const ordem = [...semPos, rg.com_pos, rg.religado_apos_pos, rg.religado];
+  const linhaMes = (lista, cols, rot) => { const v = cols.map((col) => lista.filter((c) => c.regua === col).length); return { celulas: [rot, ...v, soma(v)] }; };
+
+  // 1) clientes sem a 1ª visita
+  const sem = cortes.filter((c) => semPos.includes(c.regua));
+  const l1 = meses.map((m) => linhaMes(sem.filter((c) => c.mes === m), semPos, mesRot(m))).filter((l) => l.celulas[l.celulas.length - 1] > 0);
+  l1.push({ classe: "total", ...linhaMes(sem, semPos, "Total Geral") });
+  const ctl = `Situação no cadastro ${seletor("sitPos", [["CORTADA", "CORTADA"], ["", "Todas"], ["ATIVA", "ATIVA"], [T.sem_cadastro, T.sem_cadastro]], sit)}`;
+  let html = bloco("Clientes cortados sem a 1ª visita (sem pós-corte e sem religação)",
+    `Régua pelos dias cortado contados até hoje (${dataRot(DADOS.hoje)}). ${esc(rg.faixas.map((f) => f.nome).join(" · "))}.`,
+    tabela("semPos", ["Mês do corte", ...semPos, "Total"], l1), "semPos", ctl);
+
+  // 2) régua completa
+  const l2 = meses.map((m) => linhaMes(cortes.filter((c) => c.mes === m), ordem, mesRot(m)));
+  l2.push({ classe: "total", ...linhaMes(cortes, ordem, "Total Geral") });
+  html += bloco("Régua de cobrança por mês do corte",
+    `<b>Religado após pós corte</b>: religou no dia do pós-corte ou depois. <b>Realizado pós corte</b>: teve pós-corte e ainda não religou. A 1ª visita conta mesmo se foi <i>Encerrada com Ocorrência</i>.`,
+    tabela("regua", ["Mês do corte", ...ordem, "Total"], l2), "regua");
+
+  // 3) 1ª visita sem sucesso
+  const sucesso = R.status.pos_corte_sem_sucesso;
+  const l3 = meses.map((m) => {
+    const d = cortes.filter((c) => c.mes === m), comPos = d.filter((c) => c.data_pos), falha = comPos.filter((c) => c.status_pos === sucesso);
+    const depois = falha.filter((c) => c.data_pos_finalizada).length, relig = falha.filter((c) => c.data_religacao).length;
+    return { celulas: [mesRot(m), d.length, comPos.length, falha.length, { v: comPos.length ? falha.length / comPos.length : null, txt: fmtP(comPos.length ? falha.length / comPos.length : null) }, depois, relig] };
+  });
+  const cp = cortes.filter((c) => c.data_pos), fl = cp.filter((c) => c.status_pos === sucesso);
+  l3.push({ classe: "total", celulas: ["Total Geral", cortes.length, cp.length, fl.length, { v: cp.length ? fl.length / cp.length : null, txt: fmtP(cp.length ? fl.length / cp.length : null) }, fl.filter((c) => c.data_pos_finalizada).length, fl.filter((c) => c.data_religacao).length] });
+  html += bloco("1ª visita pós-corte sem sucesso",
+    `Cortes cuja 1ª vistoria pós-corte foi <i>${esc(sucesso)}</i>; quantos tiveram depois um pós-corte Finalizado e quantos religaram.`,
+    tabela("posFalha", ["Mês do corte", "Cortes", "Com pós-corte", "1ª visita sem sucesso", "% sem sucesso", "Depois Finalizado", "Religaram"], l3), "posFalha");
+
+  // 4) lista
+  const lista = [...sem].sort((a, b) => (b.dias_cortado || 0) - (a.dias_cortado || 0));
+  const cab = ["Matrícula", "Cliente", "Cidade", "Recurso", "Tipo", "Data do corte", "Dias cortado", "Régua", "Situação", "Valor dos débitos", "Negociou?"];
+  const linhasL = lista.map((c) => ({ celulas: [c.matricula, txt(c.cliente), txt(c.cidade), txt(c.recurso), txt(c.tipo), { v: c.data, txt: dataRot(c.data) }, c.dias_cortado, txt(c.regua), txt(c.situacao), { v: c.valor_debito, txt: c.valor_debito == null ? "" : nf2.format(c.valor_debito) }, txt(c.negociou)] }));
+  const mostrar = linhasL.slice(0, 300);
+  html += bloco(`Lista: clientes sem a 1ª visita (${fmtN(lista.length)})`,
+    lista.length > 300 ? `Mostrando os 300 há mais tempo cortados; o botão baixa a lista inteira.` : "",
+    tabela("listaSemPos", cab, mostrar), "listaSemPos");
+  TABELAS.listaSemPos.linhas = linhasL.map((l) => l.celulas.map((c) => (c && typeof c === "object" ? c.v : c)));
+  return html;
+}
+const txt = (v) => ({ v: v ?? "", classe: "txt" });
+
+// ===================== aba Permanência =====================
+function abaPermanencia(todos) {
+  const P = R.permanencia, cortes = filtraPos(todos, CTL.posPerm), pct = CTL.modoPerm === "pct";
+  const faixas = [...P.faixas.map((f) => f.nome), P.sem_religacao];
+  const tipos = ordenaTipos(unicos(cortes.map((c) => c.tipo)));
+  const linha = (lista, rot, classe) => {
+    const v = faixas.map((f) => lista.filter((c) => c.permanencia === f).length), t = lista.length;
+    return { classe, celulas: [rot, ...v.map((x) => (pct ? (t ? x / t : 0) : x)), pct ? 1 : t] };
+  };
+  const l1 = tipos.map((t) => linha(cortes.filter((c) => c.tipo === t), t));
+  l1.push(linha(cortes, "Total Geral", "total"));
+  const ctl = `Pós-corte ${seletor("posPerm", [["todos", "Todos"], ["com", "Com pós-corte"], ["sem", "Sem pós-corte"]], CTL.posPerm)}
+    Mostrar ${seletor("modoPerm", [["qtd", "Quantidade"], ["pct", "% do tipo"]], CTL.modoPerm)}`;
+  let html = bloco("Permanência no corte por tipo", `Dias entre o corte e a religação, em faixas (cada faixa vai até o limite, inclusive). Religação no mesmo dia conta 0 dias.`,
+    tabela("perm", ["Tipo de corte", ...faixas, "Total"], l1, { pct }), "perm", ctl);
+
+  // eficácia: com x sem pós-corte
+  const ind = (lista) => {
+    const rel = lista.filter((c) => c.data_religacao), dias = rel.map((c) => c.dias);
+    const ate15 = rel.filter((c) => c.dias <= P.faixas[0].ate).length;
+    return { n: lista.length, pRel: lista.length ? rel.length / lista.length : null, p15: lista.length ? ate15 / lista.length : null, med: mediana(dias) };
+  };
+  const p = (v) => ({ v, txt: fmtP(v) }), md = (v) => ({ v, txt: v == null ? "-" : nf0.format(v) });
+  const l2 = [...tipos, null].map((t) => {
+    const base = t ? todos.filter((c) => c.tipo === t) : todos;
+    const a = ind(base), com = ind(base.filter((c) => c.data_pos)), sem = ind(base.filter((c) => !c.data_pos));
+    return { classe: t ? "" : "total", celulas: [t || "Total Geral", a.n, p(a.pRel), p(a.p15), md(a.med), com.n, p(com.pRel), md(com.med), sem.n, p(sem.pRel), md(sem.med)] };
+  });
+  html += bloco("Eficácia por tipo de corte: com × sem pós-corte",
+    `% religado = cortes que religaram ÷ cortes. Mediana = dias até religar (só quem religou). Cortes recentes ainda tiveram pouco tempo para religar: compare meses fechados usando o filtro de período.`,
+    tabela("eficacia", ["Tipo de corte", "Cortes", "% religado", `% religado até ${P.faixas[0].ate} dias`, "Mediana de dias", "Com pós: cortes", "Com pós: % religado", "Com pós: mediana", "Sem pós: cortes", "Sem pós: % religado", "Sem pós: mediana"], l2), "eficacia");
+  return html;
+}
+
+// ===================== aba Dados =====================
+function abaDados(cortes) {
+  const info = Object.entries(DADOS.info).map(([k, v]) => ({ celulas: [k, txt(typeof v === "number" ? fmtN(v) : v)] }));
+  let html = `<div class="bloco"><div class="topo"><div><h3>Baixar as bases para conferir</h3>
+    <p class="nota">A planilha calculada tem a base de cortes (todas as colunas usadas nas abas), os eventos do saldo, os arquivos lidos e os parâmetros. O CSV traz só os cortes dos filtros atuais.</p></div>
+    <div class="controles"><button id="btnExcel">⬇ Base calculada (Excel)</button><button id="btnCsvCortes">⬇ Cortes filtrados (CSV)</button></div></div></div>`;
+  html += bloco("Parâmetros da análise", "", tabela("info", ["Parâmetro", "Valor"], info), "info");
+  html += bloco("Arquivos da pasta", "Atividades, cadastro e catálogo são reconhecidos sozinhos; os demais aparecem como “não usado”.",
+    tabela("arquivos", ["Arquivo", "Tipo", "Linhas", "Observação"], DADOS.arquivos.map((a) => ({ celulas: [a.arquivo, txt(a.tipo), a.linhas, txt(a.obs)] }))), "arquivos");
+  const st = linhasDe(DADOS.status);
+  html += bloco("Atividades por categoria e status", "Todas as atividades das categorias do painel, antes de filtrar o status.",
+    tabela("status", ["Categoria", "Status", "Atividades"], st.map((s) => ({ celulas: [s.categoria, txt(s.status), s.qtd] }))), "status");
+  if (DADOS.nao_classificados.length) html += bloco("Serviços com cara de corte/religação fora do catálogo",
+    "Estes serviços não estão no catálogo e por isso não entram no painel. Se algum deveria entrar, inclua o código na planilha Descrição serviço.",
+    tabela("naoClass", ["Código/Descrição", "Atividades"], DADOS.nao_classificados.map((s) => ({ celulas: [s.servico, s.qtd] }))), "naoClass");
+  html += explicacao();
+  setTimeout(() => {
+    $("btnExcel").onclick = () => { $("btnExcel").disabled = true; mostraProgresso("Gerando a planilha…"); worker.postMessage({ fase: "excel" }); };
+    $("btnCsvCortes").onclick = () => {
+      const cols = Object.keys(DADOS.cortes).filter((k) => k !== "mes");
+      baixaCsv(cols, cortes.map((c) => cols.map((k) => c[k])), "Cortes filtrados");
+    };
+  });
+  return html;
+}
+function explicacao() {
+  const rg = R.regua, P = R.permanencia, S = R.status;
+  return `<div class="bloco explica"><h3>Como cada número é calculado</h3>
+  <h4>Classificação das atividades</h4>
+  <p>O código do serviço (números do início de <code>Código/Descrição</code>) é procurado no catálogo (<i>Descrição serviço</i>); sem código, vale a descrição. Categorias usadas: ${Object.values(R.categorias).map(esc).join(", ")}.
+  O tipo (CAVALETE, LISC, RAMAL, REDE…) sai da descrição do serviço. Atividade repetida em mais de um arquivo (mesmo <i>ID da Atividade</i>) conta uma vez.</p>
+  <h4>Base de cortes</h4>
+  <ul><li>Uma linha por matrícula e data, só OS de corte <b>${esc(S.finalizada)}</b>. Dois cortes no mesmo dia (ex.: OS principal + LISC) contam um; o tipo segue a prioridade ${esc(R.tipos.prioridade_mesmo_dia.join(" > "))}.</li>
+  <li><b>Religação</b>: 1ª OS de religação ${esc(S.finalizada)} no dia do corte ou depois, e antes do próximo corte da mesma matrícula.</li>
+  <li><b>Pós-corte</b>: 1ª vistoria pós-corte (${esc(S.pos_corte_aceitos.join(" ou "))}) na mesma janela. Se ela foi <i>${esc(S.pos_corte_sem_sucesso)}</i>, a observação mostra que a visita foi sem sucesso, e a coluna <i>Data 1º pós corte Finalizado</i> mostra se houve uma visita com sucesso depois.</li>
+  <li><b>Situação</b> e <b>economias</b>: da planilha de cadastro (<code>SIT_LIG</code>, <code>TOTAL_ECO</code>), referência mais recente da matrícula.</li>
+  <li><b>Mês da religação</b>: o mês da religação; sem religação, <b>Ativa</b> quando o cadastro mostra a ligação ATIVA e este é o último corte da matrícula, senão <b>Sem Religação</b>.</li></ul>
+  <h4>Régua de cobrança</h4>
+  <ul><li>Religou: <b>${esc(rg.religado_apos_pos)}</b> se a religação foi no dia do pós-corte ou depois; senão <b>${esc(rg.religado)}</b>.</li>
+  <li>Não religou e teve pós-corte: <b>${esc(rg.com_pos)}</b>.</li>
+  <li>Não religou e sem pós-corte: dias cortado = hoje (${dataRot(DADOS.hoje)}) − data do corte → ${rg.faixas.map((f) => `<b>${esc(f.nome)}</b>${f.ate != null ? ` (até ${f.ate} dias)` : ""}`).join(", ")}.</li></ul>
+  <h4>Permanência</h4>
+  <p>Dias = data da religação − data do corte. Faixas: ${P.faixas.map((f) => `${esc(f.nome)}${f.ate != null ? ` (até ${f.ate})` : ""}`).join(", ")}; sem religação: ${esc(P.sem_religacao)}.</p>
+  <h4>Saldo de economias</h4>
+  <p>Saldo do mês = −corte + religação + implantação de ligação de água, só OS ${esc(S.finalizada)}, uma vez por matrícula, dia e categoria. As economias vêm do cadastro do mesmo mês da OS; sem esse mês, do mais recente; sem cadastro, 1.</p>
+  <p class="nota">As regras ficam em <code>cortes/regras.json</code> no repositório.</p></div>`;
+}
+
+// ===================== pasta e worker =====================
+let worker = null, pastaHandle = null, inicioAnalise = 0;
+function novoWorker() {
+  worker = new Worker("analisador.worker.js");
+  worker.onmessage = (e) => {
+    const m = e.data;
+    if (m.tipo === "etapa") progresso(null, m.texto);
+    else if (m.tipo === "progresso") progresso(m.pct, m.texto);
+    else if (m.tipo === "log") { $("log").textContent += m.linha + "\n"; }
+    else if (m.tipo === "resultado") {
+      escondeProgresso(); aviso("");
+      carregaDados(m.dados);
+    } else if (m.tipo === "excel") {
+      escondeProgresso(); const b = $("btnExcel"); if (b) b.disabled = false;
+      baixa(new Blob([m.conteudo], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), "Base_Cortes_calculada.xlsx");
+    } else if (m.tipo === "erro") {
+      escondeProgresso(); const b = $("btnExcel"); if (b) b.disabled = false;
+      aviso("Não foi possível concluir: " + m.resumo + (m.detalhe && m.detalhe !== m.resumo ? "\n\nDetalhe técnico:\n" + m.detalhe.slice(-1500) : ""));
+      habilita(true);
+    }
+  };
+  worker.onerror = (e) => { escondeProgresso(); aviso("Erro no processamento: " + (e.message || e)); habilita(true); };
+}
+function mostraProgresso(texto) { $("progresso").style.display = "block"; $("log").textContent = ""; progresso(0, texto); }
+function progresso(pct, texto) {
+  if (texto) $("progTexto").textContent = texto + (inicioAnalise ? ` — ${Math.round((Date.now() - inicioAnalise) / 1000)} s` : "");
+  if (pct != null) $("progBarra").style.width = pct + "%";
+}
+function escondeProgresso() { $("progresso").style.display = "none"; inicioAnalise = 0; habilita(true); }
+function habilita(sim) { $("btnConectar").disabled = !sim; $("btnAtualizar").disabled = !sim || !pastaHandle; }
+
+const EXT = /\.(xlsx|xlsm|xls|csv)$/i;
+async function arquivosDaPasta(handle, prefixo = "") {
+  const lista = [];
+  for await (const [nome, item] of handle.entries()) {
+    if (item.kind === "directory") lista.push(...await arquivosDaPasta(item, prefixo + nome + "/"));
+    else if (EXT.test(nome) && !nome.startsWith("~$") && !/^Base_Cortes/i.test(nome)) {
+      const f = await item.getFile();
+      lista.push({ nome: prefixo + nome, arquivo: f, tamanho: f.size, modificado: f.lastModified });
+    }
+  }
+  return lista;
+}
+function analisa(arquivos) {
+  if (!arquivos.length) { aviso("A pasta não tem planilhas (.xlsx, .xls ou .csv)."); return; }
+  if (!arquivos.some((a) => /^atividades-/i.test(a.nome.split("/").pop()))) {
+    aviso("Nenhum arquivo começando com “Atividades-” foi encontrado na pasta escolhida."); return;
+  }
+  aviso(""); habilita(false); inicioAnalise = Date.now(); mostraProgresso(`Lendo ${arquivos.length} arquivo(s)…`);
+  if (!worker) novoWorker();
+  worker.postMessage({ fase: "analisar", arquivos });
+}
+
+// guarda a pasta escolhida para o botão Atualizar funcionar depois de reabrir a página
+function bancoPasta() {
+  return new Promise((ok, erro) => {
+    const r = indexedDB.open("cortes_pasta", 1);
+    r.onupgradeneeded = () => r.result.createObjectStore("pasta");
+    r.onsuccess = () => ok(r.result); r.onerror = () => erro(r.error);
+  });
+}
+async function guardaPasta(h) { try { const db = await bancoPasta(); db.transaction("pasta", "readwrite").objectStore("pasta").put(h, "atual"); } catch (e) { /* sem armazenamento */ } }
+async function pastaGuardada() {
+  try { const db = await bancoPasta(); return await new Promise((ok) => { const r = db.transaction("pasta").objectStore("pasta").get("atual"); r.onsuccess = () => ok(r.result || null); r.onerror = () => ok(null); }); }
+  catch (e) { return null; }
+}
+async function lePastaHandle() {
+  try {
+    if ((await pastaHandle.queryPermission({ mode: "read" })) !== "granted" && (await pastaHandle.requestPermission({ mode: "read" })) !== "granted") {
+      aviso("Sem permissão para ler a pasta. Clique em Conectar pasta."); return;
+    }
+    $("pastaNome").textContent = "Pasta: " + pastaHandle.name;
+    progresso(null, "Listando os arquivos…");
+    analisa(await arquivosDaPasta(pastaHandle));
+  } catch (e) { aviso("Não foi possível ler a pasta: " + e.message); habilita(true); }
+}
+
+$("btnConectar").addEventListener("click", async () => {
+  if ("showDirectoryPicker" in window) {
+    try { pastaHandle = await window.showDirectoryPicker({ id: "cortes", mode: "read" }); }
+    catch (e) { return; }                         // cancelou
+    guardaPasta(pastaHandle); habilita(true); lePastaHandle();
+  } else $("inputPasta").click();                  // Firefox/Safari: escolha comum de pasta (sem Atualizar)
+});
+$("btnAtualizar").addEventListener("click", () => { if (pastaHandle) lePastaHandle(); });
+$("inputPasta").addEventListener("change", (e) => {
+  const arquivos = [...e.target.files].filter((f) => EXT.test(f.name) && !f.name.startsWith("~$")).map((f) => ({
+    nome: (f.webkitRelativePath || f.name).split("/").slice(1).join("/") || f.name, arquivo: f, tamanho: f.size, modificado: f.lastModified }));
+  $("pastaNome").textContent = arquivos.length ? "Pasta: " + (e.target.files[0].webkitRelativePath || "").split("/")[0] : "";
+  analisa(arquivos); e.target.value = "";
+});
+
+(async () => {
+  if (!("showDirectoryPicker" in window)) return;
+  pastaHandle = await pastaGuardada();
+  if (pastaHandle) { $("pastaNome").textContent = "Pasta: " + pastaHandle.name + " (clique em Atualizar)"; habilita(true); }
+})();
+</script>
+</body>
+</html>

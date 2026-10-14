@@ -1,0 +1,235 @@
+{
+ "_origem": "Planilha Descrição serviço (só as categorias usadas no painel). Uma planilha com as colunas CODIGO/DESCRICAO, SERVICO e CATEGORIA na pasta substitui esta lista.",
+ "servicos": {
+  "109001": {
+   "categoria": "CORTE",
+   "descricao": "CORTE DE ÁGUA NO CAVALETE - DÉBITO",
+   "abertura": "CORTE DE ÁGUA NO CAVALETE"
+  },
+  "109002": {
+   "categoria": "CORTE",
+   "descricao": "CORTE DE ÁGUA NO CAVALETE - DÉBITO (LISC)",
+   "abertura": "CORTE DE ÁGUA NO CAVALETE - DÉBITO (LISC)"
+  },
+  "109004": {
+   "categoria": "CORTE",
+   "descricao": "CORTE DE ÁGUA NO RAMAL - DÉBITO",
+   "abertura": "CORTE DE ÁGUA NO RAMAL"
+  },
+  "109007": {
+   "categoria": "CORTE",
+   "descricao": "CORTE DE ÁGUA NA REDE - CONSUMO FINAL (ASFALTO)",
+   "abertura": "CORTE DE ÁGUA NA REDE"
+  },
+  "109008": {
+   "categoria": "CORTE",
+   "descricao": "CORTE DE ÁGUA NA REDE - CONSUMO FINAL (TERRA)",
+   "abertura": "CORTE DE ÁGUA NA REDE"
+  },
+  "110010": {
+   "categoria": "VISTORIA PÓS CORTE",
+   "descricao": "VISTORIA PÓS CORTE",
+   "abertura": "VISTORIA PÓS CORTE"
+  },
+  "110011": {
+   "categoria": "VISTORIA PÓS CORTE",
+   "descricao": "VISTORIA PÓS CORTE - INTERMEDIÁRIO",
+   "abertura": "VISTORIA PÓS CORTE"
+  },
+  "110012": {
+   "categoria": "VISTORIA PÓS CORTE",
+   "descricao": "VISTORIA PÓS CORTE - AVANÇADO",
+   "abertura": "VISTORIA PÓS CORTE"
+  },
+  "111001": {
+   "categoria": "RELIGAÇÃO",
+   "descricao": "RELIGAÇÃO DE ÁGUA NO CAVALETE - DÉBITO",
+   "abertura": "RELIGAÇÃO DE ÁGUA NO CAVALETE"
+  },
+  "111002": {
+   "categoria": "RELIGAÇÃO",
+   "descricao": "RELIGAÇÃO DE ÁGUA NO CAVALETE - DÉBITO (LISC)",
+   "abertura": "RELIGAÇÃO DE ÁGUA NO CAVALETE - DÉBITO (LISC)"
+  },
+  "111004": {
+   "categoria": "RELIGAÇÃO",
+   "descricao": "RELIGAÇÃO DE ÁGUA NO RAMAL - DÉBITO",
+   "abertura": "RELIGAÇÃO DE ÁGUA NO RAMAL"
+  },
+  "111006": {
+   "categoria": "RELIGAÇÃO",
+   "descricao": "RELIGAÇÃO DE ÁGUA NA REDE - DÉBITO",
+   "abertura": "RELIGAÇÃO"
+  },
+  "111012": {
+   "categoria": "RELIGAÇÃO",
+   "descricao": "Autoreligação",
+   "abertura": "RELIGAÇÃO"
+  },
+  "111014": {
+   "categoria": "RELIGAÇÃO",
+   "descricao": "RELIGAÇÃO POR CORTE INDEVIDO",
+   "abertura": "RELIGAÇÃO"
+  },
+  "117002": {
+   "categoria": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA",
+   "descricao": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA 3/4 - ASFALTO",
+   "abertura": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA 3/4"
+  },
+  "117003": {
+   "categoria": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA",
+   "descricao": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA 1 - ASFALTO",
+   "abertura": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA 3/4"
+  },
+  "117005": {
+   "categoria": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA",
+   "descricao": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA 2 - ASFALTO",
+   "abertura": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA 3/4"
+  },
+  "117006": {
+   "categoria": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA",
+   "descricao": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA - MEDIÇÃO INDIVIDUALIZADA",
+   "abertura": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA 3/4"
+  },
+  "117007": {
+   "categoria": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA",
+   "descricao": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA 3/4 - TERRA",
+   "abertura": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA 3/4"
+  },
+  "117008": {
+   "categoria": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA",
+   "descricao": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA 1 - TERRA",
+   "abertura": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA 3/4"
+  },
+  "117011": {
+   "categoria": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA",
+   "descricao": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA 3/4 COM EXTENSÃO - ASFALTO",
+   "abertura": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA 3/4"
+  },
+  "117015": {
+   "categoria": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA",
+   "descricao": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA 3/4 COM EXTENSÃO - TERRA",
+   "abertura": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA 3/4"
+  },
+  "117045": {
+   "categoria": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA",
+   "descricao": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA 3/4 - BLOCO/PARALELO",
+   "abertura": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA 3/4"
+  },
+  "117071": {
+   "categoria": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA",
+   "descricao": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA SOCIAL - ASFALTO",
+   "abertura": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA 3/4"
+  },
+  "117074": {
+   "categoria": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA",
+   "descricao": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA 4 - TERRA",
+   "abertura": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA 3/4"
+  },
+  "117076": {
+   "categoria": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA",
+   "descricao": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA SOCIAL - TERRA",
+   "abertura": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA 3/4"
+  },
+  "117081": {
+   "categoria": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA",
+   "descricao": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA SOCIAL - BLOCO/PARALELO",
+   "abertura": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA 3/4"
+  },
+  "117085": {
+   "categoria": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA",
+   "descricao": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA 3/4 - PASSEIO",
+   "abertura": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA 3/4"
+  },
+  "117090": {
+   "categoria": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA",
+   "descricao": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA SOCIAL - PASSEIO",
+   "abertura": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA 3/4"
+  },
+  "117094": {
+   "categoria": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA",
+   "descricao": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA 3/4 - CONCRETO",
+   "abertura": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA 3/4"
+  },
+  "117099": {
+   "categoria": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA",
+   "descricao": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA SOCIAL - CONCRETO",
+   "abertura": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA 3/4"
+  },
+  "209001": {
+   "categoria": "CORTE",
+   "descricao": "CORTE DE ÁGUA NO CAVALETE - DÉBITO",
+   "abertura": "CORTE DE ÁGUA NO CAVALETE"
+  },
+  "209002": {
+   "categoria": "CORTE",
+   "descricao": "CORTE DE ÁGUA NO CAVALETE - DÉBITO (LISC)",
+   "abertura": "CORTE DE ÁGUA NO CAVALETE - DÉBITO (LISC)"
+  },
+  "209004": {
+   "categoria": "CORTE",
+   "descricao": "CORTE DE ÁGUA NO RAMAL - DÉBITO",
+   "abertura": "CORTE DE ÁGUA NO RAMAL"
+  },
+  "210010": {
+   "categoria": "VISTORIA PÓS CORTE",
+   "descricao": "VISTORIA PÓS CORTE",
+   "abertura": "VISTORIA PÓS CORTE"
+  },
+  "211001": {
+   "categoria": "RELIGAÇÃO",
+   "descricao": "RELIGAÇÃO DE ÁGUA NO CAVALETE - DÉBITO",
+   "abertura": "RELIGAÇÃO DE ÁGUA NO CAVALETE"
+  },
+  "211002": {
+   "categoria": "RELIGAÇÃO",
+   "descricao": "RELIGAÇÃO DE ÁGUA NO CAVALETE - DÉBITO (LISC)",
+   "abertura": "RELIGAÇÃO DE ÁGUA NO CAVALETE - DÉBITO (LISC)"
+  },
+  "211004": {
+   "categoria": "RELIGAÇÃO",
+   "descricao": "RELIGAÇÃO DE ÁGUA NO RAMAL - DÉBITO",
+   "abertura": "RELIGAÇÃO DE ÁGUA NO RAMAL"
+  },
+  "217002": {
+   "categoria": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA",
+   "descricao": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA 3/4 - ASFALTO",
+   "abertura": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA 3/4"
+  },
+  "302010": {
+   "categoria": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA",
+   "descricao": "IMPLANTAÇÃO DE MATRÍCULA",
+   "abertura": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA 3/4"
+  },
+  "311001": {
+   "categoria": "RELIGAÇÃO",
+   "descricao": "RELIGAÇÃO DE ÁGUA NO CAVALETE - DÉBITO",
+   "abertura": "RELIGAÇÃO DE ÁGUA NO CAVALETE"
+  },
+  "311004": {
+   "categoria": "RELIGAÇÃO",
+   "descricao": "RELIGAÇÃO DE ÁGUA NO RAMAL - DÉBITO",
+   "abertura": "RELIGAÇÃO DE ÁGUA NO RAMAL"
+  },
+  "311005": {
+   "categoria": "RELIGAÇÃO",
+   "descricao": "RELIGAÇÃO DE ÁGUA NO RAMAL - A PEDIDO",
+   "abertura": "RELIGAÇÃO DE ÁGUA NO RAMAL"
+  },
+  "317002": {
+   "categoria": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA",
+   "descricao": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA 3/4 - ASFALTO",
+   "abertura": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA 3/4"
+  },
+  "317007": {
+   "categoria": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA",
+   "descricao": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA 3/4 - TERRA",
+   "abertura": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA 3/4"
+  },
+  "317011": {
+   "categoria": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA",
+   "descricao": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA 3/4 COM EXTENSÃO - ASFALTO",
+   "abertura": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA 3/4"
+  }
+ }
+}

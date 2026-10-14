@@ -1,0 +1,78 @@
+{
+  "_leia": "Regras de negócio do painel. Mudou algo aqui? Aumente VERSAO em cortes/cache_arquivos.py só se mudar a leitura dos arquivos.",
+
+  "arquivos": {
+    "prefixo_atividades": "Atividades-",
+    "colunas_cadastro": ["NUM_LIGACAO", "SIT_LIG", "TOTAL_ECO"],
+    "colunas_catalogo": ["SERVICO", "CATEGORIA"]
+  },
+
+  "colunas_atividades": {
+    "id": "ID da Atividade",
+    "recurso": "Recurso",
+    "conta": "Número da Conta",
+    "matricula": "Matrícula",
+    "servico": "Código/Descrição",
+    "data": "Data",
+    "status": "Status da Atividade",
+    "cidade": "Cidade",
+    "parecer": "Parecer De Campo",
+    "motivo": "Motivo de Não Execução - Normal",
+    "valor_debito": "Valor Total dos Débitos",
+    "negociou": "Negociou O Débito?"
+  },
+
+  "categorias": {
+    "corte": "CORTE",
+    "religacao": "RELIGAÇÃO",
+    "implantacao": "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA",
+    "pos_corte": "VISTORIA PÓS CORTE"
+  },
+
+  "status": {
+    "finalizada": "Finalizada",
+    "pos_corte_aceitos": ["Finalizada", "Encerrada com Ocorrência"],
+    "pos_corte_sem_sucesso": "Encerrada com Ocorrência"
+  },
+
+  "tipos": {
+    "_leia": "Tipo do corte/religação pela descrição do serviço, na ordem: o primeiro termo encontrado vale.",
+    "ordem": [["LISC", "LISC"], ["REDE", "REDE"], ["RAMAL", "RAMAL"], ["CAVALETE", "CAVALETE"], ["AUTORELIGA", "AUTORELIGAÇÃO"], ["INDEVIDO", "CORTE INDEVIDO"]],
+    "outros": "OUTROS",
+    "_leia_prioridade": "Mesma matrícula com mais de um corte no mesmo dia (ex.: OS principal + LISC): vale o tipo que vem primeiro nesta lista.",
+    "prioridade_mesmo_dia": ["REDE", "RAMAL", "CAVALETE", "LISC", "OUTROS"]
+  },
+
+  "regua": {
+    "_leia": "Dias cortado = hoje − data do corte (só para quem não religou e não teve pós-corte).",
+    "religado_apos_pos": "Religado após pós corte",
+    "religado": "Religado",
+    "com_pos": "Realizado pós corte",
+    "faixas": [
+      {"ate": 6, "nome": "Sem pós corte - 7 dias"},
+      {"ate": 14, "nome": "Sem pós corte 7 a 15 dias"},
+      {"ate": null, "nome": "Sem pós corte + 15 dias"}
+    ]
+  },
+
+  "permanencia": {
+    "_leia": "Dias = data da religação − data do corte. Cada faixa vai até 'ate' dias (inclusive).",
+    "faixas": [
+      {"ate": 15, "nome": "Menor que 15"},
+      {"ate": 30, "nome": "15 a 30 dias"},
+      {"ate": 45, "nome": "30 a 45 dias"},
+      {"ate": 90, "nome": "45 a 90 dias"},
+      {"ate": 180, "nome": "90 a 180 dias"},
+      {"ate": null, "nome": "180 + dias"}
+    ],
+    "sem_religacao": "Sem Religação"
+  },
+
+  "textos": {
+    "sem_religacao": "Sem Religação",
+    "ativa": "Ativa",
+    "sem_pos": "Sem Pós Corte",
+    "sem_cadastro": "Sem cadastro",
+    "pos_sem_sucesso": "1ª visita pós corte sem sucesso (Encerrada com Ocorrência)"
+  }
+}

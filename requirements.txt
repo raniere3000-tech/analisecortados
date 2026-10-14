@@ -1,0 +1,5 @@
+pandas>=2.0
+numpy>=1.24
+openpyxl>=3.1      # leitura de .xlsx
+xlrd>=2.0          # leitura de .xls antigo
+xlsxwriter>=3.0    # gravação do Excel da aba Dados
