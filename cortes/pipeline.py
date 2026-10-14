@@ -58,6 +58,7 @@ class Analise:
         return {
             "cortes": saida.colunar(self.cortes, saida.COLUNAS_CORTES),
             "saldo": saida.saldo_agrupado(self.eventos),
+            "eventos": saida.colunar(self.eventos, saida.COLUNAS_EVENTOS),
             "status": saida.colunar(status, {c: c for c in status.columns}),
             "arquivos": self.arquivos,
             "info": self.info,

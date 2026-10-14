@@ -16,6 +16,12 @@ COLUNAS_CORTES = {
     "permanencia": "permanencia", "situacao": "situacao", "id": "id", "arquivo": "arquivo",
 }
 
+# eventos do saldo (corte, religação, implantação) para abrir os clientes por trás de cada número
+COLUNAS_EVENTOS = {
+    "matricula": "matricula", "data": "data", "categoria": "categoria", "tipo": "tipo", "economias": "economias",
+    "cidade": "cidade", "recurso": "recurso", "servico": "servico", "id": "id",
+}
+
 # nomes das colunas no Excel (como nas planilhas antigas, quando havia equivalente)
 NOMES_EXCEL = {
     "matricula": "NUM_LIGACAO", "data": "DATA_CONCLUSAO", "mes_corte": "Mês Corte", "tipo": "Tipo de corte",

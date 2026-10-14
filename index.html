@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Análise de Corte e Religação — Águas do Rio</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
 :root {
   --navy:#102840; --blue:#176b9c; --cyan:#16a5b8; --ink:#1f2d3d; --muted:#64748b; --line:#dbe4ec; --bg:#f3f6f9;
@@ -22,7 +23,7 @@ body { margin:0; background:var(--bg); color:var(--ink); font-family:"Segoe UI",
 .eyebrow { color:#9fe1e7; font-size:10px; letter-spacing:1.2px; font-weight:700; text-transform:uppercase; white-space:nowrap; }
 .versao { margin-left:6px; padding:0 7px; border-radius:99px; background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.4); font-size:9.5px; font-weight:800; color:#fff; text-transform:none; letter-spacing:.6px; }
 .top h1 { margin:0; font-size:14.5px; font-weight:600; white-space:nowrap; }
-.filtros, .ferramentas { display:flex; gap:6px 10px; align-items:center; }
+.filtros, .ferramentas { display:flex; gap:6px 8px; align-items:center; }
 .filtros { flex-wrap:wrap; justify-content:center; }
 .fsel { display:flex; align-items:center; gap:6px; font-size:9px; font-weight:750; text-transform:uppercase; letter-spacing:.2px; color:#c8d6e5; transition:opacity .15s; }
 .fsel.apagado { opacity:.4; }
@@ -31,10 +32,20 @@ body { margin:0; background:var(--bg); color:var(--ink); font-family:"Segoe UI",
 .fsel[data-f=de] select, .fsel[data-f=ate] select { max-width:132px; }
 .btn-top { padding:5px 8px; border-radius:8px; font:inherit; font-size:12px; cursor:pointer; background:rgba(255,255,255,.12); color:#fff; border:1px solid rgba(255,255,255,.3); text-decoration:none; white-space:nowrap; }
 .btn-top:hover:not(:disabled) { background:rgba(255,255,255,.22); }
-.btn-top:disabled { opacity:.5; cursor:default; }
+.btn-top:disabled { opacity:.6; cursor:wait; }
+.btn-top:focus-visible { outline:2px solid #fff; outline-offset:2px; }
 .fonte-status { font-size:11.5px; color:#bfe0eb; margin-top:3px; min-height:15px; }
 .barra-prog { height:8px; margin-top:4px; border-radius:4px; background:rgba(255,255,255,.15); overflow:hidden; }
 .barra-prog div { height:100%; width:0; background:linear-gradient(90deg,#16a5b8,#7ee0bc); transition:width .3s; }
+.etapas { display:flex; flex-wrap:wrap; gap:2px 14px; list-style:none; margin:4px 0 0; padding:0; font-size:11.5px; color:#9fb6c8; }
+.etapas li.ok span { color:#7ee0bc; }
+.etapas li.atual { color:#fff; font-weight:700; }
+.etapas li.atual span { color:#ffd166; animation:pulsa 1s infinite alternate; }
+@keyframes pulsa { from { opacity:.35; } to { opacity:1; } }
+.detalhes { margin-top:4px; font-size:11px; color:#bfe0eb; }
+.detalhes summary { cursor:pointer; }
+.detalhes pre { max-height:110px; overflow:auto; margin:4px 0; white-space:pre-wrap; color:#dbe9f2; }
+.detalhes button { font-size:11px; }
 
 /* ===== abas ===== */
 .nav { padding:0 20px; background:#fff; border-bottom:1px solid var(--line); display:flex; gap:2px; overflow:auto; }
@@ -55,6 +66,15 @@ main { font-family:var(--fonte); }
 .card.alerta h2, .card.alerta p { color:var(--laranja-texto); }
 .card.alerta p { margin:4px 0 0; white-space:pre-wrap; font-size:12.5px; }
 .rot-ctl { font-size:11px; color:var(--azul-claro); }
+.info { display:inline-block; margin-left:4px; font-size:11px; color:var(--azul-claro); cursor:help; font-weight:400; }
+.grid { display:grid; gap:0 12px; max-width:1800px; margin:0 auto; }
+.grid.g21 { grid-template-columns:minmax(0,2fr) minmax(0,1fr); }
+.grid.g12 { grid-template-columns:minmax(0,1fr) minmax(0,2fr); }
+.grid.g11 { grid-template-columns:minmax(0,1fr) minmax(0,1fr); }
+.grid > .card { margin-left:0; margin-right:0; }
+.graf { position:relative; height:clamp(200px,34vh,300px); }
+.graf-aviso { color:var(--azul-claro); font-size:12px; padding:30px 0; text-align:center; }
+.dica { font-size:11px; color:var(--azul-claro); margin:4px 0 0; }
 
 /* sub-abas */
 .sub { display:inline-flex; border:1px solid var(--line); border-radius:6px; overflow:hidden; }
@@ -62,14 +82,17 @@ main { font-family:var(--fonte); }
 .sub button + button { border-left:1px solid var(--line); }
 .sub button.ativo { background:var(--marinho); color:#fff; }
 
-/* botões */
+/* botões e campos */
 .btn-just { padding:5px 12px; border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--marinho); font:600 12.5px var(--fonte); cursor:pointer; }
 .btn-just:hover:not(:disabled) { border-color:var(--azul-claro); }
-.btn-just:disabled { opacity:.5; cursor:default; }
+.btn-just:disabled { opacity:.6; cursor:wait; }
 .btn-down { padding:4px 9px; font-size:13px; }
 .btn-principal { background:var(--navy); color:#fff; border:0; border-radius:10px; padding:9px 18px; font:600 13px var(--fonte); cursor:pointer; }
 .btn-principal:hover { background:var(--blue); }
-button:focus-visible, select:focus-visible, a:focus-visible { outline:2px solid var(--azul-claro); outline-offset:2px; }
+.busca { display:inline-flex; align-items:center; gap:4px; }
+.busca input { border:1px solid var(--line); border-radius:6px; padding:5px 8px; font:12.5px var(--fonte); width:190px; color:var(--ink); }
+.busca button { padding:3px 8px; }
+button:focus-visible, select:focus-visible, a:focus-visible, input:focus-visible, th:focus-visible, .clic:focus-visible { outline:2px solid var(--azul-claro); outline-offset:2px; }
 
 /* KPIs */
 .kpis { display:grid; grid-template-columns:repeat(var(--n,5),minmax(0,1fr)); gap:1px; background:var(--line); border:1px solid var(--line); border-radius:8px; overflow:hidden; margin:10px auto; max-width:1800px; }
@@ -81,13 +104,15 @@ button:focus-visible, select:focus-visible, a:focus-visible { outline:2px solid 
 .kpi-det { font-size:11px; color:var(--azul-claro); }
 
 /* tabelas */
-.tabela-wrap { overflow:auto; scrollbar-width:thin; }
+.tabela-wrap { overflow:auto; scrollbar-width:thin; scrollbar-color:var(--azul-claro) transparent; cursor:grab; }
+.tabela-wrap.grabbing { cursor:grabbing; user-select:none; }
 .tabela-wrap.longa { max-height:62vh; }
 table { border-collapse:collapse; width:100%; font-family:var(--fonte-cond); font-size:12px; font-variant-numeric:tabular-nums; }
-th, td { border:1px solid var(--line); padding:5px 7px; text-align:center; white-space:nowrap; }
-th { background:var(--marinho); color:#fff; font-weight:600; font-size:11.5px; position:sticky; top:0; z-index:1; }
-th[data-ord] { cursor:pointer; user-select:none; }
-th:first-child, td:first-child { text-align:left; }
+th, td { border:1px solid var(--line); padding:5px 7px; text-align:center; white-space:nowrap; background:#fff; }
+th { background:var(--marinho); color:#fff; font-weight:600; font-size:11.5px; position:sticky; top:0; z-index:2; }
+th[data-ord], th[data-sort] { cursor:pointer; user-select:none; }
+th:first-child, td:first-child { text-align:left; position:sticky; left:0; z-index:1; }
+th:first-child { z-index:3; }
 td.num { text-align:right; }
 td.txt { text-align:left; }
 tbody tr:nth-child(even) td { background:var(--zebra); }
@@ -98,6 +123,8 @@ tr.sub-linha td:first-child { padding-left:22px; color:var(--azul-claro); }
 td.neg { background:#FFC7CE !important; color:#9C0006; }
 td.neg-txt { color:var(--laranja-texto); }
 td.vazio { color:#b0b9c3; }
+td.clic { cursor:pointer; }
+td.clic:hover { text-decoration:underline; }
 .ver-todos { display:block; margin:8px auto 0; }
 
 /* selos */
@@ -107,26 +134,62 @@ td.vazio { color:#b0b9c3; }
 .selo-info { background:#e0e7ff; color:#3730a3; }
 .selo-neutro { background:var(--tint); color:var(--azul); }
 
+/* painel lateral de detalhe */
+#gaveta { position:fixed; top:0; right:0; height:100vh; width:min(640px,96vw); background:#fff; border-left:1px solid var(--line); box-shadow:-8px 0 24px rgba(17,42,66,.14); z-index:30; display:flex; flex-direction:column; }
+#gaveta .g-topo { padding:12px 16px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:10px; background:var(--tint); }
+#gaveta h2 { font-size:14px; margin:0; color:var(--marinho); flex:1; }
+#gaveta .g-corpo { padding:10px 16px; overflow:auto; flex:1; }
+#gaveta .g-nota { font-size:11.5px; color:var(--azul-claro); margin:0 0 8px; }
+
+/* esqueleto de carregamento */
+.esq { height:90px; border-radius:12px; background:#e9eef3; margin:10px auto; max-width:1800px; }
+
 /* explicação */
 .explica p, .explica li { font-size:12.5px; margin:3px 0; line-height:1.45; }
 code { background:var(--tint); padding:0 4px; border-radius:3px; font-size:11.5px; }
+kbd { background:var(--tint); border:1px solid var(--line); border-radius:4px; padding:0 5px; font:11px var(--fonte-cond); }
 
 /* toast */
-#toast { position:fixed; right:18px; bottom:18px; background:#1A2740; color:#fff; padding:9px 14px; border-radius:8px; font-size:12.5px; box-shadow:0 6px 18px rgba(0,0,0,.25); opacity:0; transform:translateY(8px); transition:.2s; pointer-events:none; max-width:min(420px,90vw); z-index:20; }
-#toast.mostra { opacity:1; transform:none; }
+#toast { position:fixed; right:18px; bottom:18px; background:#1A2740; color:#fff; padding:9px 14px; border-radius:8px; font-size:12.5px; box-shadow:0 6px 18px rgba(0,0,0,.25); display:none; max-width:min(420px,90vw); z-index:40; }
 #toast.erro { background:#9a3412; }
 
+/* modo apresentação */
+#btnSair { position:fixed; left:14px; bottom:14px; z-index:40; }
+body.apresentacao .top .filtros, body.apresentacao .top .ferramentas, body.apresentacao .fonte-status, body.apresentacao .etapas { display:none; }
+body.apresentacao main { zoom:1.14; }
+body.apresentacao .graf { height:clamp(260px,46vh,480px); }
+
+/* impressão / PDF executivo: durante a preparação todas as abas ficam visíveis (para os gráficos terem tamanho) */
+.so-impressao { display:none; }
+body.imprimindo #painel .view { display:block !important; padding-bottom:0; }
+body.imprimindo #view-dados, body.imprimindo #inicio { display:none !important; }
+body.imprimindo main { max-width:1020px; margin:0 auto; }                       /* largura da folha A4 paisagem: os gráficos já nascem do tamanho certo */
+@media print {
+  @page { size:A4 landscape; margin:10mm; }
+  body { background:#fff; }
+  .top, .nav, #toast, #gaveta, #btnSair, .acoes, .busca, .ver-todos, .esq, .dica { display:none !important; }
+  .so-impressao { display:block; font:600 15px var(--fonte); color:var(--marinho); margin:0 0 6px; }
+  body.imprimindo #painel .view { page-break-before:always; break-before:page; padding:0; }
+  body.imprimindo #painel #view-saldo { page-break-before:auto; break-before:auto; }
+  .card, .kpis { box-shadow:none; break-inside:avoid; }
+  .card { overflow:visible; }
+  .tabela-wrap, .tabela-wrap.longa { overflow:visible !important; max-height:none !important; }
+  table { font-size:9.5px; }
+  th, td { padding:2px 4px; position:static !important; }
+  th { white-space:normal; }
+  th, .kpi, td.neg, .selo { print-color-adjust:exact; -webkit-print-color-adjust:exact; }
+}
+
 @media (max-width:1100px) { .kpis { grid-template-columns:repeat(4,minmax(0,1fr)); } .top-linha { flex-wrap:wrap; } }
-@media (max-width:900px) { .top, .nav { padding-left:16px; padding-right:16px; } }
+@media (max-width:900px) { .top, .nav { padding-left:16px; padding-right:16px; } .grid.g21, .grid.g12, .grid.g11 { grid-template-columns:minmax(0,1fr); } }
 @media (max-width:560px) { .kpis { grid-template-columns:repeat(2,minmax(0,1fr)); } }
-@media print { .top, .nav, #toast, .acoes button { display:none !important; } th, .kpi, td.neg { print-color-adjust:exact; -webkit-print-color-adjust:exact; } }
 </style>
 </head>
 <body>
 <header class="top">
   <div class="top-linha">
     <div>
-      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v5</span></div>
+      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v6</span></div>
       <h1 id="titulo">Análise de Corte e Religação</h1>
     </div>
     <div class="filtros" id="filtros" hidden>
@@ -141,21 +204,26 @@ code { background:var(--tint); padding:0 4px; border-radius:3px; font-size:11.5p
       <button type="button" class="btn-top" id="btnConectar">📁 Conectar pasta</button>
       <a class="btn-top" href="https://raniere3000-tech.github.io/bookcomercial/">🏠 Menu</a>
       <button type="button" class="btn-top" id="btnAtualizar" disabled title="Relê a mesma pasta (Chrome e Edge)">↻ Atualizar</button>
+      <button type="button" class="btn-top" id="btnApresentar" hidden title="Esconde o cabeçalho e aumenta gráficos e fontes (Esc sai)">🖥 Apresentar</button>
+      <button type="button" class="btn-top" id="btnPdf" hidden title="Abre a impressão: escolha “Salvar como PDF”">📄 Executivo</button>
       <input type="file" id="inputPasta" webkitdirectory directory multiple hidden>
     </div>
   </div>
   <div class="fonte-status" id="status" role="status"></div>
   <div class="barra-prog" id="progresso" hidden><div id="progBarra"></div></div>
+  <ul class="etapas" id="etapas" aria-live="polite" hidden></ul>
+  <details class="detalhes" id="detalhes" hidden><summary>Detalhes da leitura</summary><pre id="log"></pre><button type="button" class="btn-top" id="btnCopiar">Copiar detalhes</button></details>
 </header>
 <nav class="nav" id="nav" aria-label="Páginas do painel" hidden>
-  <button class="tab active" data-aba="saldo" type="button">Saldo de economias</button>
-  <button class="tab" data-aba="cruzada" type="button">Corte × Religação</button>
-  <button class="tab" data-aba="pos" type="button">Pós-corte</button>
-  <button class="tab" data-aba="perm" type="button">Permanência</button>
-  <button class="tab" data-aba="dados" type="button">Dados</button>
+  <button class="tab active" data-aba="saldo" type="button" title="Tecla 1">Saldo de economias</button>
+  <button class="tab" data-aba="cruzada" type="button" title="Tecla 2">Corte × Religação</button>
+  <button class="tab" data-aba="pos" type="button" title="Tecla 3">Pós-corte</button>
+  <button class="tab" data-aba="perm" type="button" title="Tecla 4">Permanência</button>
+  <button class="tab" data-aba="dados" type="button" title="Tecla 5">Dados</button>
 </nav>
 <main>
   <div class="view ativo" style="padding-bottom:0"><div class="card alerta" id="aviso" hidden></div></div>
+  <div class="view ativo" id="esqueleto" hidden><div class="esq"></div><div class="esq" style="height:240px"></div><div class="esq" style="height:160px"></div></div>
 
   <section class="view ativo" id="inicio">
     <div class="card">
@@ -176,6 +244,7 @@ code { background:var(--tint); padding:0 4px; border-radius:3px; font-size:11.5p
   </section>
 
   <div id="painel" hidden>
+    <div class="so-impressao" id="soImpressao"></div>
     <section class="view ativo" id="view-saldo"></section>
     <section class="view" id="view-cruzada"></section>
     <section class="view" id="view-pos"></section>
@@ -183,12 +252,13 @@ code { background:var(--tint); padding:0 4px; border-radius:3px; font-size:11.5p
     <section class="view" id="view-dados"></section>
   </div>
 </main>
+<aside id="gaveta" hidden aria-label="Detalhe"></aside>
+<button type="button" class="btn-just" id="btnSair" hidden>✕ Sair da apresentação</button>
 <div id="toast" role="status" aria-live="polite"></div>
-<pre id="log" hidden></pre>
 
 <script>
 "use strict";
-const VERSAO_SITE = "v5-20261014";
+const VERSAO_SITE = "v6-20261014";
 
 // ===================== utilidades =====================
 const $ = (id) => document.getElementById(id);
@@ -200,80 +270,166 @@ const fmtN = (v) => (v == null || v === "" ? "" : nf0.format(v));
 const fmtP = (v) => (v == null || !isFinite(v) ? "-" : nf1.format(v * 100) + "%");
 const MESES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 const mesRot = (m) => (/^\d{4}-\d{2}/.test(m || "") ? `${MESES[+m.slice(5, 7) - 1]}/${m.slice(0, 4)}` : m);
+const mesCurto = (m) => (/^\d{4}-\d{2}/.test(m || "") ? `${MESES[+m.slice(5, 7) - 1].slice(0, 3)}/${m.slice(2, 4)}` : m);
 const dataRot = (d) => (/^\d{4}-\d{2}-\d{2}/.test(d || "") ? `${d.slice(8, 10)}/${d.slice(5, 7)}/${d.slice(0, 4)}` : (d || ""));
 const soma = (arr) => arr.reduce((a, b) => a + (b || 0), 0);
 const mediana = (arr) => { if (!arr.length) return null; const s = [...arr].sort((a, b) => a - b), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
 const unicos = (arr) => [...new Set(arr.filter((v) => v != null && v !== ""))].sort();
 const txt = (v) => ({ v: v ?? "", classe: "txt" });
+const idxMes = (m) => +m.slice(0, 4) * 12 + +m.slice(5, 7);
+const ajuda = (t) => `<span class="info" tabindex="0" title="${esc(t)}" aria-label="${esc(t)}">ⓘ</span>`;
 
 function aviso(texto) { const a = $("aviso"); a.hidden = !texto; a.innerHTML = texto ? `<div class="card-topo"><h2>⚠ Atenção</h2></div><p>${esc(texto)}</p>` : ""; }
-let toastTimer = null;
 function toast(texto, erro) {
-  const t = $("toast"); t.textContent = texto; t.classList.toggle("erro", !!erro); t.classList.add("mostra");
-  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("mostra"), erro ? 6000 : 3500);
+  const t = $("toast"); t.textContent = texto; t.className = erro ? "erro" : ""; t.style.display = "block";
+  clearTimeout(toast.t); toast.t = setTimeout(() => { t.style.display = "none"; }, erro ? 9000 : 5000);
 }
+function guarda(chave, valor) { try { localStorage.setItem(chave, JSON.stringify(valor)); } catch (e) { /* sem armazenamento */ } }
+function le(chave, padrao) { try { const v = localStorage.getItem(chave); return v == null ? padrao : JSON.parse(v); } catch (e) { return padrao; } }
 
-// Tabelas: guardam os dados para o botão ⬇ (CSV)
-const TABELAS = {};
+// ===================== tabelas =====================
+const TABELAS = {};                                          // para o botão ⬇ (CSV)
+const DET = [];                                              // detalhes que abrem no painel lateral
+function regDet(titulo, obter, tipo) { DET.push({ titulo, obter, tipo }); return DET.length - 1; }
+
 function tabela(id, cabecalho, linhas, opcoes = {}) {
   TABELAS[id] = { cabecalho, linhas: linhas.map((l) => l.celulas.map((c) => (c && typeof c === "object" ? (c.csv ?? c.v) : c))) };
   const th = cabecalho.map((c, i) => {
     const ord = opcoes.ordem && opcoes.ordem[i];
     const seta = ord && CTL.ordem && CTL.ordem.col === ord ? (CTL.ordem.dir > 0 ? " ▲" : " ▼") : "";
-    return `<th${ord ? ` data-ord="${esc(ord)}" title="Ordenar"` : ""}>${esc(c)}${seta}</th>`;
+    const attr = ord ? ` data-ord="${esc(ord)}" tabindex="0" title="Ordenar"` : (opcoes.semOrd ? "" : ` data-sort="${i}" tabindex="0" title="Ordenar"`);
+    return `<th${attr}>${esc(c)}${seta}</th>`;
   }).join("");
   const corpo = linhas.map((l) => `<tr class="${l.classe || ""}">${l.celulas.map((c, i) => celula(c, i, opcoes)).join("")}</tr>`).join("");
   return `<div class="tabela-wrap${opcoes.longa ? " longa" : ""}"><table id="t-${id}"><thead><tr>${th}</tr></thead><tbody>${corpo}</tbody></table></div>`;
 }
 function celula(c, i, opcoes) {
   if (c && typeof c === "object") {
-    if (c.selo) return `<td class="${c.classe || ""}"><span class="selo selo-${c.selo}">${esc(c.txt ?? c.v)}</span></td>`;
-    return `<td class="${c.classe || ""}">${esc(c.txt ?? c.v)}</td>`;
+    const at = (c.det != null ? ` data-det="${c.det}" tabindex="0" title="Ver os clientes"` : "") + (c.mat ? ` data-mat="${esc(c.mat)}" tabindex="0" title="Ver o histórico"` : "") + (c.bg ? ` style="background:${c.bg} !important"` : "");
+    if (c.selo) return `<td class="${c.classe || ""}"${at}><span class="selo selo-${c.selo}">${esc(c.txt ?? c.v)}</span></td>`;
+    return `<td class="${c.classe || ""}"${at}>${esc(c.txt ?? c.v)}</td>`;
   }
   if (typeof c === "number") return `<td class="num${c === 0 ? " vazio" : ""}">${opcoes.pct && i > 0 ? fmtP(c) : fmtN(c)}</td>`;
   return `<td class="${i === 0 ? "" : "txt"}">${esc(c)}</td>`;
 }
+// célula numérica que abre a lista de clientes por trás do número
+const nCel = (v, titulo, obter, tipo = "cortes", extra = {}) => ({ v, txt: v === 0 ? "-" : fmtN(v), classe: "num" + (v === 0 ? " vazio" : " clic"), det: v === 0 ? null : regDet(titulo, obter, tipo), ...extra });
+const pCel = (v) => ({ v, txt: fmtP(v), classe: "num" });
+
 const botaoCsv = (id, nome) => `<button type="button" class="btn-just btn-down" data-csv="${id}" data-nome="${esc(nome)}" title="Baixar ${esc(nomeArquivo(nome))}.csv" aria-label="Baixar ${esc(nome)} em CSV">⬇</button>`;
 function baixaCsv(cabecalho, linhas, nome) {
   const q = (v) => { if (v == null) return ""; if (typeof v === "number") return String(v).replace(".", ","); const s = String(v); return /[;"\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
   const texto = "﻿" + [cabecalho, ...linhas].map((l) => l.map(q).join(";")).join("\r\n");
   baixa(new Blob([texto], { type: "text/csv;charset=utf-8" }), nomeArquivo(nome) + ".csv");
 }
-function nomeArquivo(nome) {                              // sem acento e sem caracteres proibidos no Windows
-  return nome.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[\\/:*?"<>|]/g, "_").trim() || "tabela";
+function nomeArquivo(nome) {                                 // sem acento e sem caracteres proibidos no Windows
+  return nome.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^\w .()\-]/g, "_").replace(/_+/g, "_").trim() || "tabela";
 }
 function baixa(blob, nome) {
   const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = nome;
   document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
   toast("Baixado: " + nome);
 }
-function cartao(titulo, nota, conteudo, idCsv, controles = "", extra = "") {
-  return `<div class="card"><div class="card-topo"><h2>${esc(titulo)}</h2><div class="acoes">${controles}${extra}${idCsv ? botaoCsv(idCsv, titulo) : ""}</div></div>
+function cartao(titulo, nota, conteudo, idCsv, controles = "", dica = "") {
+  return `<div class="card"><div class="card-topo"><h2>${esc(titulo)}${dica ? ajuda(dica) : ""}</h2><div class="acoes">${controles}${idCsv ? botaoCsv(idCsv, titulo) : ""}</div></div>
     ${nota ? `<p class="nota-secao">${nota}</p>` : ""}${conteudo}</div>`;
+}
+function cartaoGraf(id, titulo, nota, controles = "", dica = "", rodape = "") {
+  return `<div class="card"><div class="card-topo"><h2>${esc(titulo)}${dica ? ajuda(dica) : ""}</h2><div class="acoes">${controles}</div></div>
+    ${nota ? `<p class="nota-secao">${nota}</p>` : ""}<div class="graf"><canvas id="${id}" role="img" aria-label="${esc(titulo)}"></canvas></div>${rodape ? `<p class="dica">${rodape}</p>` : ""}</div>`;
 }
 function seletor(id, rotulo, opcoes, valor) {
   return `<span class="rot-ctl">${esc(rotulo)}</span><span class="sub" role="group" aria-label="${esc(rotulo)}">${opcoes.map(([v, t]) =>
     `<button type="button" data-ctl="${id}" data-val="${esc(v)}" class="${v === valor ? "ativo" : ""}" aria-pressed="${v === valor}">${esc(t)}</button>`).join("")}</span>`;
 }
 function kpis(lista) {
-  return `<div class="kpis" style="--n:${lista.length}">${lista.map((k) => `<div class="kpi${k.neg ? " neg" : ""}"><div class="kpi-rot">${esc(k.rot)}</div>
+  return `<div class="kpis" style="--n:${lista.length}">${lista.map((k) => `<div class="kpi${k.neg ? " neg" : ""}"><div class="kpi-rot">${esc(k.rot)}${k.ajuda ? ajuda(k.ajuda) : ""}</div>
     <div class="kpi-val">${esc(k.val)}</div><div class="kpi-det">${esc(k.det || "")}</div></div>`).join("")}</div>`;
 }
 
-// ===================== estado =====================
-let DADOS = null, CORTES = [], SALDO = [], R = null;
-const CTL = { medidaSaldo: "economias", posCruzada: "todos", modoCruzada: "qtd", sitPos: "CORTADA", posPerm: "todos", modoPerm: "qtd", verTodos: false, ordem: null };
-document.addEventListener("click", (e) => {
-  const c = e.target.closest("[data-ctl]");
-  if (c) { CTL[c.dataset.ctl] = c.dataset.val; desenha(); return; }
-  const d = e.target.closest("[data-csv]");
-  if (d && TABELAS[d.dataset.csv]) { baixaCsv(TABELAS[d.dataset.csv].cabecalho, TABELAS[d.dataset.csv].linhas, d.dataset.nome); return; }
-  const o = e.target.closest("th[data-ord]");
-  if (o) { const col = o.dataset.ord; CTL.ordem = CTL.ordem && CTL.ordem.col === col ? { col, dir: -CTL.ordem.dir } : { col, dir: 1 }; desenha(); return; }
-  if (e.target.closest("[data-acao=vertodos]")) { CTL.verTodos = !CTL.verTodos; desenha(); }
-});
+// ===================== gráficos (Chart.js) =====================
+const COR = { marinho: "#1A2740", azul: "#394D73", azulMed: "#176b9c", ciano: "#16a5b8", ant: "#A7B5CB", laranja: "#E8710A", laranjaEsc: "#9a3412", laranjaCl: "#F3B27A", grade: "#dbe4ec" };
+const GRAFICOS = {};
+let imprimindo = false;
 
-function linhasDe(col) {                                  // {col: [..]} -> [{col: v}]
+// rótulos de dados em todas as barras (plugin do guia): dentro da faixa quando cabe, em cima quando não empilhada
+const pluginRotulos = {
+  id: "rotulos",
+  afterDatasetsDraw(chart) {
+    const ctx = chart.ctx, horiz = chart.options.indexAxis === "y";
+    ctx.save(); ctx.font = "600 10.5px 'IBM Plex Sans Condensed','Segoe UI',Arial,sans-serif"; ctx.textBaseline = "middle"; ctx.textAlign = "center";
+    chart.data.datasets.forEach((ds, di) => {
+      if (ds.rotulos === false || !chart.isDatasetVisible(di)) return;
+      const meta = chart.getDatasetMeta(di), fmt = ds.fmt || fmtN, empilhado = !!ds.empilhado;
+      meta.data.forEach((el, i) => {
+        const v = ds.data[i];
+        if (v == null || v === 0 || (typeof v === "number" && !isFinite(v))) return;
+        const t = fmt(v), larg = ctx.measureText(t).width;
+        if (meta.type === "line") { ctx.fillStyle = COR.marinho; ctx.fillText(t, el.x, el.y - 11); return; }
+        const p = el.getProps(["x", "y", "base"], true);
+        if (horiz) {
+          const comp = Math.abs(p.x - p.base);
+          if (comp >= larg + 8) { ctx.fillStyle = ds.corTexto || "#fff"; ctx.fillText(t, (p.x + p.base) / 2, p.y); }
+          else if (!empilhado) { ctx.fillStyle = "#1f2d3d"; ctx.textAlign = "left"; ctx.fillText(t, Math.max(p.x, p.base) + 4, p.y); ctx.textAlign = "center"; }
+        } else {
+          const alt = Math.abs(p.base - p.y);
+          if (alt >= 18 && (empilhado || larg + 4 <= el.width)) { ctx.fillStyle = ds.corTexto || "#fff"; ctx.fillText(t, p.x, (p.y + p.base) / 2); }
+          else if (!empilhado) {
+            const acima = p.y <= p.base, y = acima ? p.y - 8 : p.y + 8;
+            ctx.fillStyle = "#1f2d3d";
+            if (larg + 4 > el.width) { ctx.save(); ctx.translate(p.x, acima ? p.y - 4 : p.y + 4); ctx.rotate(-Math.PI / 2); ctx.textAlign = acima ? "left" : "right"; ctx.fillText(t, 0, 0); ctx.restore(); }
+            else ctx.fillText(t, p.x, y);
+          }
+        }
+      });
+    });
+    ctx.restore();
+  },
+};
+if (window.Chart) {
+  Chart.register(pluginRotulos);
+  Chart.defaults.font.family = "'IBM Plex Sans','Segoe UI',Arial,sans-serif";
+  Chart.defaults.font.size = 11;
+  Chart.defaults.color = "#1f2d3d";
+  Chart.defaults.locale = "pt-BR";
+}
+
+function opcoes({ horizontal = false, empilhado = false, pct = false, aoClicar = null, legenda = true, eixoY = {} } = {}) {
+  return {
+    indexAxis: horizontal ? "y" : "x", responsive: true, maintainAspectRatio: false, animation: imprimindo ? false : undefined,
+    layout: { padding: { top: 14, right: horizontal ? 24 : 4 } },
+    interaction: { mode: "index", intersect: false },
+    onClick: aoClicar ? (ev, els, chart) => { const e = chart.getElementsAtEventForMode(ev, "nearest", { intersect: true }, true); if (e.length) aoClicar(e[0].index, e[0].datasetIndex); } : undefined,
+    onHover: aoClicar ? (ev, els, chart) => { ev.native.target.style.cursor = chart.getElementsAtEventForMode(ev, "nearest", { intersect: true }, true).length ? "pointer" : "default"; } : undefined,
+    scales: {
+      x: { stacked: empilhado, grid: { display: horizontal, color: COR.grade }, border: { display: false }, ...(horizontal && pct ? { ticks: { callback: (v) => v + "%" }, max: 100 } : {}) },
+      y: { stacked: empilhado, grid: { color: COR.grade, display: !horizontal }, border: { display: false }, beginAtZero: true, ...(!horizontal && pct ? { ticks: { callback: (v) => v + "%" }, max: 100 } : {}), ...eixoY },
+    },
+    plugins: {
+      legend: { display: legenda, position: "top", align: "end", labels: { usePointStyle: true, boxWidth: 8, boxHeight: 8, padding: 14 } },
+      tooltip: {
+        backgroundColor: "#05050D", borderColor: "#394D73", borderWidth: 1, titleColor: "#fff", bodyColor: "#fff", padding: 12, cornerRadius: 8,
+        callbacks: { label: (c) => ` ${c.dataset.label}: ${(c.dataset.fmt || fmtN)(c.parsed[horizontal ? "x" : "y"])}${pct && !c.dataset.fmt ? "%" : ""}` },
+      },
+    },
+  };
+}
+function grafico(id, tipo, dados, opts) {
+  const el = $(id); if (!el) return;
+  if (GRAFICOS[id]) { GRAFICOS[id].destroy(); delete GRAFICOS[id]; }
+  if (!window.Chart) { el.parentElement.innerHTML = `<div class="graf-aviso">Os gráficos não carregaram (sem acesso ao jsDelivr). As tabelas abaixo continuam valendo.</div>`; return; }
+  GRAFICOS[id] = new Chart(el, { type: tipo, data: dados, options: opts });
+}
+const barra = (label, data, cor, extra = {}) => ({ type: "bar", label, data, backgroundColor: cor, borderRadius: 3, categoryPercentage: .65, barPercentage: .85, ...extra });
+const setaVar = (v) => (v > 0 ? "▲ " : v < 0 ? "▼ " : "") + nf1.format(Math.abs(v) * 100) + "%";
+
+// ===================== estado =====================
+let DADOS = null, CORTES = [], SALDO = [], EVENTOS = [], R = null, HASH_PENDENTE = null;
+const CTL = Object.assign({ medidaSaldo: "economias", posCruzada: "todos", modoCruzada: "qtd", sitPos: "CORTADA", posPerm: "todos", modoPerm: "qtd", metricaEf: "pRel" }, le("cortes_ctl", {}));
+Object.assign(CTL, { verTodos: false, ordem: null, busca: "" });
+const guardaCtl = () => guarda("cortes_ctl", Object.fromEntries(["medidaSaldo", "posCruzada", "modoCruzada", "sitPos", "posPerm", "modoPerm", "metricaEf"].map((k) => [k, CTL[k]])));
+
+function linhasDe(col) {                                     // {col: [..]} -> [{col: v}]
   const chaves = Object.keys(col), n = chaves.length ? col[chaves[0]].length : 0, out = new Array(n);
   for (let i = 0; i < n; i++) { const o = {}; for (const k of chaves) o[k] = col[k][i]; out[i] = o; }
   return out;
@@ -283,6 +439,7 @@ function carregaDados(d) {
   DADOS = d; R = d.regras;
   CORTES = linhasDe(d.cortes).map((c) => ({ ...c, mes: (c.mes_corte || "").slice(0, 7) }));
   SALDO = linhasDe(d.saldo);
+  EVENTOS = linhasDe(d.eventos || {}).map((e) => ({ ...e, mes: (e.data || "").slice(0, 7) }));
   const meses = unicos([...CORTES.map((c) => c.mes), ...SALDO.map((s) => s.mes)]);
   const preenche = (sel, valores, todos = true) => {
     const atual = sel.value;
@@ -295,29 +452,25 @@ function carregaDados(d) {
   preenche($("fCidade"), unicos([...CORTES.map((c) => c.cidade), ...SALDO.map((s) => s.cidade)]));
   preenche($("fRecurso"), unicos([...CORTES.map((c) => c.recurso), ...SALDO.map((s) => s.recurso)]));
   preenche($("fTipo"), unicos(CORTES.map((c) => c.tipo)));
-  $("inicio").classList.remove("ativo"); $("inicio").hidden = true; $("painel").hidden = false; $("filtros").hidden = false; $("nav").hidden = false;
+  if (HASH_PENDENTE) {                                       // estado vindo do endereço (link compartilhado)
+    for (const [k, id] of [["de", "fDe"], ["ate", "fAte"], ["cidade", "fCidade"], ["recurso", "fRecurso"], ["tipo", "fTipo"]]) {
+      const v = HASH_PENDENTE[k], sel = $(id);
+      if (v != null && [...sel.options].some((o) => o.value === v)) { sel.value = v; sel.dataset.escolhido = "1"; }
+    }
+    if (HASH_PENDENTE.aba && FILTROS_DA_ABA[HASH_PENDENTE.aba]) abaAtual = HASH_PENDENTE.aba;
+    HASH_PENDENTE = null;
+  }
+  $("inicio").classList.remove("ativo"); $("inicio").hidden = true; $("esqueleto").hidden = true;
+  $("painel").hidden = false; $("filtros").hidden = false; $("nav").hidden = false; $("btnApresentar").hidden = false; $("btnPdf").hidden = false;
   const erros = d.arquivos.filter((a) => a.tipo === "erro").length;
   aviso(erros ? `${erros} arquivo(s) não puderam ser lidos e ficaram de fora dos números. Veja o motivo na aba Dados, em “Arquivos da pasta”.` : "");
   desenha();
 }
-["fDe", "fAte", "fCidade", "fRecurso", "fTipo"].forEach((id) => $(id).addEventListener("change", (e) => { e.target.dataset.escolhido = "1"; CTL.verTodos = false; desenha(); }));
-$("btnLimpar").addEventListener("click", () => {
-  ["fCidade", "fRecurso", "fTipo"].forEach((id) => { $(id).value = ""; });
-  ["fDe", "fAte"].forEach((id) => { delete $(id).dataset.escolhido; });
-  const op = $("fDe").options; $("fDe").value = op.length ? op[0].value : ""; $("fAte").value = op.length ? op[op.length - 1].value : "";
-  desenha();
-});
 
-function filtro() {
-  return { de: $("fDe").value, ate: $("fAte").value, cidade: $("fCidade").value, recurso: $("fRecurso").value, tipo: $("fTipo").value };
-}
-function periodo(f) {
-  if (!f.de || !f.ate) return "";
-  return f.de === f.ate ? mesRot(f.de) : `${mesRot(f.de)} a ${mesRot(f.ate)}`;
-}
-function cortesFiltrados(f = filtro()) {
-  return CORTES.filter((c) => (!f.de || c.mes >= f.de) && (!f.ate || c.mes <= f.ate) && (!f.cidade || c.cidade === f.cidade)
-    && (!f.recurso || c.recurso === f.recurso) && (!f.tipo || c.tipo === f.tipo));
+function filtro() { return { de: $("fDe").value, ate: $("fAte").value, cidade: $("fCidade").value, recurso: $("fRecurso").value, tipo: $("fTipo").value }; }
+function periodo(f) { if (!f.de || !f.ate) return ""; return f.de === f.ate ? mesRot(f.de) : `${mesRot(f.de)} a ${mesRot(f.ate)}`; }
+function cortesFiltrados(f) {
+  return CORTES.filter((c) => (!f.de || c.mes >= f.de) && (!f.ate || c.mes <= f.ate) && (!f.cidade || c.cidade === f.cidade) && (!f.recurso || c.recurso === f.recurso) && (!f.tipo || c.tipo === f.tipo));
 }
 function mesesEntre(de, ate) {
   const out = []; if (!de || !ate) return out;
@@ -325,28 +478,52 @@ function mesesEntre(de, ate) {
   while (a < a2 || (a === a2 && m <= m2)) { out.push(`${a}-${String(m).padStart(2, "0")}`); m++; if (m > 12) { m = 1; a++; } }
   return out;
 }
+// aplica um filtro a partir de um clique no gráfico
+function setFiltro(ids, valor, rotulo) {
+  for (const id of [].concat(ids)) { const sel = $(id); if (![...sel.options].some((o) => o.value === valor)) return; sel.value = valor; sel.dataset.escolhido = "1"; }
+  setTimeout(() => { desenha(); toast(`Filtro aplicado: ${rotulo}. Clique em Limpar para voltar.`); }, 0);   // fora do evento do gráfico (que será refeito)
+}
+["fDe", "fAte", "fCidade", "fRecurso", "fTipo"].forEach((id) => $(id).addEventListener("change", (e) => { e.target.dataset.escolhido = "1"; CTL.verTodos = false; desenha(); }));
+$("btnLimpar").addEventListener("click", () => {
+  ["fCidade", "fRecurso", "fTipo"].forEach((id) => { $(id).value = ""; });
+  ["fDe", "fAte"].forEach((id) => { delete $(id).dataset.escolhido; });
+  const op = $("fDe").options; $("fDe").value = op.length ? op[0].value : ""; $("fAte").value = op.length ? op[op.length - 1].value : "";
+  CTL.busca = ""; desenha();
+});
 
-// filtros que cada aba usa; os outros ficam apagados
+// ===================== abas e desenho (só a aba aberta; gráficos só quando a aba aparece) =====================
 const FILTROS_DA_ABA = { saldo: ["de", "ate", "cidade", "recurso"], cruzada: ["de", "ate", "cidade", "recurso", "tipo"], pos: ["de", "ate", "cidade", "recurso", "tipo"], perm: ["de", "ate", "cidade", "recurso", "tipo"], dados: ["de", "ate", "cidade", "recurso", "tipo"] };
-let abaAtual = "saldo";
+const ABAS = ["saldo", "cruzada", "pos", "perm", "dados"];
+let abaAtual = "saldo", CTX = null; const sujo = {}; const MEM = {};
+
 function ativaAba(aba) {
   abaAtual = aba;
   document.querySelectorAll(".tab").forEach((b) => b.classList.toggle("active", b.dataset.aba === aba));
   document.querySelectorAll("#painel .view").forEach((v) => v.classList.toggle("ativo", v.id === "view-" + aba));
   document.querySelectorAll(".fsel").forEach((l) => l.classList.toggle("apagado", !FILTROS_DA_ABA[aba].includes(l.dataset.f)));
+  if (DADOS) { renderAba(aba); atualizaHash(); }
 }
 $("nav").addEventListener("click", (e) => { const t = e.target.closest(".tab"); if (t) ativaAba(t.dataset.aba); });
 
 function desenha() {
   if (!DADOS) return;
-  const f = filtro(), cortes = cortesFiltrados(f), per = periodo(f);
-  $("titulo").textContent = "Análise de Corte e Religação" + (per ? " — " + per : "");
-  $("view-saldo").innerHTML = abaSaldo(f, per);
-  $("view-cruzada").innerHTML = abaCruzada(cortes, per);
-  $("view-pos").innerHTML = abaPos(cortes, per);
-  $("view-perm").innerHTML = abaPermanencia(cortes, per);
-  $("view-dados").innerHTML = abaDados(cortes);
+  const f = filtro(); CTX = { f, cortes: cortesFiltrados(f), per: periodo(f) };
+  DET.length = 0;
+  ABAS.forEach((a) => { sujo[a] = true; });
+  $("titulo").textContent = "Análise de Corte e Religação" + (CTX.per ? " — " + CTX.per : "");
+  $("soImpressao").textContent = "Análise de Corte e Religação" + (CTX.per ? " — " + CTX.per : "") + (f.cidade ? " · " + f.cidade : "") + (f.recurso ? " · " + f.recurso : "") + (f.tipo ? " · " + f.tipo : "");
   ativaAba(abaAtual);
+}
+const RENDER = { saldo: abaSaldo, cruzada: abaCruzada, pos: abaPos, perm: abaPermanencia, dados: abaDados };
+function renderAba(aba) {
+  if (!sujo[aba] || !CTX) return;
+  sujo[aba] = false;
+  const ativo = document.activeElement, foco = ativo && ativo.id && ativo.closest("#view-" + aba) ? { id: ativo.id, ini: ativo.selectionStart, fim: ativo.selectionEnd } : null;
+  Object.keys(GRAFICOS).filter((k) => k.startsWith("g-" + aba)).forEach((k) => { GRAFICOS[k].destroy(); delete GRAFICOS[k]; });
+  $("view-" + aba).innerHTML = RENDER[aba](CTX);
+  (MEM[aba] && MEM[aba].graficos) && MEM[aba].graficos();
+  if (aba === "dados") ligaDados();
+  if (foco) { const n = $(foco.id); if (n) { n.focus(); try { n.setSelectionRange(foco.ini, foco.fim); } catch (e) { /* sem seleção */ } } }
 }
 
 // ===================== aba Saldo =====================
@@ -354,19 +531,21 @@ const ORDEM_TIPOS = ["CAVALETE", "LISC", "RAMAL", "REDE", "AUTORELIGAÇÃO", "CO
 const pesoTipo = (t) => (ORDEM_TIPOS.indexOf(t) < 0 ? 99 : ORDEM_TIPOS.indexOf(t));
 const ordenaTipos = (t) => [...t].sort((a, b) => pesoTipo(a) - pesoTipo(b) || a.localeCompare(b));
 
-function abaSaldo(f, per) {
+function abaSaldo({ f, per }) {
   const C = R.categorias, campo = CTL.medidaSaldo === "economias" ? "economias" : "qtd";
   const ev = SALDO.filter((s) => (!f.de || s.mes >= f.de) && (!f.ate || s.mes <= f.ate) && (!f.cidade || s.cidade === f.cidade) && (!f.recurso || s.recurso === f.recurso));
   const meses = mesesEntre(f.de, f.ate);
   const valor = (cat, tipo, mes) => soma(ev.filter((s) => s.categoria === cat && (!tipo || s.tipo === tipo) && s.mes === mes).map((s) => s[campo]));
-  const num = (v, saldo) => ({ v, txt: v === 0 ? "-" : fmtN(v), classe: "num" + (v < 0 ? (saldo ? " neg" : " neg-txt") : (v === 0 ? " vazio" : "")) });
+  const detEv = (cat, tipo, mes, nome) => () => EVENTOS.filter((e) => e.categoria === cat && (!tipo || e.tipo === tipo) && (!mes || e.mes === mes) && (!f.cidade || e.cidade === f.cidade) && (!f.recurso || e.recurso === f.recurso)
+    && (!mes && f.de ? e.mes >= f.de : true) && (!mes && f.ate ? e.mes <= f.ate : true));
+  const num = (v, saldo, det) => ({ v, txt: v === 0 ? "-" : fmtN(v), classe: "num" + (v < 0 ? (saldo ? " neg" : " neg-txt") : (v === 0 ? " vazio" : "")) + (det ? " clic" : ""), det: det && v !== 0 ? det : null });
   const linhas = [];
   const grupo = (cat, rotulo, sinal, comTipos) => {
     const vals = meses.map((m) => sinal * valor(cat, null, m));
-    linhas.push({ classe: "grupo", celulas: [rotulo, ...vals.map((v) => num(v)), num(soma(vals))] });
+    linhas.push({ classe: "grupo", celulas: [rotulo, ...vals.map((v, i) => num(v, false, regDet(`${rotulo} — ${mesRot(meses[i])}`, detEv(cat, null, meses[i]), "eventos"))), num(soma(vals), false, regDet(`${rotulo} — ${per}`, detEv(cat, null, null), "eventos"))] });
     if (comTipos) ordenaTipos(unicos(ev.filter((s) => s.categoria === cat).map((s) => s.tipo))).forEach((t) => {
       const v = meses.map((m) => sinal * valor(cat, t, m));
-      linhas.push({ classe: "sub-linha", celulas: [t, ...v.map((x) => num(x)), num(soma(v))] });
+      linhas.push({ classe: "sub-linha", celulas: [t, ...v.map((x, i) => num(x, false, regDet(`${rotulo} ${t} — ${mesRot(meses[i])}`, detEv(cat, t, meses[i]), "eventos"))), num(soma(v), false, regDet(`${rotulo} ${t} — ${per}`, detEv(cat, t, null), "eventos"))] });
     });
     return vals;
   };
@@ -382,16 +561,40 @@ function abaSaldo(f, per) {
   const totCorte = -soma(corte), totRelig = soma(relig), totLna = soma(lna), totSaldo = soma(saldo);
   const unidade = campo === "economias" ? "economias" : "ligações";
   const topo = kpis([
-    { rot: "Cortes", val: fmtN(totCorte), det: unidade },
-    { rot: "Religações", val: fmtN(totRelig), det: unidade },
-    { rot: "Implantações (LNA)", val: fmtN(totLna), det: unidade },
-    { rot: "Saldo do período", val: fmtN(totSaldo), det: "−corte + religação + implantação", neg: totSaldo < 0 },
-    { rot: "Religação ÷ corte", val: totCorte ? fmtP(totRelig / totCorte) : "-", det: "no período" },
+    { rot: "Cortes", val: fmtN(totCorte), det: unidade, ajuda: "OS de corte Finalizadas, uma por matrícula e dia." },
+    { rot: "Religações", val: fmtN(totRelig), det: unidade, ajuda: "OS de religação Finalizadas (inclui autorreligação)." },
+    { rot: "Implantações (LNA)", val: fmtN(totLna), det: unidade, ajuda: "Implantação de ligação de água Finalizada." },
+    { rot: "Saldo do período", val: fmtN(totSaldo), det: "−corte + religação + implantação", neg: totSaldo < 0, ajuda: "Saldo = −corte + religação + implantação de ligação de água." },
+    { rot: "Religação ÷ corte", val: totCorte ? fmtP(totRelig / totCorte) : "-", det: "no período", ajuda: "Quantas religações para cada corte no período." },
   ]);
+
+  // por tipo (gráfico da direita)
+  const tipos = ordenaTipos(unicos(ev.filter((s) => s.categoria === C.corte || s.categoria === C.religacao).map((s) => s.tipo)));
+  const porTipo = (cat) => tipos.map((t) => soma(ev.filter((s) => s.categoria === cat && s.tipo === t).map((s) => s[campo])));
+  MEM.saldo = {
+    graficos() {
+      grafico("g-saldo-1", "bar", {
+        labels: meses.map(mesCurto),
+        datasets: [
+          barra("Corte", corte, COR.laranja, { stack: "a", empilhado: true, order: 3 }),
+          barra("Religação", relig, COR.marinho, { stack: "a", empilhado: true, order: 3 }),
+          barra("Implantação (LNA)", lna, COR.ciano, { stack: "a", empilhado: true, order: 3 }),
+          { type: "line", label: "Saldo do mês", data: saldo, borderColor: COR.azul, backgroundColor: "#fff", pointBorderColor: COR.azul, pointBackgroundColor: "#fff", pointRadius: 4, borderWidth: 2, tension: 0, rotulos: false, order: 1 },
+          { type: "line", label: "Saldo acumulado", data: acumulado, borderColor: COR.azulMed, borderDash: [6, 4], pointRadius: 0, borderWidth: 2, tension: 0, rotulos: false, order: 2 },
+        ],
+      }, opcoes({ empilhado: true, aoClicar: (i) => setFiltro(["fDe", "fAte"], meses[i], mesRot(meses[i])) }));
+      grafico("g-saldo-2", "bar", {
+        labels: tipos,
+        datasets: [barra("Corte", porTipo(C.corte), COR.laranja), barra("Religação", porTipo(C.religacao), COR.marinho)],
+      }, opcoes({ horizontal: true }));
+    },
+  };
   const nota = `Só OS <b>Finalizadas</b>; cada matrícula conta uma vez por dia e categoria. Economias = <code>TOTAL_ECO</code> do cadastro do mês da OS (sem esse mês, o mais recente).`
-    + (semCad ? ` <b>${fmtN(semCad)}</b> evento(s) sem cadastro contam 1 economia.` : "") + ` O filtro Tipo de corte não se aplica aqui: a abertura por tipo já aparece nas linhas.`;
+    + (semCad ? ` <b>${fmtN(semCad)}</b> evento(s) sem cadastro contam 1 economia.` : "") + ` O filtro Tipo de corte não se aplica aqui: a abertura por tipo já aparece nas linhas. <b>Clique num número</b> para ver as matrículas.`;
   const ctl = seletor("medidaSaldo", "Medida", [["economias", "Economias"], ["qtd", "Ligações (OS)"]], CTL.medidaSaldo);
-  return topo + cartao("Saldo de economias" + (per ? " — " + per : ""), nota, tabela("saldo", ["Mês", ...meses.map(mesRot), "Total"], linhas), "saldo", ctl);
+  return topo + `<div class="grid g21">${cartaoGraf("g-saldo-1", "Saldo mensal de economias" + (per ? " — " + per : ""), "Barras: cortes (para baixo), religações e implantações (para cima). Linhas: saldo do mês e acumulado.", ctl, "Saldo do mês = −corte + religação + implantação de ligação de água. Clique numa barra para filtrar o mês.")}
+    ${cartaoGraf("g-saldo-2", "Cortes × religações por tipo", "Total do período, por tipo de serviço.")}</div>`
+    + cartao("Tabela de apoio — saldo por mês" + (per ? " — " + per : ""), nota, tabela("saldo", ["Mês", ...meses.map(mesRot), "Total"], linhas, { semOrd: true }), "saldo");
 }
 
 // ===================== aba Corte × Religação =====================
@@ -400,132 +603,234 @@ function filtraPos(cortes, modo) {
   if (modo === "sem") return cortes.filter((c) => !c.data_pos);
   return cortes;
 }
-function abaCruzada(todos, per) {
+function abaCruzada({ cortes: todos, per }) {
   const T = R.textos, cortes = filtraPos(todos, CTL.posCruzada), pct = CTL.modoCruzada === "pct";
   const mesesCorte = unicos(cortes.map((c) => c.mes));
   const mesesRel = unicos(cortes.map((c) => c.mes_religacao).filter((m) => /^\d{4}-\d{2}$/.test(m)));
   const colunas = [T.ativa, T.sem_religacao, ...mesesRel];
-  const pctCel = (v) => ({ v, txt: fmtP(v), classe: "num" });
+  const ehMes = (m) => /^\d{4}-\d{2}$/.test(m || "");
+  const rotCol = (c) => (ehMes(c) ? mesRot(c) : c);
+
+  // tabela de apoio (com mapa de calor e clique)
   const linha = (lista, rot, classe) => {
-    const tot = lista.length, vals = colunas.map((col) => lista.filter((c) => c.mes_religacao === col).length);
-    const relig = tot - vals[0] - vals[1];
-    return { classe, celulas: [rot, ...vals.map((v) => (pct ? (tot ? v / tot : 0) : v)), pct ? 1 : tot, pctCel(tot ? relig / tot : null)] };
+    const tot = lista.length, doTot = (col) => lista.filter((c) => c.mes_religacao === col);
+    const celulas = colunas.map((col) => {
+      const sub = doTot(col), v = sub.length, share = tot ? v / tot : 0;
+      const bg = ehMes(col) && v ? `rgba(23,107,156,${(0.08 + share * 0.5).toFixed(2)})` : null;
+      const c = nCel(pct ? share : v, `${rot} → ${rotCol(col)}`, () => sub, "cortes", { bg });
+      if (pct) { c.txt = v === 0 ? "-" : fmtP(share); }
+      return c;
+    });
+    const relig = tot - doTot(T.ativa).length - doTot(T.sem_religacao).length;
+    return { classe, celulas: [rot, ...celulas, pct ? pCel(1) : nCel(tot, `${rot} — todos os cortes`, () => lista), pCel(tot ? relig / tot : null)] };
   };
   const linhas = mesesCorte.map((m) => linha(cortes.filter((c) => c.mes === m), mesRot(m)));
   linhas.push(linha(cortes, "Total Geral", "linha-total"));
-  const ctl = seletor("posCruzada", "Pós-corte", [["todos", "Todos"], ["com", "Com"], ["sem", "Sem"]], CTL.posCruzada)
-    + seletor("modoCruzada", "Mostrar", [["qtd", "Quantidade"], ["pct", "%"]], CTL.modoCruzada);
-  const nota = `Cada corte (matrícula + data, OS Finalizada) na linha do mês em que foi feito e na coluna do mês da 1ª religação depois dele (antes do próximo corte da mesma matrícula). <b>Ativa</b>: não há OS de religação, mas o cadastro mostra a ligação ATIVA (só no último corte da matrícula). <b>Sem Religação</b>: sem OS de religação e não ATIVA no cadastro.`;
-  return cartao("Cortes realizados × mês da religação" + (per ? " — " + per : ""), nota,
-    tabela("cruzada", ["Mês do corte", ...colunas.map(mesRot), "Total Geral", "% religado"], linhas, { pct }), "cruzada", ctl);
+
+  // dados dos gráficos
+  const mesmo = [], depois = [], ativa = [], sem = [];
+  mesesCorte.forEach((m) => {
+    const l = cortes.filter((c) => c.mes === m), t = l.length || 1, f = (n) => (pct ? +(n / t * 100).toFixed(1) : n);
+    const a = l.filter((c) => c.mes_religacao === m).length, at = l.filter((c) => c.mes_religacao === T.ativa).length, s = l.filter((c) => c.mes_religacao === T.sem_religacao).length;
+    mesmo.push(f(a)); ativa.push(f(at)); sem.push(f(s)); depois.push(f(l.length - a - at - s));
+  });
+  const fim = idxMes((DADOS.hoje || "").slice(0, 7) || mesesCorte[mesesCorte.length - 1] || "2000-01");
+  const coortes = mesesCorte.slice(-8), maxK = Math.max(0, ...coortes.map((m) => fim - idxMes(m)));
+  const paleta = [COR.ant, "#8da2bd", "#6c86a8", COR.azulMed, COR.ciano, COR.azul, COR.marinho, COR.laranja];
+  const curvas = coortes.map((m, k) => {
+    const l = cortes.filter((c) => c.mes === m), t = l.length || 1, lim = fim - idxMes(m);
+    return { label: mesCurto(m), data: Array.from({ length: maxK + 1 }, (_, j) => (j > lim ? null : +(l.filter((c) => c.data_religacao && idxMes(c.data_religacao.slice(0, 7)) - idxMes(m) <= j).length / t * 100).toFixed(1))),
+      borderColor: paleta[paleta.length - coortes.length + k] || COR.marinho, backgroundColor: paleta[paleta.length - coortes.length + k] || COR.marinho, borderWidth: k === coortes.length - 1 ? 3 : 2, pointRadius: 3, tension: 0, rotulos: false, fmt: (v) => nf1.format(v) + "%" };
+  });
+  const totRel = cortes.filter((c) => c.data_religacao).length, nAtiva = cortes.filter((c) => c.mes_religacao === T.ativa).length, nSem = cortes.filter((c) => c.mes_religacao === T.sem_religacao).length;
+  const diasRel = cortes.filter((c) => c.data_religacao).map((c) => c.dias);
+  const topo = kpis([
+    { rot: "Cortes no período", val: fmtN(cortes.length), det: CTL.posCruzada === "todos" ? "com e sem pós-corte" : (CTL.posCruzada === "com" ? "só com pós-corte" : "só sem pós-corte") },
+    { rot: "Religaram", val: fmtN(totRel), det: cortes.length ? fmtP(totRel / cortes.length) + " dos cortes" : "-", ajuda: "Cortes com OS de religação Finalizada antes do próximo corte da matrícula." },
+    { rot: "Ativa (sem OS de religação)", val: fmtN(nAtiva), det: "cadastro mostra ATIVA", ajuda: "Sem OS de religação, mas o cadastro mostra a ligação ATIVA no último corte da matrícula." },
+    { rot: "Sem religação", val: fmtN(nSem), det: cortes.length ? fmtP(nSem / cortes.length) + " dos cortes" : "-", neg: nSem > 0 },
+    { rot: "Mediana até religar", val: diasRel.length ? nf0.format(mediana(diasRel)) + " dias" : "-", det: "só quem religou", ajuda: "Dias entre o corte e a religação (religação no mesmo dia conta 0)." },
+  ]);
+  MEM.cruzada = {
+    graficos() {
+      grafico("g-cruzada-1", "bar", {
+        labels: mesesCorte.map(mesCurto),
+        datasets: [
+          barra("Religou no mesmo mês", mesmo, COR.marinho, { empilhado: true }),
+          barra("Religou nos meses seguintes", depois, COR.azulMed, { empilhado: true }),
+          barra("Ativa (sem OS)", ativa, COR.ciano, { empilhado: true }),
+          barra("Sem religação", sem, COR.laranja, { empilhado: true }),
+        ].map((d) => ({ ...d, fmt: pct ? (v) => nf0.format(v) + "%" : undefined })),
+      }, opcoes({ empilhado: true, pct, aoClicar: (i) => setFiltro(["fDe", "fAte"], mesesCorte[i], mesRot(mesesCorte[i])) }));
+      grafico("g-cruzada-2", "line", { labels: Array.from({ length: maxK + 1 }, (_, j) => (j === 0 ? "mesmo mês" : `+${j} mês(es)`)), datasets: curvas },
+        { ...opcoes({ eixoY: { max: 100, ticks: { callback: (v) => v + "%" } } }), plugins: { ...opcoes().plugins, tooltip: { ...opcoes().plugins.tooltip, callbacks: { label: (c) => ` ${c.dataset.label}: ${nf1.format(c.parsed.y)}%` } } } });
+    },
+  };
+  const ctl = seletor("posCruzada", "Pós-corte", [["todos", "Todos"], ["com", "Com"], ["sem", "Sem"]], CTL.posCruzada) + seletor("modoCruzada", "Mostrar", [["qtd", "Quantidade"], ["pct", "%"]], CTL.modoCruzada);
+  const nota = `Cada corte (matrícula + data, OS Finalizada) na linha do mês em que foi feito e na coluna do mês da 1ª religação depois dele (antes do próximo corte da mesma matrícula). <b>Ativa</b>: não há OS de religação, mas o cadastro mostra a ligação ATIVA (só no último corte da matrícula). <b>Sem Religação</b>: sem OS de religação e não ATIVA no cadastro. O fundo azul mostra onde se concentram as religações. <b>Clique num número</b> para ver os clientes.`;
+  return topo + `<div class="grid g11">${cartaoGraf("g-cruzada-1", "Destino dos cortes de cada mês" + (per ? " — " + per : ""), pct ? "% dos cortes do mês, por situação da religação." : "Quantidade de cortes do mês, por situação da religação.", ctl, "Para cada mês de corte: quantos religaram no mesmo mês, nos meses seguintes, estão ativos sem OS ou seguem sem religação. Clique numa barra para filtrar o mês.")}
+    ${cartaoGraf("g-cruzada-2", "Velocidade de religação por mês do corte", "% acumulado de religados a cada mês depois do corte (últimos 8 meses de corte).", "", "Cada linha é um mês de corte; a linha só avança até o mês atual. Quanto mais alta e rápida, melhor a recuperação.")}</div>`
+    + cartao("Tabela de apoio — mês do corte × mês da religação" + (per ? " — " + per : ""), nota, tabela("cruzada", ["Mês do corte", ...colunas.map(rotCol), "Total Geral", "% religado"], linhas, { pct }), "cruzada");
 }
 
 // ===================== aba Pós-corte =====================
-function abaPos(todos, per) {
+const COR_REGUA = (rg) => ({ [rg.faixas[0].nome]: COR.laranjaCl, [rg.faixas[1].nome]: COR.laranja, [rg.faixas[2].nome]: COR.laranjaEsc, [rg.com_pos]: COR.ciano, [rg.religado_apos_pos]: COR.azulMed, [rg.religado]: COR.marinho });
+function abaPos({ cortes: todos, per }) {
   const rg = R.regua, T = R.textos, sit = CTL.sitPos;
   const cortes = sit ? todos.filter((c) => c.situacao === sit) : todos;
   const meses = unicos(cortes.map((c) => c.mes));
   const semPos = rg.faixas.map((f) => f.nome);
   const ordem = [...semPos, rg.com_pos, rg.religado_apos_pos, rg.religado];
-  const linhaMes = (lista, cols, rot, classe) => { const v = cols.map((col) => lista.filter((c) => c.regua === col).length); return { classe, celulas: [rot, ...v, soma(v)] }; };
-
   const sem = cortes.filter((c) => semPos.includes(c.regua));
+  const sucesso = R.status.pos_corte_sem_sucesso;
+  const cores = COR_REGUA(rg);
+
+  const linhaMes = (lista, cols, rot, classe) => {
+    const cel = cols.map((col) => { const s = lista.filter((c) => c.regua === col); return nCel(s.length, `${rot} — ${col}`, () => s); });
+    return { classe, celulas: [rot, ...cel, soma(cel.map((c) => c.v))] };
+  };
   const l1 = meses.map((m) => linhaMes(sem.filter((c) => c.mes === m), semPos, mesRot(m))).filter((l) => l.celulas[l.celulas.length - 1] > 0);
   l1.push(linhaMes(sem, semPos, "Total Geral", "linha-total"));
-  const ctl = seletor("sitPos", "Situação no cadastro", [["CORTADA", "Cortada"], ["", "Todas"], ["ATIVA", "Ativa"], [T.sem_cadastro, "Sem cadastro"]], sit);
-  const total = sem.length;
-  const topo = kpis([
-    { rot: "Cortes no período", val: fmtN(cortes.length), det: sit ? `situação ${sit}` : "todas as situações" },
-    { rot: "Sem a 1ª visita", val: fmtN(total), det: "sem pós-corte e sem religação", neg: total > 0 },
-    { rot: "Há mais de 15 dias", val: fmtN(sem.filter((c) => c.regua === semPos[semPos.length - 1]).length), det: semPos[semPos.length - 1], neg: true },
-    { rot: "Com pós-corte", val: fmtN(cortes.filter((c) => c.data_pos).length), det: "1ª visita realizada" },
-    { rot: "1ª visita sem sucesso", val: fmtN(cortes.filter((c) => c.status_pos === R.status.pos_corte_sem_sucesso).length), det: R.status.pos_corte_sem_sucesso },
-  ]);
-  let html = topo + cartao("Clientes cortados sem a 1ª visita" + (per ? " — " + per : ""),
-    `Sem pós-corte e sem religação. Régua pelos dias cortado contados até hoje (${dataRot(DADOS.hoje)}): ${esc(semPos.join(" · "))}.`,
-    tabela("semPos", ["Mês do corte", ...semPos, "Total"], l1), "semPos", ctl);
-
   const l2 = meses.map((m) => linhaMes(cortes.filter((c) => c.mes === m), ordem, mesRot(m)));
   l2.push(linhaMes(cortes, ordem, "Total Geral", "linha-total"));
-  html += cartao("Régua de cobrança por mês do corte" + (per ? " — " + per : ""),
-    `<b>Religado após pós corte</b>: religou no dia do pós-corte ou depois. <b>Realizado pós corte</b>: teve pós-corte e ainda não religou. A 1ª visita conta mesmo se foi <i>Encerrada com Ocorrência</i>.`,
-    tabela("regua", ["Mês do corte", ...ordem, "Total"], l2), "regua");
-
-  const sucesso = R.status.pos_corte_sem_sucesso, pc = (v) => ({ v, txt: fmtP(v), classe: "num" });
   const linhaFalha = (lista, rot, classe) => {
     const comPos = lista.filter((c) => c.data_pos), falha = comPos.filter((c) => c.status_pos === sucesso);
-    return { classe, celulas: [rot, lista.length, comPos.length, falha.length, pc(comPos.length ? falha.length / comPos.length : null), falha.filter((c) => c.data_pos_finalizada).length, falha.filter((c) => c.data_religacao).length] };
+    return { classe, celulas: [rot, nCel(lista.length, `${rot} — cortes`, () => lista), nCel(comPos.length, `${rot} — com pós-corte`, () => comPos), nCel(falha.length, `${rot} — 1ª visita sem sucesso`, () => falha),
+      pCel(comPos.length ? falha.length / comPos.length : null), nCel(falha.filter((c) => c.data_pos_finalizada).length, `${rot} — depois Finalizado`, () => falha.filter((c) => c.data_pos_finalizada)), nCel(falha.filter((c) => c.data_religacao).length, `${rot} — religaram`, () => falha.filter((c) => c.data_religacao))] };
   };
   const l3 = meses.map((m) => linhaFalha(cortes.filter((c) => c.mes === m), mesRot(m)));
   l3.push(linhaFalha(cortes, "Total Geral", "linha-total"));
-  html += cartao("1ª visita pós-corte sem sucesso" + (per ? " — " + per : ""),
-    `Cortes cuja 1ª vistoria pós-corte foi <i>${esc(sucesso)}</i>; quantos tiveram depois um pós-corte Finalizado e quantos religaram.`,
-    tabela("posFalha", ["Mês do corte", "Cortes", "Com pós-corte", "1ª visita sem sucesso", "% sem sucesso", "Depois Finalizado", "Religaram"], l3), "posFalha");
 
-  // lista (ordenável; mostra as primeiras linhas e "Ver todos")
+  const total = sem.length, ult = semPos[semPos.length - 1];
+  const comPos = cortes.filter((c) => c.data_pos), falhas = comPos.filter((c) => c.status_pos === sucesso);
+  const topo = kpis([
+    { rot: "Cortes no período", val: fmtN(cortes.length), det: sit ? `situação ${sit}` : "todas as situações" },
+    { rot: "Sem a 1ª visita", val: fmtN(total), det: "sem pós-corte e sem religação", neg: total > 0, ajuda: "Cortados que ainda não tiveram vistoria pós-corte nem religação." },
+    { rot: "Há mais de 15 dias", val: fmtN(sem.filter((c) => c.regua === ult).length), det: ult, neg: true, ajuda: "Dias cortado contados até hoje (" + dataRot(DADOS.hoje) + ")." },
+    { rot: "Com pós-corte", val: fmtN(comPos.length), det: cortes.length ? fmtP(comPos.length / cortes.length) + " dos cortes" : "1ª visita realizada" },
+    { rot: "1ª visita sem sucesso", val: fmtN(falhas.length), det: comPos.length ? fmtP(falhas.length / comPos.length) + " das visitas" : sucesso, ajuda: "1ª vistoria pós-corte Encerrada com Ocorrência." },
+  ]);
+
+  // gráficos
+  const porCidade = {}; sem.forEach((c) => { const k = c.cidade || "(sem cidade)"; porCidade[k] = (porCidade[k] || 0) + 1; });
+  const topCid = Object.entries(porCidade).sort((a, b) => b[1] - a[1]).slice(0, 10);
+  const distrib = ordem.map((col) => cortes.filter((c) => c.regua === col).length);
+  MEM.pos = {
+    graficos() {
+      grafico("g-pos-1", "bar", {
+        labels: meses.map(mesCurto),
+        datasets: semPos.map((f, i) => barra(f, meses.map((m) => sem.filter((c) => c.mes === m && c.regua === f).length), cores[f], { empilhado: true, corTexto: i === 0 ? "#1f2d3d" : "#fff" })),
+      }, opcoes({ empilhado: true, aoClicar: (i) => setFiltro(["fDe", "fAte"], meses[i], mesRot(meses[i])) }));
+      grafico("g-pos-2", "bar", { labels: topCid.map((c) => c[0]), datasets: [barra("Sem a 1ª visita", topCid.map((c) => c[1]), COR.laranja)] },
+        opcoes({ horizontal: true, legenda: false, aoClicar: (i) => setFiltro("fCidade", topCid[i][0], topCid[i][0]) }));
+      grafico("g-pos-3", "doughnut", { labels: ordem, datasets: [{ data: distrib, backgroundColor: ordem.map((o) => cores[o]), borderColor: "#fff", borderWidth: 2, rotulos: false }] },
+        { responsive: true, maintainAspectRatio: false, animation: imprimindo ? false : undefined, cutout: "58%", layout: { padding: 4 },
+          plugins: { legend: { position: "right", labels: { usePointStyle: true, boxWidth: 8, boxHeight: 8, padding: 10 } },
+            tooltip: { ...opcoes().plugins.tooltip, callbacks: { label: (c) => ` ${c.label}: ${fmtN(c.parsed)} (${fmtP(c.parsed / (cortes.length || 1))})` } } } });
+      grafico("g-pos-4", "bar", { labels: meses.map(mesCurto), datasets: [
+        barra("Com pós-corte", meses.map((m) => comPos.filter((c) => c.mes === m).length), COR.marinho),
+        barra("1ª visita sem sucesso", meses.map((m) => falhas.filter((c) => c.mes === m).length), COR.laranja)] },
+        opcoes({ aoClicar: (i) => setFiltro(["fDe", "fAte"], meses[i], mesRot(meses[i])) }));
+    },
+  };
+
+  // lista com busca, ordenação e "ver todos"
   const colunasLista = { matricula: "Matrícula", cliente: "Cliente", cidade: "Cidade", recurso: "Recurso", tipo: "Tipo", data: "Data do corte", dias_cortado: "Dias cortado", regua: "Régua", situacao: "Situação", valor_debito: "Valor dos débitos", negociou: "Negociou?" };
+  const idx = Object.keys(colunasLista);
+  const termos = CTL.busca.toLowerCase().split(/[\s,;]+/).filter(Boolean), soNumeros = termos.length && termos.every((t) => /^\d{4,}$/.test(t));
+  const bate = (c) => !termos.length || (soNumeros ? termos.some((t) => (c.matricula || "").includes(t)) : (() => { const b = [c.matricula, c.cliente, c.cidade, c.recurso, c.tipo, c.regua, c.situacao].join(" ").toLowerCase(); return termos.every((t) => b.includes(t)); })());
   const ord = CTL.ordem && colunasLista[CTL.ordem.col] ? CTL.ordem : { col: "dias_cortado", dir: -1 };
-  const lista = [...sem].sort((a, b) => {
+  const lista = sem.filter(bate).sort((a, b) => {
     const x = a[ord.col], y = b[ord.col];
     if (x == null && y == null) return 0; if (x == null) return 1; if (y == null) return -1;
     return (typeof x === "number" && typeof y === "number" ? x - y : String(x).localeCompare(String(y), "pt-BR")) * ord.dir;
   });
   const seloSit = (s) => ({ v: s ?? "", txt: s ?? "", selo: s === "ATIVA" ? "ok" : (s === "CORTADA" ? "atencao" : "neutro") });
-  const cel = (c) => [c.matricula, txt(c.cliente), txt(c.cidade), txt(c.recurso), txt(c.tipo), { v: c.data, txt: dataRot(c.data), classe: "num" }, c.dias_cortado,
+  const cel = (c) => [{ v: c.matricula, txt: c.matricula, classe: "clic", mat: c.matricula }, txt(c.cliente), txt(c.cidade), txt(c.recurso), txt(c.tipo), { v: c.data, txt: dataRot(c.data), classe: "num" }, c.dias_cortado,
     txt(c.regua), seloSit(c.situacao), { v: c.valor_debito, txt: c.valor_debito == null ? "" : nfBRL.format(c.valor_debito), classe: "num" }, txt(c.negociou)];
-  const limite = CTL.verTodos ? 1000 : 50;
+  const limite = CTL.verTodos ? 1000 : 15;
   const linhasL = lista.slice(0, limite).map((c) => ({ celulas: cel(c) }));
-  const idx = ["matricula", "cliente", "cidade", "recurso", "tipo", "data", "dias_cortado", "regua", "situacao", "valor_debito", "negociou"];
-  const cabecalho = idx.map((k) => colunasLista[k]);
-  let corpo = tabela("listaSemPos", cabecalho, linhasL, { longa: true, ordem: idx });
-  if (lista.length > 50) corpo += `<button type="button" class="btn-just ver-todos" data-acao="vertodos">${CTL.verTodos ? "Ver menos" : `Ver todos (${fmtN(Math.min(lista.length, 1000))})`}</button>`;
-  html += cartao(`Lista — clientes sem a 1ª visita (${fmtN(lista.length)})`,
-    lista.length > 1000 ? "O ⬇ baixa a lista inteira; a tela mostra no máximo 1.000 linhas." : "Clique no cabeçalho para ordenar.", corpo, "listaSemPos");
+  let corpo = tabela("listaSemPos", idx.map((k) => colunasLista[k]), linhasL, { longa: true, ordem: idx });
+  if (lista.length > 15) corpo += `<button type="button" class="btn-just ver-todos" data-acao="vertodos">${CTL.verTodos ? "Mostrar só os 15 primeiros" : `Mostrar todos (${fmtN(Math.min(lista.length, 1000))})`}</button>`;
   TABELAS.listaSemPos.linhas = lista.map((c) => cel(c).map((x) => (x && typeof x === "object" ? x.v : x)));
-  return html;
+  const busca = `<span class="busca"><input id="busca" type="search" placeholder="Filtrar…" value="${esc(CTL.busca)}" aria-label="Filtrar a lista (matrículas separadas por espaço ou texto)"><button type="button" class="btn-just" data-acao="limpabusca" aria-label="Limpar filtro">✕</button></span><span>${fmtN(lista.length)} de ${fmtN(sem.length)}</span>`;
+
+  const ctl = seletor("sitPos", "Situação no cadastro", [["CORTADA", "Cortada"], ["", "Todas"], ["ATIVA", "Ativa"], [T.sem_cadastro, "Sem cadastro"]], sit);
+  return topo + `<div class="grid g21">${cartaoGraf("g-pos-1", "Cortados sem a 1ª visita, por mês do corte" + (per ? " — " + per : ""), `Sem pós-corte e sem religação, pelos dias cortado até hoje (${dataRot(DADOS.hoje)}).`, ctl, "Quanto mais laranja-escuro, mais tempo o cliente está cortado sem visita. Clique numa barra para filtrar o mês.")}
+    ${cartaoGraf("g-pos-2", "Cidades com mais cortados sem visita", "Top 10 cidades. Clique numa barra para filtrar a cidade.")}</div>`
+    + `<div class="grid g12">${cartaoGraf("g-pos-3", "Régua de cobrança", "Situação de todos os cortes do filtro.", "", "Religado após pós corte: religou no dia do pós-corte ou depois. Realizado pós corte: teve pós-corte e ainda não religou.")}
+    ${cartaoGraf("g-pos-4", "1ª visita pós-corte: com pós-corte × sem sucesso" + (per ? " — " + per : ""), `Sem sucesso = 1ª vistoria <i>${esc(sucesso)}</i>.`)}</div>`
+    + cartao("Tabela de apoio — cortados sem a 1ª visita" + (per ? " — " + per : ""), "Os mesmos números do primeiro gráfico. <b>Clique num número</b> para ver os clientes.", tabela("semPos", ["Mês do corte", ...semPos, "Total"], l1), "semPos")
+    + cartao("Tabela de apoio — régua de cobrança por mês do corte" + (per ? " — " + per : ""), `A 1ª visita conta mesmo se foi <i>Encerrada com Ocorrência</i>.`, tabela("regua", ["Mês do corte", ...ordem, "Total"], l2), "regua")
+    + cartao("Tabela de apoio — 1ª visita pós-corte sem sucesso" + (per ? " — " + per : ""), `Quantos tiveram depois um pós-corte Finalizado e quantos religaram.`, tabela("posFalha", ["Mês do corte", "Cortes", "Com pós-corte", "1ª visita sem sucesso", "% sem sucesso", "Depois Finalizado", "Religaram"], l3), "posFalha")
+    + cartao(`Lista — clientes sem a 1ª visita (${fmtN(sem.length)})`, "Clique no cabeçalho para ordenar e na matrícula para ver o histórico do cliente. Tecla <kbd>/</kbd> vai para o filtro." + (lista.length > 1000 ? " O ⬇ baixa a lista inteira; a tela mostra no máximo 1.000 linhas." : ""), corpo, "listaSemPos", busca);
 }
 
 // ===================== aba Permanência =====================
-function abaPermanencia(todos, per) {
+function abaPermanencia({ cortes: todos, per }) {
   const P = R.permanencia, cortes = filtraPos(todos, CTL.posPerm), pct = CTL.modoPerm === "pct";
   const faixas = [...P.faixas.map((f) => f.nome), P.sem_religacao];
   const tipos = ordenaTipos(unicos(cortes.map((c) => c.tipo)));
+  const coresFaixa = [COR.marinho, COR.azul, COR.azulMed, COR.ciano, COR.ant, COR.laranja, COR.laranjaEsc];
   const linha = (lista, rot, classe) => {
-    const v = faixas.map((f) => lista.filter((c) => c.permanencia === f).length), t = lista.length;
-    return { classe, celulas: [rot, ...v.map((x) => (pct ? (t ? x / t : 0) : x)), pct ? 1 : t] };
+    const t = lista.length, cel = faixas.map((f) => { const s = lista.filter((c) => c.permanencia === f); const c = nCel(pct ? (t ? s.length / t : 0) : s.length, `${rot} — ${f}`, () => s); if (pct) c.txt = s.length ? fmtP(s.length / t) : "-"; return c; });
+    return { classe, celulas: [rot, ...cel, pct ? pCel(1) : nCel(t, `${rot} — todos`, () => lista)] };
   };
   const l1 = tipos.map((t) => linha(cortes.filter((c) => c.tipo === t), t));
   l1.push(linha(cortes, "Total Geral", "linha-total"));
-  const ctl = seletor("posPerm", "Pós-corte", [["todos", "Todos"], ["com", "Com"], ["sem", "Sem"]], CTL.posPerm)
-    + seletor("modoPerm", "Mostrar", [["qtd", "Quantidade"], ["pct", "% do tipo"]], CTL.modoPerm);
-  let html = cartao("Permanência no corte por tipo" + (per ? " — " + per : ""),
-    `Dias entre o corte e a religação, em faixas (cada faixa vai até o limite, inclusive). Religação no mesmo dia conta 0 dias.`,
-    tabela("perm", ["Tipo de corte", ...faixas, "Total"], l1, { pct }), "perm", ctl);
 
   const ind = (lista) => {
-    const rel = lista.filter((c) => c.data_religacao), dias = rel.map((c) => c.dias);
-    const ate15 = rel.filter((c) => c.dias <= P.faixas[0].ate).length;
+    const rel = lista.filter((c) => c.data_religacao), dias = rel.map((c) => c.dias), ate15 = rel.filter((c) => c.dias <= P.faixas[0].ate).length;
     return { n: lista.length, pRel: lista.length ? rel.length / lista.length : null, p15: lista.length ? ate15 / lista.length : null, med: mediana(dias) };
   };
   const p = (v) => ({ v, txt: fmtP(v), classe: "num" }), md = (v) => ({ v, txt: v == null ? "-" : nf0.format(v), classe: "num" });
-  const l2 = [...tipos, null].map((t) => {
-    const base = t ? todos.filter((c) => c.tipo === t) : todos;
+  const grupos = [...tipos.map((t) => [t, todos.filter((c) => c.tipo === t)]), ["Total", todos]];
+  const l2 = grupos.map(([t, base]) => {
     const a = ind(base), com = ind(base.filter((c) => c.data_pos)), sem = ind(base.filter((c) => !c.data_pos));
-    return { classe: t ? "" : "linha-total", celulas: [t || "Total Geral", a.n, p(a.pRel), p(a.p15), md(a.med), com.n, p(com.pRel), md(com.med), sem.n, p(sem.pRel), md(sem.med)] };
+    return { classe: t === "Total" ? "linha-total" : "", celulas: [t === "Total" ? "Total Geral" : t, a.n, p(a.pRel), p(a.p15), md(a.med), com.n, p(com.pRel), md(com.med), sem.n, p(sem.pRel), md(sem.med)] };
   });
-  html += cartao("Eficácia por tipo de corte: com × sem pós-corte" + (per ? " — " + per : ""),
-    `% religado = cortes que religaram ÷ cortes. Mediana = dias até religar (só quem religou). Cortes recentes tiveram pouco tempo para religar: compare meses fechados usando o período.`,
-    tabela("eficacia", ["Tipo de corte", "Cortes", "% religado", `% religado até ${P.faixas[0].ate} dias`, "Mediana de dias", "Com pós: cortes", "Com pós: % religado", "Com pós: mediana", "Sem pós: cortes", "Sem pós: % religado", "Sem pós: mediana"], l2), "eficacia");
-  return html;
+
+  const tot = ind(cortes), rotMetrica = { pRel: "% religado", p15: `% religado até ${P.faixas[0].ate} dias`, med: "Mediana de dias até religar" }[CTL.metricaEf];
+  const topo = kpis([
+    { rot: "Cortes no período", val: fmtN(tot.n), det: CTL.posPerm === "todos" ? "com e sem pós-corte" : (CTL.posPerm === "com" ? "só com pós-corte" : "só sem pós-corte") },
+    { rot: "% religado", val: fmtP(tot.pRel), det: "dos cortes", ajuda: "Cortes com religação ÷ cortes. Cortes recentes tiveram pouco tempo para religar." },
+    { rot: `% religado até ${P.faixas[0].ate} dias`, val: fmtP(tot.p15), det: "religação rápida", ajuda: "Religações em até " + P.faixas[0].ate + " dias ÷ cortes." },
+    { rot: "Mediana até religar", val: tot.med == null ? "-" : nf0.format(tot.med) + " dias", det: "só quem religou" },
+    { rot: "Sem religação", val: fmtN(cortes.filter((c) => c.permanencia === P.sem_religacao).length), det: "ainda cortados ou ativos sem OS", neg: true },
+  ]);
+  const base = (m) => (CTL.metricaEf === "med" ? m.med : (CTL.metricaEf === "p15" ? (m.p15 == null ? null : +(m.p15 * 100).toFixed(1)) : (m.pRel == null ? null : +(m.pRel * 100).toFixed(1))));
+  const fmtM = CTL.metricaEf === "med" ? (v) => nf0.format(v) + " d" : (v) => nf1.format(v) + "%";
+  MEM.perm = {
+    graficos() {
+      grafico("g-perm-1", "bar", {
+        labels: tipos,
+        datasets: faixas.map((f, i) => barra(f, tipos.map((t) => { const l = cortes.filter((c) => c.tipo === t), n = l.filter((c) => c.permanencia === f).length; return l.length ? +(n / l.length * 100).toFixed(1) : 0; }), coresFaixa[i], { empilhado: true, corTexto: i === 4 ? "#1f2d3d" : "#fff", fmt: (v) => nf0.format(v) + "%" })),
+      }, opcoes({ horizontal: true, empilhado: true, pct: true, aoClicar: (i) => setFiltro("fTipo", tipos[i], tipos[i]) }));
+      grafico("g-perm-2", "bar", {
+        labels: grupos.map(([t]) => (t === "Total" ? "Total" : t)),
+        datasets: [
+          barra("Sem pós-corte", grupos.map(([, b]) => base(ind(b.filter((c) => !c.data_pos)))), COR.ant, { fmt: fmtM, corTexto: "#1f2d3d" }),
+          barra("Com pós-corte", grupos.map(([, b]) => base(ind(b.filter((c) => c.data_pos)))), COR.marinho, { fmt: fmtM }),
+        ],
+      }, opcoes({ aoClicar: (i) => { if (grupos[i][0] !== "Total") setFiltro("fTipo", grupos[i][0], grupos[i][0]); } }));
+    },
+  };
+  const ctl = seletor("posPerm", "Pós-corte", [["todos", "Todos"], ["com", "Com"], ["sem", "Sem"]], CTL.posPerm) + seletor("modoPerm", "Mostrar", [["qtd", "Quantidade"], ["pct", "% do tipo"]], CTL.modoPerm);
+  const ctl2 = seletor("metricaEf", "Métrica", [["pRel", "% religado"], ["p15", `% até ${P.faixas[0].ate} dias`], ["med", "Mediana de dias"]], CTL.metricaEf);
+  return topo + `<div class="grid g11">${cartaoGraf("g-perm-1", "Permanência no corte por tipo" + (per ? " — " + per : ""), "% dos cortes de cada tipo em cada faixa de dias até a religação.", ctl, "Dias entre o corte e a religação. Religação no mesmo dia conta 0 dias. Clique numa barra para filtrar o tipo.")}
+    ${cartaoGraf("g-perm-2", "O pós-corte ajuda? " + rotMetrica, "Compara cortes com e sem vistoria pós-corte, por tipo de corte (usa todos os cortes do filtro).", ctl2, "Mostra em qual tipo de corte o pós-corte mais acelera a religação. Atenção: cortes recentes tiveram pouco tempo para religar; compare meses fechados.")}</div>`
+    + cartao("Tabela de apoio — permanência por tipo e faixa" + (per ? " — " + per : ""), `Cada faixa vai até o limite, inclusive. <b>Clique num número</b> para ver os clientes.`, tabela("perm", ["Tipo de corte", ...faixas, "Total"], l1, { pct }), "perm")
+    + cartao("Tabela de apoio — eficácia por tipo: com × sem pós-corte" + (per ? " — " + per : ""), `% religado = cortes que religaram ÷ cortes. Mediana = dias até religar (só quem religou).`,
+      tabela("eficacia", ["Tipo de corte", "Cortes", "% religado", `% religado até ${P.faixas[0].ate} dias`, "Mediana de dias", "Com pós: cortes", "Com pós: % religado", "Com pós: mediana", "Sem pós: cortes", "Sem pós: % religado", "Sem pós: mediana"], l2), "eficacia");
 }
 
 // ===================== aba Dados =====================
-function abaDados(cortes) {
+function abaDados() {
   const info = Object.entries(DADOS.info).map(([k, v]) => ({ celulas: [k, txt(typeof v === "number" ? fmtN(v) : v)] }));
   let html = `<div class="card"><div class="card-topo"><h2>Bases para conferir</h2>
     <div class="acoes"><button type="button" class="btn-just" id="btnExcel">⬇ Base calculada (Excel)</button><button type="button" class="btn-just" id="btnCsvCortes">⬇ Cortes filtrados (CSV)</button></div></div>
-    <p class="nota-secao">A planilha calculada tem a base de cortes (todas as colunas usadas nas abas), os eventos do saldo, os arquivos lidos e os parâmetros. O CSV traz só os cortes dos filtros atuais.</p></div>`;
-  html += cartao("Parâmetros da análise", "", tabela("info", ["Parâmetro", "Valor"], info), "info");
+    <p class="nota-secao">A planilha calculada tem a base de cortes (todas as colunas usadas nas abas), os eventos do saldo, os arquivos lidos e os parâmetros. O CSV traz só os cortes dos filtros atuais. Em qualquer aba, clicar num número abre as matrículas por trás dele, com ⬇ para conferir no Excel.</p></div>`;
+  html += cartao("Parâmetros da análise", "", tabela("info", ["Parâmetro", "Valor"], info, { semOrd: true }), "info");
   html += cartao("Arquivos da pasta", "Atividades, cadastro e catálogo são reconhecidos sozinhos; os demais aparecem como “não usado”. Arquivo com erro mostra o motivo.",
     tabela("arquivos", ["Arquivo", "Tipo", "Linhas", "Observação"], DADOS.arquivos.map((a) => ({ celulas: [a.arquivo, a.tipo === "erro" ? { v: "erro", txt: "erro", selo: "atencao" } : txt(a.tipo), a.linhas, txt(a.obs)] })), { longa: true }), "arquivos");
   const st = linhasDe(DADOS.status);
@@ -535,15 +840,16 @@ function abaDados(cortes) {
     "Estes serviços não estão no catálogo e por isso não entram no painel. Se algum deveria entrar, inclua o código na planilha Descrição serviço.",
     tabela("naoClass", ["Código/Descrição", "Atividades"], DADOS.nao_classificados.map((s) => ({ celulas: [s.servico, s.qtd] }))), "naoClass");
   html += explicacao();
-  setTimeout(() => {
-    const b = $("btnExcel"); if (!b) return;
-    b.onclick = () => { b.disabled = true; mostraProgresso("Gerando a planilha…"); worker.postMessage({ fase: "excel" }); };
-    $("btnCsvCortes").onclick = () => {
-      const cols = Object.keys(DADOS.cortes).filter((k) => k !== "mes");
-      baixaCsv(cols, cortes.map((c) => cols.map((k) => c[k])), "Cortes filtrados");
-    };
-  });
+  MEM.dados = {};
   return html;
+}
+function ligaDados() {
+  const b = $("btnExcel"); if (!b) return;
+  b.onclick = () => { b.disabled = true; mostraProgresso("Gerando a planilha…"); worker.postMessage({ fase: "excel" }); };
+  $("btnCsvCortes").onclick = () => {
+    const cols = Object.keys(DADOS.cortes).filter((k) => k !== "mes");
+    baixaCsv(cols, CTX.cortes.map((c) => cols.map((k) => c[k])), "Cortes filtrados");
+  };
 }
 function explicacao() {
   const rg = R.regua, P = R.permanencia, S = R.status;
@@ -565,11 +871,159 @@ function explicacao() {
   <p>Dias = data da religação − data do corte. Faixas: ${P.faixas.map((f) => `${esc(f.nome)}${f.ate != null ? ` (até ${f.ate})` : ""}`).join(", ")}; sem religação: ${esc(P.sem_religacao)}.</p>
   <h3>Saldo de economias</h3>
   <p>Saldo do mês = −corte + religação + implantação de ligação de água, só OS ${esc(S.finalizada)}, uma vez por matrícula, dia e categoria. As economias vêm do cadastro do mesmo mês da OS; sem esse mês, do mais recente; sem cadastro, 1.</p>
+  <h3>Atalhos</h3>
+  <p><kbd>1</kbd>…<kbd>5</kbd> trocam de aba · <kbd>/</kbd> vai para o filtro da lista · <kbd>Esc</kbd> fecha o painel lateral ou o modo apresentação. O endereço da página guarda a aba e os filtros: copie e envie o link.</p>
   <p class="nota-secao">As regras ficam em <code>cortes/regras.json</code> no repositório.</p></div>`;
 }
 
-// ===================== pasta e worker =====================
+// ===================== painel lateral: clientes por trás do número e histórico =====================
+const PILHA = [];
+const COLS_CORTES = [["matricula", "Matrícula"], ["cliente", "Cliente"], ["cidade", "Cidade"], ["tipo", "Tipo"], ["data", "Corte"], ["data_religacao", "Religação"], ["dias", "Dias"], ["data_pos", "Pós-corte"], ["regua", "Régua"], ["situacao", "Situação"], ["economias", "Economias"]];
+const COLS_EVENTOS = [["matricula", "Matrícula"], ["data", "Data"], ["categoria", "Categoria"], ["tipo", "Tipo"], ["economias", "Economias"], ["cidade", "Cidade"], ["recurso", "Recurso"]];
+function abreGaveta(titulo, nota, cols, linhas, extra = "") {
+  const g = $("gaveta");
+  const limite = 200, mostra = linhas.slice(0, limite);
+  const cel = (k, v) => (k === "matricula" ? `<td class="clic" data-mat="${esc(v)}" tabindex="0" title="Ver o histórico">${esc(v)}</td>` : (/^data/.test(k) ? `<td class="num">${dataRot(v)}</td>` : (typeof v === "number" ? `<td class="num">${fmtN(v)}</td>` : `<td class="txt">${esc(v ?? "")}</td>`)));
+  g.hidden = false;
+  g.innerHTML = `<div class="g-topo"><h2>${esc(titulo)}</h2>${PILHA.length > 1 ? `<button type="button" class="btn-just" data-acao="voltar">← Voltar</button>` : ""}<button type="button" class="btn-just btn-down" id="gCsv" title="Baixar ${esc(nomeArquivo(titulo))}.csv" aria-label="Baixar em CSV">⬇</button><button type="button" class="btn-just" data-acao="fechar" aria-label="Fechar">✕</button></div>
+    <div class="g-corpo"><p class="g-nota">${esc(nota)}${linhas.length > limite ? ` Mostrando ${limite} de ${fmtN(linhas.length)}; o ⬇ baixa todas.` : ""}</p>${extra}
+    <div class="tabela-wrap"><table><thead><tr>${cols.map(([, t]) => `<th>${esc(t)}</th>`).join("")}</tr></thead><tbody>${mostra.map((l) => `<tr>${cols.map(([k]) => cel(k, l[k])).join("")}</tr>`).join("")}</tbody></table></div></div>`;
+  $("gCsv").onclick = () => baixaCsv(cols.map(([, t]) => t), linhas.map((l) => cols.map(([k]) => l[k])), titulo);
+  const fechar = g.querySelector("[data-acao=fechar]"); if (fechar) fechar.focus();
+}
+function abreDetalhe(i) {
+  const d = DET[i]; if (!d) return;
+  const linhas = d.obter();
+  PILHA.length = 0; PILHA.push({ i });
+  if (d.tipo === "eventos") abreGaveta(d.titulo, `${fmtN(linhas.length)} evento(s) — OS Finalizadas, uma por matrícula, dia e categoria.`, COLS_EVENTOS, linhas);
+  else abreGaveta(d.titulo, `${fmtN(linhas.length)} corte(s). Clique numa matrícula para ver o histórico.`, COLS_CORTES, linhas);
+}
+function abreHistorico(mat) {
+  const cs = CORTES.filter((c) => c.matricula === mat).sort((a, b) => (a.data || "").localeCompare(b.data || ""));
+  const ev = EVENTOS.filter((e) => e.matricula === mat).sort((a, b) => (a.data || "").localeCompare(b.data || ""));
+  if (!PILHA.length || PILHA[PILHA.length - 1].mat !== mat) PILHA.push({ mat });
+  const c0 = cs[cs.length - 1];
+  const resumo = c0 ? `<p class="g-nota"><b>${esc(c0.cliente || "(sem cadastro)")}</b> · ${esc(c0.cidade || "")} · ${esc(c0.sub_categoria || "")} · situação ${esc(c0.situacao || "")} · ${fmtN(c0.economias)} economia(s)</p>` : "";
+  const evHtml = `<h3 style="font-size:13px;margin:12px 0 4px;color:var(--marinho)">Linha do tempo (corte, religação, implantação)</h3><div class="tabela-wrap"><table><thead><tr><th>Data</th><th>Categoria</th><th>Tipo</th><th>Cidade</th><th>Recurso</th></tr></thead><tbody>${ev.map((e) => `<tr><td class="num">${dataRot(e.data)}</td><td class="txt">${esc(e.categoria)}</td><td class="txt">${esc(e.tipo)}</td><td class="txt">${esc(e.cidade || "")}</td><td class="txt">${esc(e.recurso || "")}</td></tr>`).join("") || `<tr><td colspan="5" class="txt">Sem eventos.</td></tr>`}</tbody></table></div>`;
+  abreGaveta(`Histórico — matrícula ${mat}`, `${cs.length} corte(s) deste cliente (sem aplicar os filtros).`, COLS_CORTES, cs, "");
+  $("gaveta").querySelector(".g-corpo").insertAdjacentHTML("beforeend", resumo ? evHtml : evHtml);
+  if (resumo) $("gaveta").querySelector(".g-nota").insertAdjacentHTML("afterend", resumo);
+}
+function fechaGaveta() { $("gaveta").hidden = true; PILHA.length = 0; }
+function voltaGaveta() {
+  PILHA.pop(); const a = PILHA[PILHA.length - 1]; if (!a) return fechaGaveta();
+  if (a.mat) { PILHA.pop(); abreHistorico(a.mat); } else abreDetalhe(a.i);
+}
+
+// ===================== interações globais =====================
+document.addEventListener("click", (e) => {
+  const c = e.target.closest("[data-ctl]");
+  if (c) { CTL[c.dataset.ctl] = c.dataset.val; guardaCtl(); desenha(); return; }
+  const d = e.target.closest("[data-csv]");
+  if (d && TABELAS[d.dataset.csv]) { baixaCsv(TABELAS[d.dataset.csv].cabecalho, TABELAS[d.dataset.csv].linhas, d.dataset.nome); return; }
+  const o = e.target.closest("th[data-ord]");
+  if (o) { const col = o.dataset.ord; CTL.ordem = CTL.ordem && CTL.ordem.col === col ? { col, dir: -CTL.ordem.dir } : { col, dir: 1 }; desenha(); return; }
+  const s = e.target.closest("th[data-sort]");
+  if (s) { ordenaTabela(s); return; }
+  const det = e.target.closest("[data-det]");
+  if (det) { abreDetalhe(+det.dataset.det); return; }
+  const mat = e.target.closest("[data-mat]");
+  if (mat) { abreHistorico(mat.dataset.mat); return; }
+  const a = e.target.closest("[data-acao]");
+  if (a) {
+    const acao = a.dataset.acao;
+    if (acao === "vertodos") { CTL.verTodos = !CTL.verTodos; desenha(); }
+    else if (acao === "limpabusca") { CTL.busca = ""; desenha(); }
+    else if (acao === "fechar") fechaGaveta();
+    else if (acao === "voltar") voltaGaveta();
+  }
+});
+document.addEventListener("input", (e) => {
+  if (e.target.id !== "busca") return;
+  clearTimeout(input.t); input.t = setTimeout(() => { CTL.busca = e.target.value; CTL.verTodos = false; desenha(); }, 200);
+});
+function input() { /* marcador do temporizador da busca */ }
+
+// ordenar qualquer tabela pelo cabeçalho (só as linhas de dados; totais ficam no fim)
+function ordenaTabela(th) {
+  const tabela = th.closest("table"), col = +th.dataset.sort, corpo = tabela.tBodies[0];
+  const asc = th.dataset.dir === "asc" ? false : (th.dataset.dir === "desc" ? true : !/^\s*\d|^-?\d/.test(corpo.rows[0]?.cells[col]?.textContent || ""));
+  const num = (t) => { const x = parseFloat(String(t).replace(/[^\d,.\-]/g, "").replace(/\./g, "").replace(",", ".")); return isNaN(x) ? null : x; };
+  const linhas = [...corpo.rows], fixas = linhas.filter((r) => r.classList.contains("linha-total")), dados = linhas.filter((r) => !r.classList.contains("linha-total"));
+  const k = (r) => { const t = r.cells[col]?.textContent.trim() || ""; const n = num(t); return n == null ? t.toLowerCase() : n; };
+  dados.sort((a, b) => { const x = k(a), y = k(b); return (typeof x === "number" && typeof y === "number" ? x - y : String(x).localeCompare(String(y), "pt-BR")) * (asc ? 1 : -1); });
+  [...dados, ...fixas].forEach((r) => corpo.appendChild(r));
+  tabela.querySelectorAll("th").forEach((h) => { h.textContent = h.textContent.replace(/ [▲▼]$/, ""); delete h.dataset.dir; });
+  th.textContent += asc ? " ▲" : " ▼"; th.dataset.dir = asc ? "asc" : "desc";
+}
+// teclado: Enter/Espaço em cabeçalho e células clicáveis
+document.addEventListener("keydown", (e) => {
+  const alvo = e.target;
+  if ((e.key === "Enter" || e.key === " ") && alvo.matches && alvo.matches("th[tabindex], td[data-det], td[data-mat], .info")) { e.preventDefault(); alvo.click(); return; }
+  if (e.key === "Escape") {
+    if (!$("gaveta").hidden) { fechaGaveta(); return; }
+    if (document.body.classList.contains("apresentacao")) { apresentar(false); return; }
+    if (alvo.id === "busca" && alvo.value) { CTL.busca = ""; desenha(); }
+    return;
+  }
+  const digitando = /^(INPUT|SELECT|TEXTAREA)$/.test(alvo.tagName);
+  if (digitando || e.ctrlKey || e.metaKey || e.altKey || !DADOS) return;
+  if (e.key >= "1" && e.key <= "5") { ativaAba(ABAS[+e.key - 1]); e.preventDefault(); }
+  else if (e.key === "/") { e.preventDefault(); ativaAba("pos"); const b = $("busca"); if (b) { b.focus(); b.select(); } }
+});
+// arrastar tabelas largas para o lado
+(() => {
+  let wrap = null, x0 = 0, s0 = 0, moveu = false;
+  document.addEventListener("mousedown", (e) => { const w = e.target.closest(".tabela-wrap"); if (!w || e.button !== 0 || w.scrollWidth <= w.clientWidth) return; wrap = w; x0 = e.pageX; s0 = w.scrollLeft; moveu = false; });
+  document.addEventListener("mousemove", (e) => { if (!wrap) return; const dx = e.pageX - x0; if (Math.abs(dx) > 4) { moveu = true; wrap.classList.add("grabbing"); } if (moveu) wrap.scrollLeft = s0 - dx * 1.5; });
+  const solta = () => { if (wrap) wrap.classList.remove("grabbing"); wrap = null; };
+  document.addEventListener("mouseup", solta); document.addEventListener("mouseleave", solta);
+  document.addEventListener("click", (e) => { if (moveu) { e.stopPropagation(); e.preventDefault(); moveu = false; } }, true);
+})();
+
+// estado na URL (aba e filtros) para mandar o link exato
+function lerHash() {
+  const p = new URLSearchParams(location.hash.replace(/^#/, "")), o = {};
+  p.forEach((v, k) => { o[k] = v; });
+  return Object.keys(o).length ? o : null;
+}
+function atualizaHash() {
+  if (!DADOS) return;
+  const f = filtro(), p = new URLSearchParams();
+  p.set("aba", abaAtual);
+  for (const [k, v] of Object.entries(f)) if (v) p.set(k, v);
+  try { history.replaceState(null, "", "#" + p.toString()); } catch (e) { /* sem histórico */ }
+}
+
+// modo apresentação e PDF executivo
+function apresentar(sim) {
+  document.body.classList.toggle("apresentacao", sim); $("btnSair").hidden = !sim;
+  Object.values(GRAFICOS).forEach((g) => g.resize());
+}
+$("btnApresentar").addEventListener("click", () => apresentar(true));
+$("btnSair").addEventListener("click", () => apresentar(false));
+$("btnPdf").addEventListener("click", () => {
+  if (!DADOS) return;
+  imprimindo = true; document.body.classList.add("imprimindo");
+  ABAS.forEach((a) => { sujo[a] = true; }); ABAS.filter((a) => a !== "dados").forEach(renderAba);
+  toast("Na janela de impressão, escolha “Salvar como PDF” (A4, paisagem).");
+  setTimeout(() => window.print(), 600);
+});
+window.addEventListener("afterprint", () => {
+  if (!imprimindo) return;
+  imprimindo = false; document.body.classList.remove("imprimindo");
+  ABAS.forEach((a) => { sujo[a] = true; }); ativaAba(abaAtual);
+});
+
+// ===================== pasta, progresso e worker =====================
 let worker = null, pastaHandle = null, inicioAnalise = 0, pastaNome = "";
+const ETAPAS = ["Preparar o Python", "Ler os arquivos", "Classificar as atividades", "Cruzar cortes e religações", "Montar o painel"];
+function etapaDe(pct) { return pct == null ? 0 : pct < 70 ? 1 : pct < 80 ? 2 : pct < 97 ? 3 : 4; }
+function mostraEtapas(atual) {
+  const ul = $("etapas"); ul.hidden = atual == null;
+  if (atual == null) return;
+  ul.innerHTML = ETAPAS.map((t, i) => `<li class="${i < atual ? "ok" : (i === atual ? "atual" : "")}"><span>${i < atual ? "✓" : "●"}</span> ${t}</li>`).join("");
+}
 function status(texto) { $("status").textContent = texto || ""; }
 function novoWorker() {
   worker = new Worker("analisador.worker.js");
@@ -577,7 +1031,7 @@ function novoWorker() {
     const m = e.data;
     if (m.tipo === "etapa") progresso(null, m.texto);
     else if (m.tipo === "progresso") progresso(m.pct, m.texto);
-    else if (m.tipo === "log") { $("log").textContent += m.linha + "\n"; }
+    else if (m.tipo === "log") { $("log").textContent += m.linha + "\n"; $("detalhes").hidden = false; }
     else if (m.tipo === "resultado") {
       escondeProgresso(); carregaDados(m.dados);
       const n = m.dados.arquivos.filter((a) => a.tipo !== "erro" && a.tipo !== "não usado").length;
@@ -590,18 +1044,19 @@ function novoWorker() {
       escondeProgresso(); const b = $("btnExcel"); if (b) b.disabled = false;
       aviso("Não foi possível concluir: " + m.resumo + (m.detalhe && m.detalhe !== m.resumo ? "\n\nDetalhe técnico:\n" + m.detalhe.slice(-1500) : ""));
       toast("Não foi possível concluir a análise", true);
-      habilita(true);
+      $("progBarra").style.background = COR.laranja; $("esqueleto").hidden = true; if (!DADOS) $("inicio").hidden = false; habilita(true);
     }
   };
   worker.onerror = (e) => { escondeProgresso(); aviso("Erro no processamento: " + (e.message || e)); habilita(true); };
 }
-function mostraProgresso(texto) { $("progresso").hidden = false; $("log").textContent = ""; progresso(0, texto); }
+function mostraProgresso(texto) { $("progresso").hidden = false; $("progBarra").style.background = ""; $("log").textContent = ""; mostraEtapas(0); progresso(0, texto); }
 function progresso(pct, texto) {
   if (texto) status(texto + (inicioAnalise ? ` — ${Math.round((Date.now() - inicioAnalise) / 1000)} s` : ""));
-  if (pct != null) $("progBarra").style.width = pct + "%";
+  if (pct != null) { $("progBarra").style.width = pct + "%"; mostraEtapas(etapaDe(pct)); }
 }
-function escondeProgresso() { $("progresso").hidden = true; inicioAnalise = 0; habilita(true); }
-function habilita(sim) { $("btnConectar").disabled = !sim; $("btnConectar2").disabled = !sim; $("btnAtualizar").disabled = !sim || !pastaHandle; }
+function escondeProgresso() { $("progresso").hidden = true; mostraEtapas(null); inicioAnalise = 0; habilita(true); }
+function habilita(sim) { for (const id of ["btnConectar", "btnConectar2"]) $(id).disabled = !sim; $("btnAtualizar").disabled = !sim || !pastaHandle; }
+$("btnCopiar").addEventListener("click", async () => { try { await navigator.clipboard.writeText($("log").textContent); toast("Detalhes copiados."); } catch (e) { toast("Não foi possível copiar.", true); } });
 
 const EXT = /\.(xlsx|xlsm|xls|csv)$/i;
 async function arquivosDaPasta(handle, prefixo = "") {
@@ -621,6 +1076,7 @@ function analisa(arquivos) {
     aviso("Nenhum arquivo começando com “Atividades-” foi encontrado na pasta escolhida."); return;
   }
   aviso(""); habilita(false); inicioAnalise = Date.now(); mostraProgresso(`Lendo ${arquivos.length} arquivo(s)…`);
+  if (!DADOS) { $("inicio").hidden = true; $("esqueleto").hidden = false; }
   if (!worker) novoWorker();
   worker.postMessage({ fase: "analisar", arquivos });
 }
@@ -648,13 +1104,12 @@ async function lePastaHandle() {
     analisa(await arquivosDaPasta(pastaHandle));
   } catch (e) { aviso("Não foi possível ler a pasta: " + e.message); habilita(true); }
 }
-
 async function conecta() {
   if ("showDirectoryPicker" in window) {
     try { pastaHandle = await window.showDirectoryPicker({ id: "cortes", mode: "read" }); }
-    catch (e) { return; }                         // cancelou
+    catch (e) { return; }                                    // cancelou
     guardaPasta(pastaHandle); habilita(true); lePastaHandle();
-  } else $("inputPasta").click();                  // Firefox/Safari: escolha comum de pasta (sem Atualizar)
+  } else $("inputPasta").click();                            // Firefox/Safari: escolha comum de pasta (sem Atualizar)
 }
 $("btnConectar").addEventListener("click", conecta);
 $("btnConectar2").addEventListener("click", conecta);
@@ -666,6 +1121,7 @@ $("inputPasta").addEventListener("change", (e) => {
   analisa(arquivos); e.target.value = "";
 });
 
+HASH_PENDENTE = lerHash();
 (async () => {
   if (!("showDirectoryPicker" in window)) return;
   pastaHandle = await pastaGuardada();

@@ -137,3 +137,12 @@ def test_xlsx_plano_alimenta_o_painel(tmp_path):
     analise.executar("2026-04-10")
     c = analise.cortes.iloc[0]
     assert len(analise.cortes) == 1 and c["dias"] == 2 and c["regua"] == "Religado" and c["tipo"] == "CAVALETE"
+
+
+def test_json_traz_os_eventos_do_saldo(resultado):
+    analise, dados = resultado
+    ev = dados["eventos"]
+    n = len(ev["matricula"])
+    assert n == len(analise.eventos) and all(len(v) == n for v in ev.values())
+    assert set(ev["categoria"]) == {"CORTE", "RELIGAÇÃO", "IMPLANTAÇÃO DE LIGAÇÃO DE ÁGUA"}
+    assert sum(ev["economias"]) == analise.eventos["economias"].sum()
