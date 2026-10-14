@@ -9,3 +9,6 @@
   navegador reaproveita leituras antigas guardadas.
 - Regras de negócio (faixas da régua e da permanência, status, prioridade de tipos) ficam em `cortes/regras.json`.
 - Nunca suba planilhas com dados de clientes (`*.xlsx`, `*.csv` estão no `.gitignore`).
+- **Publicação autorizada:** o dono do repositório autorizou atualizar a `main` sempre. Depois de rodar os testes,
+  envie o commit para a branch de trabalho e avance a `main` para o mesmo commit
+  (`git push origin HEAD:main`) — a `main` é o que o GitHub Pages publica. Confira se a publicação terminou com sucesso.
