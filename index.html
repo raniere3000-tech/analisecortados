@@ -203,7 +203,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 <header class="top">
   <div class="top-linha">
     <div>
-      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v18</span></div>
+      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v19</span></div>
       <h1 id="titulo">Análise de Corte e Religação</h1>
     </div>
     <div class="filtros" id="filtros" hidden>
@@ -275,7 +275,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 
 <script>
 "use strict";
-const VERSAO_SITE = "v18-20261015";
+const VERSAO_SITE = "v19-20261015";
 
 // ===================== utilidades =====================
 const $ = (id) => document.getElementById(id);
@@ -545,9 +545,9 @@ const setaVar = (v) => (v > 0 ? "▲ " : v < 0 ? "▼ " : "") + nf1.format(Math.
 
 // ===================== estado =====================
 let DADOS = null, CORTES = [], SALDO = [], EVENTOS = [], R = null, HASH_PENDENTE = null, ULTIMO_MES = "";
-const CTL = Object.assign({ abertos: {}, medidaSaldo: "economias", posCruzada: "todos", modoCruzada: "qtd", sitPos: "CORTADA", reguaPos: null, visitaPos: "todas", colPos: "regua", posPerm: "todos", modoPerm: "qtd", metricaEf: "pRel" }, le("cortes_ctl", {}));
+const CTL = Object.assign({ abertos: {}, medidaSaldo: "economias", posCruzada: "todos", modoCruzada: "qtd", sitPos: "CORTADA", reguaPos: null, mesesPos: null, visitaPos: "todas", colPos: "regua", posPerm: "todos", modoPerm: "qtd", metricaEf: "pRel" }, le("cortes_ctl", {}));
 Object.assign(CTL, { verTodos: false, ordem: null, busca: "" });
-const guardaCtl = () => guarda("cortes_ctl", Object.fromEntries(["abertos", "medidaSaldo", "posCruzada", "modoCruzada", "sitPos", "reguaPos", "visitaPos", "colPos", "posPerm", "modoPerm", "metricaEf"].map((k) => [k, CTL[k]])));
+const guardaCtl = () => guarda("cortes_ctl", Object.fromEntries(["abertos", "medidaSaldo", "posCruzada", "modoCruzada", "sitPos", "reguaPos", "mesesPos", "visitaPos", "colPos", "posPerm", "modoPerm", "metricaEf"].map((k) => [k, CTL[k]])));
 
 function linhasDe(col) {                                     // {col: [..]} -> [{col: v}]
   const chaves = Object.keys(col), n = chaves.length ? col[chaves[0]].length : 0, out = new Array(n);
@@ -864,7 +864,12 @@ function abaPos({ f, cortes: todos, per }) {
   const comVisita = [rg.com_pos, rg.religado_apos_pos, rg.religado];
   const falha = CTL.visitaPos === "falha", soSemPos = falha && !marcTela.some((r) => comVisita.includes(r));
   const marc = falha ? (soSemPos ? comVisita : marcTela.filter((r) => comVisita.includes(r))) : marcTela;
-  const cortes = todos.filter((c) => (!sit || c.situacao === sit) && marc.includes(c.regua) && (!falha || c.status_pos === sucesso));
+  const base = todos.filter((c) => (!sit || c.situacao === sit) && marc.includes(c.regua) && (!falha || c.status_pos === sucesso));
+  // meses do corte (como o campo "Meses" da tabela dinâmica): todos os do período do cabeçalho, ou só os marcados
+  const mesesDisp = unicos(todos.map((c) => c.mes));
+  const mesesMarc = Array.isArray(CTL.mesesPos) ? CTL.mesesPos.filter((m) => mesesDisp.includes(m)) : [];
+  const todosMeses = !mesesMarc.length || mesesMarc.length === mesesDisp.length;
+  const cortes = todosMeses ? base : base.filter((c) => mesesMarc.includes(c.mes));
   const meses = unicos(cortes.map((c) => c.mes));
   const ehPadrao = !falha && marc.length === semPos.length && semPos.every((r) => marc.includes(r));
 
@@ -913,7 +918,7 @@ function abaPos({ f, cortes: todos, per }) {
   const sitTela = ["Situação filtrada na aba", () => sit || "Todas"];
   ANALITICO.posTabela = () => analiticoCortes([...cortes].sort((a, b) => (a.mes + a.data + a.matricula).localeCompare(b.mes + b.data + b.matricula)), [
     ["Linha: mês do corte", (c) => mesRot(c.mes)], [`Coluna: ${{ regua: "régua", tipo: "tipo de corte", cidade: "cidade", recurso: "recurso" }[dim]}`, (c) => rotCol(colDe(c))],
-    sitTela, ["Régua marcada na aba", () => marc.map((r) => nomeCurto[r] || r).join(", ")], ["1ª visita filtrada", () => (CTL.visitaPos === "falha" ? "Só sem sucesso" : "Todas")]]);
+    sitTela, ["Meses marcados na aba", () => (todosMeses ? "Todos" : mesesMarc.map(mesCurto).join(", "))], ["Régua marcada na aba", () => marc.map((r) => nomeCurto[r] || r).join(", ")], ["1ª visita filtrada", () => (CTL.visitaPos === "falha" ? "Só sem sucesso" : "Todas")]]);
   const verLista = regDet(`Clientes do filtro (${fmtN(cortes.length)})`, () => [...cortes].sort((a, b) => (b.dias_cortado ?? -1) - (a.dias_cortado ?? -1)), "cortes");
 
   const filtros = `<div class="card filtros-aba"><div class="linha-filtros">
@@ -921,18 +926,21 @@ function abaPos({ f, cortes: todos, per }) {
         : seletor("sitPos", "Situação", [["CORTADA", "Cortada"], ["ATIVA", "Ativa"], [T.sem_cadastro, "Sem cadastro"], ["", "Todas"]], sit)}
       ${seletor("visitaPos", "1ª visita", [["todas", "Todas"], ["falha", "Sem sucesso"]], CTL.visitaPos || "todas")}
       ${seletor("colPos", "Colunas por", [["regua", "Régua"], ["tipo", "Tipo de corte"], ["cidade", "Cidade"], ["recurso", "Recurso"]], dim)}</div>
+    <div class="linha-filtros">${multiSel("mesesPos", "Meses do corte", mesesDisp.map((m) => [m, mesCurto(m)]), todosMeses ? mesesDisp : mesesMarc,
+      [["Todos", mesesDisp], ["Últimos 3", mesesDisp.slice(-3)], ["Último", mesesDisp.slice(-1)]])}</div>
     <div class="linha-filtros">${multiSel("reguaPos", "Régua de cobrança", opReg.map((r) => [r, nomeCurto[r] || r]), marc,
       [["Sem pós-corte", semPos], ["Com pós-corte", [rg.com_pos, rg.religado_apos_pos]], ["Todas", opReg]])}</div>
     ${falha ? `<p class="nota-secao aviso-filtro"><b>1ª visita sem sucesso:</b> clientes cuja 1ª vistoria pós-corte foi <i>${esc(sucesso)}</i>. Eles tiveram visita, então a régua usa só os itens com pós-corte${soSemPos ? " (os itens “sem pós-corte” marcados não se aplicam aqui)" : ""}.</p>` : ""}
     <p class="nota-secao">Padrão = a tabela dinâmica de “clientes sem a 1ª visita”: situação <b>CORTADA</b> e régua <b>sem pós-corte</b> (−7, 7 a 15 e +15 dias, contados até hoje, ${dataRot(DADOS.hoje)}). “1ª visita: Sem sucesso” mostra quem teve a 1ª vistoria <i>${esc(sucesso)}</i>.</p></div>`;
 
+  const perTit = todosMeses ? per : (mesesMarc.length > 4 ? `${mesesMarc.length} meses` : mesesMarc.map(mesCurto).join(", "));
   const titulo = ehPadrao ? "Clientes sem a 1ª visita" : (falha ? "Clientes com a 1ª visita sem sucesso" : "Clientes do filtro");
   const titDim = { regua: "régua de cobrança", tipo: "tipo de corte", cidade: "cidade", recurso: "recurso" }[dim];
   const nota = `Linhas: mês do corte. Colunas: ${titDim}${corta ? " (as 8 maiores; o resto em Outros)" : ""}. Conta cada corte (matrícula + data) uma vez. <b>Clique num número</b> para ver os clientes; o ⬇ baixa o analítico.`;
   const btnLista = `<button type="button" class="btn-just" data-det="${verLista}" title="Abre a lista com todos os clientes do filtro (do maior tempo cortado ao menor)">Ver clientes (${fmtN(cortes.length)})</button>`;
   return topo + filtros
-    + cartaoGraf("g-pos-1", titulo + ", por mês do corte" + (per ? " — " + per : ""), `Barras por ${titDim}.`, "", "Clique numa barra para filtrar o mês.")
-    + cartao(titulo + " — mês do corte × " + titDim + (per ? " — " + per : ""), nota,
+    + cartaoGraf("g-pos-1", titulo + ", por mês do corte" + (perTit ? " — " + perTit : ""), `Barras por ${titDim}.`, "", "Clique numa barra para filtrar o mês.")
+    + cartao(titulo + " — mês do corte × " + titDim + (perTit ? " — " + perTit : ""), nota,
       cortes.length ? tabela("posTabela", ["Mês do corte", ...colunas.map(rotCol), "Total Geral"], linhas) : `<p class="nota-secao">Nenhum cliente com esses filtros.</p>`, "posTabela", btnLista);
 }
 
