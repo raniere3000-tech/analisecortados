@@ -93,6 +93,7 @@ tr.fechado { display:none; }
 .sub.multi button { padding:5px 11px; }
 .sub.multi button.ativo { background:var(--ciano, #16a5b8); color:#fff; }
 .btn-just.atalho { font-size:11.5px; padding:4px 9px; }
+.aviso-filtro { background:#fff4e8; border-left:3px solid var(--laranja, #E8710A); padding:6px 10px; border-radius:4px; }
 
 /* botões e campos */
 .btn-just { padding:5px 12px; border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--marinho); font:600 12.5px var(--fonte); cursor:pointer; }
@@ -202,7 +203,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 <header class="top">
   <div class="top-linha">
     <div>
-      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v17</span></div>
+      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v18</span></div>
       <h1 id="titulo">Análise de Corte e Religação</h1>
     </div>
     <div class="filtros" id="filtros" hidden>
@@ -274,7 +275,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 
 <script>
 "use strict";
-const VERSAO_SITE = "v17-20261015";
+const VERSAO_SITE = "v18-20261015";
 
 // ===================== utilidades =====================
 const $ = (id) => document.getElementById(id);
@@ -857,10 +858,15 @@ function abaPos({ f, cortes: todos, per }) {
   const semPos = rg.faixas.map((x) => x.nome);
   const opReg = [...semPos, rg.com_pos, rg.religado_apos_pos, rg.religado, ...(f.ativas ? [ROT_ATIVA_OS] : [])];
   const nomeCurto = { [semPos[0]]: "-7 dias", [semPos[1]]: "7 a 15 dias", [semPos[2]]: "+15 dias", [rg.com_pos]: "Pós realizado, sem religar", [rg.religado_apos_pos]: "Religou após o pós", [rg.religado]: "Religado", [ROT_ATIVA_OS]: "Ativa sem OS" };
-  const marc = (Array.isArray(CTL.reguaPos) && CTL.reguaPos.filter((r) => opReg.includes(r)).length) ? CTL.reguaPos.filter((r) => opReg.includes(r)) : semPos;
-  const cortes = todos.filter((c) => (!sit || c.situacao === sit) && marc.includes(c.regua) && (CTL.visitaPos !== "falha" || c.status_pos === sucesso));
+  const marcTela = (Array.isArray(CTL.reguaPos) && CTL.reguaPos.filter((r) => opReg.includes(r)).length) ? CTL.reguaPos.filter((r) => opReg.includes(r)) : semPos;
+  // 1ª visita sem sucesso = teve visita (Encerrada com Ocorrência): só existe nos itens da régua com pós-corte;
+  // se a régua marcada só tem "sem pós-corte", usa todos os itens com visita (senão a tabela fica vazia)
+  const comVisita = [rg.com_pos, rg.religado_apos_pos, rg.religado];
+  const falha = CTL.visitaPos === "falha", soSemPos = falha && !marcTela.some((r) => comVisita.includes(r));
+  const marc = falha ? (soSemPos ? comVisita : marcTela.filter((r) => comVisita.includes(r))) : marcTela;
+  const cortes = todos.filter((c) => (!sit || c.situacao === sit) && marc.includes(c.regua) && (!falha || c.status_pos === sucesso));
   const meses = unicos(cortes.map((c) => c.mes));
-  const ehPadrao = marc.length === semPos.length && semPos.every((r) => marc.includes(r));
+  const ehPadrao = !falha && marc.length === semPos.length && semPos.every((r) => marc.includes(r));
 
   // colunas da tabela (e séries do gráfico): régua, tipo, cidade ou recurso — muitas cidades/recursos: as 8 maiores + Outros
   const dim = CTL.colPos || "regua";
@@ -885,7 +891,7 @@ function abaPos({ f, cortes: todos, per }) {
   const mais15 = cortes.filter((c) => c.regua === semPos[2]).length, dias = cortes.map((c) => c.dias_cortado).filter((v) => v != null);
   const debito = soma(cortes.map((c) => c.valor_debito || 0)), eco = soma(cortes.map((c) => c.economias || 0));
   const topo = kpis([
-    { rot: "Clientes no filtro", val: fmtN(cortes.length), det: ehPadrao ? "sem a 1ª visita pós-corte" : `${marc.length} item(ns) da régua`, ajuda: "Cortes (matrícula + data) que passam pelos filtros desta aba e do cabeçalho." },
+    { rot: "Clientes no filtro", val: fmtN(cortes.length), det: ehPadrao ? "sem a 1ª visita pós-corte" : (falha ? "1ª visita Encerrada com Ocorrência" : `${marc.length} item(ns) da régua`), ajuda: "Cortes (matrícula + data) que passam pelos filtros desta aba e do cabeçalho." },
     { rot: "Há mais de 15 dias", val: fmtN(mais15), det: cortes.length ? fmtP(mais15 / cortes.length) + " do filtro" : "-", neg: mais15 > 0, ajuda: "Sem pós-corte e sem religação há mais de 15 dias (até hoje)." },
     { rot: "Mediana de dias cortado", val: dias.length ? nf0.format(mediana(dias)) + " dias" : "-", det: "até hoje, de quem segue sem religar" },
     { rot: "Economias", val: fmtN(eco), det: "dos clientes do filtro" },
@@ -917,14 +923,16 @@ function abaPos({ f, cortes: todos, per }) {
       ${seletor("colPos", "Colunas por", [["regua", "Régua"], ["tipo", "Tipo de corte"], ["cidade", "Cidade"], ["recurso", "Recurso"]], dim)}</div>
     <div class="linha-filtros">${multiSel("reguaPos", "Régua de cobrança", opReg.map((r) => [r, nomeCurto[r] || r]), marc,
       [["Sem pós-corte", semPos], ["Com pós-corte", [rg.com_pos, rg.religado_apos_pos]], ["Todas", opReg]])}</div>
-    <p class="nota-secao">Padrão = a tabela dinâmica de “clientes sem a 1ª visita”: situação <b>CORTADA</b> e régua <b>sem pós-corte</b> (−7, 7 a 15 e +15 dias, contados até hoje, ${dataRot(DADOS.hoje)}). “1ª visita sem sucesso” = a 1ª vistoria foi <i>${esc(sucesso)}</i> (marque “Com pós-corte” na régua).</p></div>`;
+    ${falha ? `<p class="nota-secao aviso-filtro"><b>1ª visita sem sucesso:</b> clientes cuja 1ª vistoria pós-corte foi <i>${esc(sucesso)}</i>. Eles tiveram visita, então a régua usa só os itens com pós-corte${soSemPos ? " (os itens “sem pós-corte” marcados não se aplicam aqui)" : ""}.</p>` : ""}
+    <p class="nota-secao">Padrão = a tabela dinâmica de “clientes sem a 1ª visita”: situação <b>CORTADA</b> e régua <b>sem pós-corte</b> (−7, 7 a 15 e +15 dias, contados até hoje, ${dataRot(DADOS.hoje)}). “1ª visita: Sem sucesso” mostra quem teve a 1ª vistoria <i>${esc(sucesso)}</i>.</p></div>`;
 
+  const titulo = ehPadrao ? "Clientes sem a 1ª visita" : (falha ? "Clientes com a 1ª visita sem sucesso" : "Clientes do filtro");
   const titDim = { regua: "régua de cobrança", tipo: "tipo de corte", cidade: "cidade", recurso: "recurso" }[dim];
   const nota = `Linhas: mês do corte. Colunas: ${titDim}${corta ? " (as 8 maiores; o resto em Outros)" : ""}. Conta cada corte (matrícula + data) uma vez. <b>Clique num número</b> para ver os clientes; o ⬇ baixa o analítico.`;
   const btnLista = `<button type="button" class="btn-just" data-det="${verLista}" title="Abre a lista com todos os clientes do filtro (do maior tempo cortado ao menor)">Ver clientes (${fmtN(cortes.length)})</button>`;
   return topo + filtros
-    + cartaoGraf("g-pos-1", (ehPadrao ? "Clientes sem a 1ª visita pós-corte, por mês do corte" : "Clientes do filtro, por mês do corte") + (per ? " — " + per : ""), `Barras por ${titDim}.`, "", "Clique numa barra para filtrar o mês.")
-    + cartao((ehPadrao ? "Clientes sem a 1ª visita" : "Clientes do filtro") + " — mês do corte × " + titDim + (per ? " — " + per : ""), nota,
+    + cartaoGraf("g-pos-1", titulo + ", por mês do corte" + (per ? " — " + per : ""), `Barras por ${titDim}.`, "", "Clique numa barra para filtrar o mês.")
+    + cartao(titulo + " — mês do corte × " + titDim + (per ? " — " + per : ""), nota,
       cortes.length ? tabela("posTabela", ["Mês do corte", ...colunas.map(rotCol), "Total Geral"], linhas) : `<p class="nota-secao">Nenhum cliente com esses filtros.</p>`, "posTabela", btnLista);
 }
 
