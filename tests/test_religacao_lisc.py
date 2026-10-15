@@ -123,3 +123,24 @@ def test_chave_cidade():
     assert base.chave_cidade("S.FCO.DO ITABAPOANA") == base.chave_cidade("São Francisco de Itabapoana")
     assert base.chave_cidade("STA MARIA MADALENA") == base.chave_cidade("Santa Maria Madalena")
     assert base.chave_cidade("RIO BONITO") != base.chave_cidade("RIO DAS OSTRAS")
+
+
+def test_padroniza_cidades_e_sup():
+    m = base.padroniza_cidades(pd.Series(["São Francisco de Itabapoana", "RIO DE JANEIRO - A", "Magé", "MAGE 2", "Niterói", "NITEROI"]))
+    assert m["São Francisco de Itabapoana"] == "S.FCO.DO ITABAPOANA"
+    assert m["RIO DE JANEIRO - A"] == "RIO DE JANEIRO" and m["Magé"] == m["MAGE 2"] == "MAGE"
+    assert m["Niterói"] == m["NITEROI"]                         # fora da lista: os parecidos viram um só
+    assert base.sup(pd.Series(["MAGE", "CAMBUCI", m["NITEROI"], None])).tolist() == ["Leste", "Interior", "Sem Sup", "Sem Sup"]
+
+
+def test_sup_e_cidade_padrao_na_analise(tmp_path):
+    ativ = [["R1", "1", "5000", "109001-CORTE DE ÁGUA NO CAVALETE - DÉBITO", "01/04/26", "Finalizada", "S.FCO.DO ITABAPOANA"],
+            ["R1", "2", "6000", "109001-CORTE DE ÁGUA NO CAVALETE - DÉBITO", "01/04/26", "Finalizada", "São Francisco de Itabapoana"],
+            ["R1", "3", "7000", "109001-CORTE DE ÁGUA NO CAVALETE - DÉBITO", "01/04/26", "Finalizada", "RIO DE JANEIRO - A"]]
+    pd.DataFrame(ativ, columns=COLS_ATIV).to_excel(tmp_path / "Atividades-IN.xlsx", index=False)
+    analise = Analise(str(tmp_path))
+    dados = analise.executar("2026-04-10")
+    c = analise.cortes.set_index("matricula")
+    assert c.loc["6000", "cidade"] == "S.FCO.DO ITABAPOANA" and c.loc["6000", "sup"] == "Interior"
+    assert c.loc["7000", "cidade"] == "RIO DE JANEIRO" and c.loc["7000", "sup"] == "Leste"
+    assert set(dados["saldo"]["sup"]) == {"Interior", "Leste"} and "sup" in dados["cortes"]

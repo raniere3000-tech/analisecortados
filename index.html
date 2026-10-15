@@ -196,12 +196,13 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 <header class="top">
   <div class="top-linha">
     <div>
-      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v12</span></div>
+      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v13</span></div>
       <h1 id="titulo">Análise de Corte e Religação</h1>
     </div>
     <div class="filtros" id="filtros" hidden>
       <label class="fsel" data-f="de"><span>Mês inicial</span><select id="fDe" aria-label="Mês inicial"></select></label>
       <label class="fsel" data-f="ate"><span>Mês final</span><select id="fAte" aria-label="Mês final"></select></label>
+      <label class="fsel" data-f="sup"><span>Sup</span><select id="fSup" aria-label="Sup"></select></label>
       <label class="fsel" data-f="cidade"><span>Cidade</span><select id="fCidade" aria-label="Cidade"></select></label>
       <label class="fsel" data-f="recurso"><span>Recurso</span><select id="fRecurso" aria-label="Recurso"></select></label>
       <label class="fsel" data-f="tipo"><span>Tipo de corte</span><select id="fTipo" aria-label="Tipo de corte"></select></label>
@@ -267,7 +268,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 
 <script>
 "use strict";
-const VERSAO_SITE = "v12-20261015";
+const VERSAO_SITE = "v13-20261015";
 
 // ===================== utilidades =====================
 const $ = (id) => document.getElementById(id);
@@ -462,13 +463,16 @@ function carregaDados(d) {
   preenche($("fDe"), meses, false); preenche($("fAte"), meses, false);
   if (!meses.includes($("fDe").value) || !$("fDe").dataset.escolhido) $("fDe").value = meses[0] || "";
   if (!meses.includes($("fAte").value) || !$("fAte").dataset.escolhido) $("fAte").value = meses[meses.length - 1] || "";
-  preenche($("fCidade"), unicos([...CORTES.map((c) => c.cidade), ...SALDO.map((s) => s.cidade)]));
+  PREENCHE = preenche;
+  preenche($("fSup"), unicos([...CORTES.map((c) => c.sup), ...SALDO.map((s) => s.sup)]));
+  preencheCidades();
   preenche($("fRecurso"), unicos([...CORTES.map((c) => c.recurso), ...SALDO.map((s) => s.recurso)]));
   preenche($("fTipo"), unicos(CORTES.map((c) => c.tipo)));
   if (HASH_PENDENTE) {                                       // estado vindo do endereço (link compartilhado)
-    for (const [k, id] of [["de", "fDe"], ["ate", "fAte"], ["cidade", "fCidade"], ["recurso", "fRecurso"], ["tipo", "fTipo"]]) {
+    for (const [k, id] of [["de", "fDe"], ["ate", "fAte"], ["sup", "fSup"], ["cidade", "fCidade"], ["recurso", "fRecurso"], ["tipo", "fTipo"]]) {
       const v = HASH_PENDENTE[k], sel = $(id);
       if (v != null && [...sel.options].some((o) => o.value === v)) { sel.value = v; sel.dataset.escolhido = "1"; }
+      if (id === "fSup") preencheCidades();
     }
     if (HASH_PENDENTE.ativas != null) $("fAtivas").checked = HASH_PENDENTE.ativas === "1";
     if (HASH_PENDENTE.aba && FILTROS_DA_ABA[HASH_PENDENTE.aba]) abaAtual = HASH_PENDENTE.aba;
@@ -481,9 +485,16 @@ function carregaDados(d) {
   desenha();
 }
 
+// Sup e cidade: a lista de cidades mostra só as da Sup escolhida
+let PREENCHE = null;
+function preencheCidades() {
+  const sup = $("fSup").value, daSup = (x) => !sup || x.sup === sup;
+  PREENCHE($("fCidade"), unicos([...CORTES.filter(daSup).map((c) => c.cidade), ...SALDO.filter(daSup).map((s) => s.cidade)]));
+}
+const bateLocal = (x, f) => (!f.sup || x.sup === f.sup) && (!f.cidade || x.cidade === f.cidade);
 function filtro() {
   if ($("fDe").value && $("fAte").value && $("fDe").value > $("fAte").value) { const d = $("fDe").value; $("fDe").value = $("fAte").value; $("fAte").value = d; }   // período invertido
-  return { de: $("fDe").value, ate: $("fAte").value, cidade: $("fCidade").value, recurso: $("fRecurso").value, tipo: $("fTipo").value, ativas: $("fAtivas").checked };
+  return { de: $("fDe").value, ate: $("fAte").value, sup: $("fSup").value, cidade: $("fCidade").value, recurso: $("fRecurso").value, tipo: $("fTipo").value, ativas: $("fAtivas").checked };
 }
 // "Ativas = religadas": o corte sem OS de religação cuja ligação está ATIVA no cadastro passa a valer como religado (sem data)
 let VISAO = { on: null, lista: null };
@@ -496,7 +507,7 @@ function cortesBase() {
 }
 function periodo(f) { if (!f.de || !f.ate) return ""; return f.de === f.ate ? mesRot(f.de) : `${mesRot(f.de)} a ${mesRot(f.ate)}`; }
 function cortesFiltrados(f) {
-  return cortesBase().filter((c) => (!f.de || c.mes >= f.de) && (!f.ate || c.mes <= f.ate) && (!f.cidade || c.cidade === f.cidade) && (!f.recurso || c.recurso === f.recurso) && (!f.tipo || c.tipo === f.tipo));
+  return cortesBase().filter((c) => (!f.de || c.mes >= f.de) && (!f.ate || c.mes <= f.ate) && bateLocal(c, f) && (!f.recurso || c.recurso === f.recurso) && (!f.tipo || c.tipo === f.tipo));
 }
 function mesesEntre(de, ate) {
   const out = []; if (!de || !ate) return out;
@@ -509,20 +520,21 @@ function setFiltro(ids, valor, rotulo) {
   for (const id of [].concat(ids)) { const sel = $(id); if (![...sel.options].some((o) => o.value === valor)) return; sel.value = valor; sel.dataset.escolhido = "1"; }
   setTimeout(() => { desenha(); toast(`Filtro aplicado: ${rotulo}. Clique em Limpar para voltar.`); }, 0);   // fora do evento do gráfico (que será refeito)
 }
-["fDe", "fAte", "fCidade", "fRecurso", "fTipo"].forEach((id) => $(id).addEventListener("change", (e) => { e.target.dataset.escolhido = "1"; CTL.verTodos = false; desenha(); }));
+["fDe", "fAte", "fSup", "fCidade", "fRecurso", "fTipo"].forEach((id) => $(id).addEventListener("change", (e) => { e.target.dataset.escolhido = "1"; if (id === "fSup") preencheCidades(); CTL.verTodos = false; desenha(); }));
 $("fAtivas").addEventListener("change", (e) => {
   guarda("cortes_ativas", e.target.checked); CTL.verTodos = false; desenha();
   toast(e.target.checked ? "Ativas = religadas: ligações ATIVAS no cadastro, sem OS de religação, contam como religadas." : "Ativas = religadas desligado.");
 });
 $("btnLimpar").addEventListener("click", () => {
-  ["fCidade", "fRecurso", "fTipo"].forEach((id) => { $(id).value = ""; });
+  ["fSup", "fCidade", "fRecurso", "fTipo"].forEach((id) => { $(id).value = ""; });
+  preencheCidades();
   ["fDe", "fAte"].forEach((id) => { delete $(id).dataset.escolhido; });
   const op = $("fDe").options; $("fDe").value = op.length ? op[0].value : ""; $("fAte").value = op.length ? op[op.length - 1].value : "";
   CTL.busca = ""; desenha();
 });
 
 // ===================== abas e desenho (só a aba aberta; gráficos só quando a aba aparece) =====================
-const FILTROS_DA_ABA = { saldo: ["de", "ate", "cidade", "recurso"], cruzada: ["de", "ate", "cidade", "recurso", "tipo"], pos: ["de", "ate", "cidade", "recurso", "tipo"], perm: ["de", "ate", "cidade", "recurso", "tipo"], dados: ["de", "ate", "cidade", "recurso", "tipo"] };
+const FILTROS_DA_ABA = { saldo: ["de", "ate", "sup", "cidade", "recurso"], cruzada: ["de", "ate", "sup", "cidade", "recurso", "tipo"], pos: ["de", "ate", "sup", "cidade", "recurso", "tipo"], perm: ["de", "ate", "sup", "cidade", "recurso", "tipo"], dados: ["de", "ate", "sup", "cidade", "recurso", "tipo"] };
 const ABAS = ["saldo", "cruzada", "pos", "perm", "dados"];
 Object.keys(FILTROS_DA_ABA).forEach((k) => FILTROS_DA_ABA[k].push("ativas"));      // o filtro vale para todas as abas
 let abaAtual = "saldo", CTX = null; const sujo = {}; const MEM = {};
@@ -542,7 +554,7 @@ function desenha() {
   DET.length = 0; fechaGaveta();                              // os números mudaram: a lista aberta ao lado ficaria velha
   ABAS.forEach((a) => { sujo[a] = true; });
   $("titulo").textContent = "Análise de Corte e Religação" + (CTX.per ? " — " + CTX.per : "");
-  $("soImpressao").textContent = "Análise de Corte e Religação" + (CTX.per ? " — " + CTX.per : "") + (f.cidade ? " · " + f.cidade : "") + (f.recurso ? " · " + f.recurso : "") + (f.tipo ? " · " + f.tipo : "") + (f.ativas ? " · Ativas = religadas" : "");
+  $("soImpressao").textContent = "Análise de Corte e Religação" + (CTX.per ? " — " + CTX.per : "") + (f.sup ? " · Sup " + f.sup : "") + (f.cidade ? " · " + f.cidade : "") + (f.recurso ? " · " + f.recurso : "") + (f.tipo ? " · " + f.tipo : "") + (f.ativas ? " · Ativas = religadas" : "");
   ativaAba(abaAtual);
 }
 const RENDER = { saldo: abaSaldo, cruzada: abaCruzada, pos: abaPos, perm: abaPermanencia, dados: abaDados };
@@ -564,10 +576,10 @@ const ordenaTipos = (t) => [...t].sort((a, b) => pesoTipo(a) - pesoTipo(b) || a.
 
 function abaSaldo({ f, per }) {
   const C = R.categorias, campo = CTL.medidaSaldo === "economias" ? "economias" : "qtd";
-  const ev = SALDO.filter((s) => (!f.de || s.mes >= f.de) && (!f.ate || s.mes <= f.ate) && (!f.cidade || s.cidade === f.cidade) && (!f.recurso || s.recurso === f.recurso));
+  const ev = SALDO.filter((s) => (!f.de || s.mes >= f.de) && (!f.ate || s.mes <= f.ate) && bateLocal(s, f) && (!f.recurso || s.recurso === f.recurso));
   const meses = mesesEntre(f.de, f.ate);
   const valor = (cat, tipo, mes) => soma(ev.filter((s) => s.categoria === cat && (!tipo || s.tipo === tipo) && s.mes === mes).map((s) => s[campo]));
-  const detEv = (cat, tipo, mes, nome) => () => EVENTOS.filter((e) => e.categoria === cat && (!tipo || e.tipo === tipo) && (!mes || e.mes === mes) && (!f.cidade || e.cidade === f.cidade) && (!f.recurso || e.recurso === f.recurso)
+  const detEv = (cat, tipo, mes, nome) => () => EVENTOS.filter((e) => e.categoria === cat && (!tipo || e.tipo === tipo) && (!mes || e.mes === mes) && bateLocal(e, f) && (!f.recurso || e.recurso === f.recurso)
     && (!mes && f.de ? e.mes >= f.de : true) && (!mes && f.ate ? e.mes <= f.ate : true));
   const num = (v, saldo, det) => ({ v, txt: v === 0 ? "-" : fmtN(v), classe: "num" + (v < 0 ? (saldo ? " neg" : " neg-txt") : (v === 0 ? " vazio" : "")) + (det ? " clic" : ""), det: det && v !== 0 ? det : null });
   const linhas = [];
@@ -585,7 +597,7 @@ function abaSaldo({ f, per }) {
   const corte = grupo(C.corte, "(−) Corte", -1, true);
   const relig = grupo(C.religacao, "(+) Religação", 1, true);
   const lna = grupo(C.implantacao, "(+) Implantação de ligação de água", 1, false);
-  const ativasOs = f.ativas ? cortesBase().filter((c) => c.ativa_os && (!f.de || c.mes >= f.de) && (!f.ate || c.mes <= f.ate) && (!f.cidade || c.cidade === f.cidade) && (!f.recurso || c.recurso === f.recurso)) : [];
+  const ativasOs = f.ativas ? cortesBase().filter((c) => c.ativa_os && (!f.de || c.mes >= f.de) && (!f.ate || c.mes <= f.ate) && bateLocal(c, f) && (!f.recurso || c.recurso === f.recurso)) : [];
   const ativaMes = meses.map((m) => { const l = ativasOs.filter((c) => c.mes === m); return campo === "economias" ? soma(l.map((c) => c.economias)) : l.length; });
   if (f.ativas) linhas.push({ classe: "grupo", celulas: ["(+) Ativa sem OS de religação", ...ativaMes.map((v, i) => num(v, false, regDet(`Ativa sem OS — ${mesRot(meses[i])}`, () => ativasOs.filter((c) => c.mes === meses[i]), "cortes"))), num(soma(ativaMes), false, regDet(`Ativa sem OS — ${per}`, () => ativasOs, "cortes"))] });
   const saldo = meses.map((_, i) => corte[i] + relig[i] + lna[i] + ativaMes[i]);
@@ -898,7 +910,8 @@ function explicacao() {
   <p>O código do serviço (números do início de <code>Código/Descrição</code>) é procurado no catálogo (<i>Descrição serviço</i>); sem código, vale a descrição. Categorias usadas: ${Object.values(R.categorias).map(esc).join(", ")}.
   O tipo (CAVALETE, LISC, RAMAL, REDE…) sai da descrição do serviço. Atividade repetida em mais de um arquivo (mesmo <i>ID da Atividade</i>) conta uma vez.</p>
   <h3>Religação LISC (planilhas separadas)</h3>
-  <p>Planilha com as colunas <code>Matrícula</code>, <code>Serviço Executado</code> e <code>Dt. Execução</code> (o título acima do cabeçalho é ignorado). Cada O.S. com Dt. Execução vira uma religação Finalizada nessa data; serviço fora do catálogo conta como religação quando tem “RELIGA” no nome, e sem tipo no nome vale LISC. A mesma O.S. (Nº/Ano) em mais de um arquivo e a mesma religação já presente nas atividades (mesma matrícula e dia) contam uma vez. Cidade = <code>Nome da Localidade</code>; recurso = <code>Executor</code>. <b>Só valem as cidades que aparecem nos arquivos de atividades</b> (sem diferença de acento ou maiúscula); as demais linhas ficam de fora e aparecem contadas nos parâmetros acima.</p>
+  <p>Planilha com as colunas <code>Matrícula</code>, <code>Serviço Executado</code> e <code>Dt. Execução</code> (o título acima do cabeçalho é ignorado). Cada O.S. com Dt. Execução vira uma religação Finalizada nessa data; serviço fora do catálogo conta como religação quando tem “RELIGA” no nome, e sem tipo no nome vale LISC. A mesma O.S. (Nº/Ano) em mais de um arquivo e a mesma religação já presente nas atividades (mesma matrícula e dia) contam uma vez. Cidade = <code>Nome da Localidade</code>; recurso = <code>Executor</code>. <b>Só valem as cidades que aparecem nos arquivos de atividades</b> ou matrículas que têm atividade; as demais linhas ficam de fora e aparecem contadas nos parâmetros acima.</p>
+  <p><b>Sup e cidades.</b> Cada cidade pertence a uma Sup (Leste ou Interior), conforme a lista em <code>cortes/regras.json</code> (<code>supervisao</code>). Nomes parecidos da mesma cidade nas atividades, na LISC e no cadastro (“São Francisco de Itabapoana” = “S.FCO.DO ITABAPOANA”, “RIO DE JANEIRO - A” = “RIO DE JANEIRO”, com ou sem acento) viram um nome só. Cidade fora da lista fica em “Sem Sup”; os nomes juntados e as cidades sem Sup aparecem nos parâmetros acima.</p>
   <h3>Base de cortes</h3>
   <ul><li>Uma linha por matrícula e data, só OS de corte <b>${esc(S.finalizada)}</b>. Dois cortes no mesmo dia (ex.: OS principal + LISC) contam um; o tipo segue a prioridade ${esc(R.tipos.prioridade_mesmo_dia.join(" > "))}.</li>
   <li><b>Religação</b>: 1ª OS de religação ${esc(S.finalizada)} no dia do corte ou depois, e até o dia do próximo corte da mesma matrícula (religação no mesmo dia de um novo corte fica com o corte anterior). Cada religação vale para um corte só.</li>

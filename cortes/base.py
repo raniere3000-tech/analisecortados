@@ -146,16 +146,64 @@ def chave_cidade(nome):
     if not isinstance(nome, str) or not nome.strip():
         return None
     partes = re.sub(r"[^A-Z0-9]+", " ", normaliza(nome)).split()
+    while len(partes) > 1 and (len(partes[-1]) == 1 or partes[-1].isdigit()):   # 'RIO DE JANEIRO - A', 'MAGE 2'
+        partes.pop()
     partes = [_ABREV_CIDADE.get(p, p) for p in partes]
     return "".join(p for p in partes if p not in _TIRA_CIDADE) or None
 
 
-def _cidade_parecida(c, validas):
-    if c in validas:
-        return True
+def _parecida(c, candidatas):
+    """A candidata que representa a mesma cidade que `c` (chaves de `chave_cidade`), ou None."""
+    if c in candidatas:
+        return c
+    if len(c) < 5:
+        return None
     from difflib import SequenceMatcher
-    return any(v.startswith(c) or c.startswith(v) or SequenceMatcher(None, c, v).ratio() >= 0.88
-               for v in validas if min(len(c), len(v)) >= 5)
+    melhor, nota = None, 0.0
+    for v in candidatas:
+        if len(v) < 5:
+            continue
+        n = 0.95 if (v.startswith(c) or c.startswith(v)) else SequenceMatcher(None, c, v).ratio()
+        if n > nota:
+            melhor, nota = v, n
+    return melhor if nota >= 0.85 else None
+
+
+def _cidade_parecida(c, validas):
+    return _parecida(c, validas) is not None
+
+
+def padroniza_cidades(*series):
+    """{nome como veio: nome padrão} para todas as séries. Vale o nome da lista de Sup do regras.json; nomes
+    parecidos fora da lista viram o mais frequente entre eles ('Cambuci', 'CAMBUCI.' → 'CAMBUCI')."""
+    lista = {chave_cidade(n): n for n in REGRAS["supervisao"]["cidades"]}
+    contagem = pd.concat([s.dropna().astype(str).str.strip() for s in series if s is not None] or [pd.Series(dtype=str)]).value_counts()
+    mapa, outras = {}, {}
+    for nome in contagem.index:                       # do mais frequente ao menos frequente
+        k = chave_cidade(nome)
+        if not k:
+            continue
+        alvo = _parecida(k, lista)
+        if alvo:
+            mapa[nome] = lista[alvo]
+            continue
+        par = _parecida(k, outras)
+        if par:
+            mapa[nome] = outras[par]
+        else:
+            outras[k] = mapa[nome] = re.sub(r"\s+", " ", nome).upper()
+    return mapa
+
+
+def aplica_cidades(df, mapa, coluna="cidade"):
+    if df is not None and coluna in df.columns:
+        df[coluna] = df[coluna].map(lambda v: mapa.get(str(v).strip(), v) if isinstance(v, str) else v)
+    return df
+
+
+def sup(serie):
+    cid = REGRAS["supervisao"]["cidades"]
+    return serie.map(lambda c: cid.get(c, REGRAS["supervisao"]["sem_sup"]) if isinstance(c, str) and c.strip() else REGRAS["supervisao"]["sem_sup"])
 
 
 def filtra_lisc_por_cidade(ativ):

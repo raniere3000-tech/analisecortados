@@ -70,3 +70,10 @@ python -m pytest tests -q
 ```
 
 Os testes usam dados sintéticos (`tests/dados_sinteticos.py`) e rodam no GitHub Actions a cada push.
+
+## Sup e cidades
+
+- O filtro **Sup** (Leste / Interior) fica no cabeçalho e vale em todas as abas; a lista de cidades mostra só as da Sup escolhida.
+- A Sup de cada cidade está em `cortes/regras.json` → `supervisao.cidades` (nome como em `Nome da Localidade`).
+- Nomes parecidos da mesma cidade (atividades, LISC, cadastro) viram um só: sem acento, pontuação, “de/do/São”, com abreviações
+  (`S.FCO.DO ITABAPOANA` = `São Francisco de Itabapoana`) e sufixos (`RIO DE JANEIRO - A` = `RIO DE JANEIRO`). Cidade fora da lista fica em “Sem Sup”.

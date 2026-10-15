@@ -48,13 +48,26 @@ class Analise:
         self.progresso(70, "Classificando as atividades…")
         cat, origem_cat = base.catalogo(lido["catalogo"])
         ativ, duplicadas = base.prepara_atividades(lido["atividades"], cat)
-        ativ, lisc_fora, lisc_cidades_fora = base.filtra_lisc_por_cidade(ativ)
         cad = base.prepara_cadastro(lido["cadastro"])
+        # nomes parecidos da mesma cidade (atividades, LISC, cadastro) viram um só — o da lista de Sup
+        mapa_cid = base.padroniza_cidades(ativ["cidade"], None if cad is None else cad.get("CIDADE"))
+        base.aplica_cidades(ativ, mapa_cid)
+        base.aplica_cidades(cad, mapa_cid, "CIDADE")
+        ativ, lisc_fora, lisc_cidades_fora = base.filtra_lisc_por_cidade(ativ)
 
         self.progresso(80, "Cruzando cortes, religações e pós-corte…")
         self.cortes = base.monta_cortes(ativ, cad, hoje)
         self.progresso(90, "Calculando o saldo de economias…")
         self.eventos = base.monta_saldo(ativ, cad)
+        for df in (self.cortes, self.eventos):
+            df["sup"] = base.sup(df["cidade"])
+        sem_sup = pd.concat([self.cortes.loc[self.cortes["sup"].eq(REGRAS["supervisao"]["sem_sup"]), "cidade"],
+                             self.eventos.loc[self.eventos["sup"].eq(REGRAS["supervisao"]["sem_sup"]), "cidade"]])
+        sem_sup = sem_sup.fillna("(sem cidade)").value_counts().head(15)
+        juntados = {}
+        for orig, novo in mapa_cid.items():
+            if orig != novo:
+                juntados.setdefault(novo, []).append(orig)
 
         sem_cat = ativ[ativ["categoria"].isna()]
         suspeitos = sem_cat[sem_cat["servico"].fillna("").map(leitura.normaliza).str.contains(SUSPEITOS)]
@@ -68,6 +81,8 @@ class Analise:
             "Atividades sem data ou matrícula": int((ativ["data"].isna() | ativ["matricula"].isna()).sum()),
             "Catálogo de serviços": origem_cat,
             **_info_lisc(ativ, lisc_fora, lisc_cidades_fora),
+            "Cidades com nomes diferentes juntadas": "; ".join(f"{n} ← {', '.join(v[:5])}" for n, v in juntados.items())[:600] or "nenhuma",
+            "Cidades fora da lista de Sup (ficam em \"" + REGRAS["supervisao"]["sem_sup"] + "\")": ", ".join(f"{n} ({q})" for n, q in sem_sup.items()) or "nenhuma",
             "Arquivos que não puderam ser lidos": sum(1 for a in self.arquivos if a["tipo"] == "erro"),
             "Cadastro": (f"{len(cad):,} linhas; referência mais recente {cad['ref'].max():%m/%Y}".replace(",", ".")
                          if cad is not None and cad["ref"].notna().any() else ("sem planilha de cadastro na pasta" if cad is None else f"{len(cad)} linhas")),

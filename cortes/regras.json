@@ -186,5 +186,31 @@
       "servico",
       "data"
     ]
+  },
+  "supervisao": {
+    "_leia": "Sup de cada cidade (Nome da Localidade). Nomes parecidos nas atividades, LISC e cadastro ('São Francisco de Itabapoana', 'RIO DE JANEIRO - A', sem acento/pontuação) viram o nome desta lista. Cidade fora da lista fica em 'sem_sup'.",
+    "cidades": {
+      "RIO DE JANEIRO": "Leste",
+      "SAO GONCALO": "Leste",
+      "MAGE": "Leste",
+      "MARICA": "Leste",
+      "ITABORAI": "Leste",
+      "MUTONDO": "Leste",
+      "TANGUA": "Leste",
+      "SAQUAREMA": "Leste",
+      "ITAOCARA": "Interior",
+      "S.FCO.DO ITABAPOANA": "Interior",
+      "RIO BONITO": "Interior",
+      "CORDEIRO": "Interior",
+      "APERIBE": "Interior",
+      "CASIMIRO DE ABREU": "Interior",
+      "CANTAGALO": "Interior",
+      "MIRACEMA": "Interior",
+      "S.SEBASTIAO DO ALTO": "Interior",
+      "DUAS BARRAS": "Interior",
+      "CAMBUCI": "Interior",
+      "CACHOEIRAS DE MACACU": "Interior"
+    },
+    "sem_sup": "Sem Sup"
   }
 }
