@@ -196,7 +196,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 <header class="top">
   <div class="top-linha">
     <div>
-      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v14</span></div>
+      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v15</span></div>
       <h1 id="titulo">Análise de Corte e Religação</h1>
     </div>
     <div class="filtros" id="filtros" hidden>
@@ -268,7 +268,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 
 <script>
 "use strict";
-const VERSAO_SITE = "v14-20261015";
+const VERSAO_SITE = "v15-20261015";
 
 // ===================== utilidades =====================
 const $ = (id) => document.getElementById(id);
@@ -370,7 +370,18 @@ const pluginRotulos = {
   afterDatasetsDraw(chart) {
     const ctx = chart.ctx, horiz = chart.options.indexAxis === "y";
     ctx.save(); ctx.font = "600 10.5px 'IBM Plex Sans Condensed','Segoe UI',Arial,sans-serif"; ctx.textBaseline = "middle"; ctx.textAlign = "center";
+    const usados = [];
     chart.data.datasets.forEach((ds, di) => {
+      if (ds.rotuloFim && chart.isDatasetVisible(di)) {        // curva: só o último valor, na ponta da linha (sem encavalar)
+        const meta = chart.getDatasetMeta(di), fmt = ds.fmt || fmtN;
+        let i = ds.data.length - 1; while (i >= 0 && ds.data[i] == null) i--;
+        const el = i >= 0 ? meta.data[i] : null, t = el ? fmt(ds.data[i]) : "", w = ctx.measureText(t).width;
+        if (el && !usados.some((u) => Math.abs(u.y - el.y) < 12 && el.x + 6 < u.x + u.w && u.x < el.x + 6 + w)) {
+          ctx.save(); ctx.textAlign = "left"; ctx.lineWidth = 3; ctx.strokeStyle = "#fff"; ctx.strokeText(t, el.x + 6, el.y);
+          ctx.fillStyle = ds.borderColor || COR.marinho; ctx.fillText(t, el.x + 6, el.y); ctx.restore();
+          usados.push({ x: el.x + 6, y: el.y, w });
+        }
+      }
       if (ds.rotulos === false || !chart.isDatasetVisible(di)) return;
       const meta = chart.getDatasetMeta(di), fmt = ds.fmt || fmtN, empilhado = !!ds.empilhado;
       meta.data.forEach((el, i) => {
@@ -396,6 +407,19 @@ const pluginRotulos = {
       });
     });
     ctx.restore();
+  },
+};
+// linha de base (o zero) no lugar do eixo: ancora as barras, inclusive as negativas do saldo
+const pluginBase = {
+  id: "linhaBase",
+  beforeDatasetsDraw(chart) {
+    if (chart.config.type === "doughnut" || chart.config.type === "pie" || chart.config.type === "line") return;
+    const hor = chart.options.indexAxis === "y", esc = hor ? chart.scales.x : chart.scales.y, a = chart.chartArea, ctx = chart.ctx;
+    if (!esc) return;
+    const z = esc.getPixelForValue(0);
+    ctx.save(); ctx.strokeStyle = "#c9d3de"; ctx.lineWidth = 1; ctx.beginPath();
+    if (hor) { ctx.moveTo(z, a.top); ctx.lineTo(z, a.bottom); } else { ctx.moveTo(a.left, z); ctx.lineTo(a.right, z); }
+    ctx.stroke(); ctx.restore();
   },
 };
 // coluna sob o mouse: faixa clara atrás dela (mostra a qual coluna o balão se refere)
@@ -426,26 +450,28 @@ if (window.Chart) {
     const y = Math.min(Math.max((Math.min(...ys) + Math.max(...ys)) / 2, a.top), a.bottom);
     return x > (a.left + a.right) / 2 ? { x: x - meia, y, xAlign: "right", yAlign: "center" } : { x: x + meia, y, xAlign: "left", yAlign: "center" };
   };
-  Chart.register(pluginRotulos, pluginFaixa);
+  Chart.register(pluginRotulos, pluginFaixa, pluginBase);
   Chart.defaults.font.family = "'IBM Plex Sans','Segoe UI',Arial,sans-serif";
   Chart.defaults.font.size = 11;
   Chart.defaults.color = "#1f2d3d";
   Chart.defaults.locale = "pt-BR";
 }
 
+const EIXO_CAT = { color: "#5b6b7d", font: { size: 11 }, padding: 6 };
 function opcoes({ horizontal = false, empilhado = false, pct = false, aoClicar = null, legenda = true, eixoY = {} } = {}) {
   return {
     indexAxis: horizontal ? "y" : "x", responsive: true, maintainAspectRatio: false, animation: imprimindo ? false : undefined,
-    layout: { padding: { top: 14, right: horizontal ? 24 : 4 } },
+    layout: { padding: { top: 22, right: horizontal ? 34 : 6, bottom: 2 } },
     interaction: { mode: "index", intersect: false, axis: horizontal ? "y" : "x" },   // o balão abre com o mouse em qualquer altura da coluna
     onClick: aoClicar ? (ev, els, chart) => { const e = chart.getElementsAtEventForMode(ev, "nearest", { intersect: true }, true); if (e.length) aoClicar(e[0].index, e[0].datasetIndex); } : undefined,
     onHover: aoClicar ? (ev, els, chart) => { ev.native.target.style.cursor = chart.getElementsAtEventForMode(ev, "nearest", { intersect: true }, true).length ? "pointer" : "default"; } : undefined,
     scales: {
-      x: { stacked: empilhado, grid: { display: horizontal, color: COR.grade }, border: { display: false }, ...(horizontal && pct ? { ticks: { callback: (v) => v + "%" }, max: 100 } : {}) },
-      y: { stacked: empilhado, grid: { color: COR.grade, display: !horizontal }, border: { display: false }, beginAtZero: true, ...(!horizontal && pct ? { ticks: { callback: (v) => v + "%" }, max: 100 } : {}), ...eixoY },
+      // visual limpo: sem linhas de grade e sem o eixo de valores (os números estão nos rótulos das barras e no balão)
+      x: { stacked: empilhado, grid: { display: false }, border: { display: false }, ...(horizontal ? { display: false, beginAtZero: true, ...(pct ? { max: 100 } : {}) } : { ticks: EIXO_CAT }) },
+      y: { stacked: empilhado, grid: { display: false }, border: { display: false }, ...(horizontal ? { ticks: EIXO_CAT } : { display: false, beginAtZero: true, ...(pct ? { max: 100 } : {}) }), ...eixoY },
     },
     plugins: {
-      legend: { display: legenda, position: "top", align: "end", labels: { usePointStyle: true, boxWidth: 8, boxHeight: 8, padding: 14 } },
+      legend: { display: legenda, position: "top", align: "end", labels: { usePointStyle: true, pointStyle: "circle", boxWidth: 7, boxHeight: 7, padding: 16, color: "#4a5a6b", font: { size: 11 } } },
       tooltip: {
         position: "coluna", caretSize: 7, caretPadding: 6,
         backgroundColor: "#05050D", borderColor: "#394D73", borderWidth: 1, titleColor: "#fff", bodyColor: "#fff", footerColor: "#9fdbe4", padding: 12, cornerRadius: 8,
@@ -720,7 +746,7 @@ function abaCruzada({ f, cortes: todos, per }) {
   const curvas = coortes.map((m, k) => {
     const l = cortes.filter((c) => c.mes === m), t = l.length || 1, lim = fim - idxMes(m);
     return { label: mesCurto(m), data: Array.from({ length: maxK + 1 }, (_, j) => (j > lim ? null : +(l.filter((c) => c.data_religacao && idxMes(c.data_religacao.slice(0, 7)) - idxMes(m) <= j).length / t * 100).toFixed(1))),
-      borderColor: paleta[paleta.length - coortes.length + k] || COR.marinho, backgroundColor: paleta[paleta.length - coortes.length + k] || COR.marinho, borderWidth: k === coortes.length - 1 ? 3 : 2, pointRadius: 3, tension: 0, rotulos: false, fmt: (v) => nf1.format(v) + "%" };
+      borderColor: paleta[paleta.length - coortes.length + k] || COR.marinho, backgroundColor: paleta[paleta.length - coortes.length + k] || COR.marinho, borderWidth: k === coortes.length - 1 ? 3 : 2, pointRadius: 3, tension: .25, rotulos: false, rotuloFim: true, pointHoverRadius: 5, fmt: (v) => nf1.format(v) + "%" };
   });
   const nAtiva = cortes.filter((c) => c.mes_religacao === T.ativa).length, totRel = cortes.filter((c) => c.data_religacao).length + (f.ativas ? nAtiva : 0), nSem = cortes.filter((c) => c.mes_religacao === T.sem_religacao).length;
   const diasRel = cortes.filter((c) => c.data_religacao).map((c) => c.dias);
@@ -743,7 +769,7 @@ function abaCruzada({ f, cortes: todos, per }) {
         ].map((d) => ({ ...d, fmt: pct ? (v) => nf0.format(v) + "%" : undefined })),
       }, opcoes({ empilhado: true, pct, aoClicar: (i) => setFiltro(["fDe", "fAte"], mesesCorte[i], mesRot(mesesCorte[i])) }));
       grafico("g-cruzada-2", "line", { labels: Array.from({ length: maxK + 1 }, (_, j) => (j === 0 ? "mesmo mês" : `+${j} mês(es)`)), datasets: curvas },
-        { ...opcoes({ eixoY: { max: 100, ticks: { callback: (v) => v + "%" } } }), plugins: { ...opcoes().plugins, tooltip: { ...opcoes().plugins.tooltip, callbacks: { label: (c) => ` ${c.dataset.label}: ${nf1.format(c.parsed.y)}%` } } } });
+        { ...opcoes({ eixoY: { beginAtZero: false, grace: "8%" } }), layout: { padding: { top: 22, right: 44, left: 4 } }, plugins: { ...opcoes().plugins, tooltip: { ...opcoes().plugins.tooltip, callbacks: { label: (c) => ` ${c.dataset.label}: ${nf1.format(c.parsed.y)}%` } } } });
     },
   };
   const ctl = seletor("posCruzada", "Pós-corte", [["todos", "Todos"], ["com", "Com"], ["sem", "Sem"]], CTL.posCruzada) + seletor("modoCruzada", "Mostrar", [["qtd", "Quantidade"], ["pct", "%"]], CTL.modoCruzada);
