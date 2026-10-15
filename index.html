@@ -75,6 +75,10 @@ main { font-family:var(--fonte); }
 .grid.g11 { grid-template-columns:minmax(0,1fr) minmax(0,1fr); }
 .grid > .card { margin-left:0; margin-right:0; }
 .graf { position:relative; height:clamp(200px,34vh,300px); }
+.graf.graf-alto { height:clamp(320px,54vh,540px); }
+td.grupo-toggle { cursor:pointer; user-select:none; }
+td.grupo-toggle:hover { text-decoration:underline; }
+tr.fechado { display:none; }
 .graf-aviso { color:var(--azul-claro); font-size:12px; padding:30px 0; text-align:center; }
 .dica { font-size:11px; color:var(--azul-claro); margin:4px 0 0; }
 
@@ -160,6 +164,7 @@ kbd { background:var(--tint); border:1px solid var(--line); border-radius:4px; p
 body.apresentacao .top .filtros, body.apresentacao .top .ferramentas, body.apresentacao .fonte-status, body.apresentacao .etapas { display:none; }
 body.apresentacao main { zoom:1.14; }
 body.apresentacao .graf { height:clamp(260px,46vh,480px); }
+body.apresentacao .graf.graf-alto { height:clamp(360px,62vh,640px); }
 
 /* impressão / PDF executivo: durante a preparação todas as abas ficam visíveis (para os gráficos terem tamanho) */
 .so-impressao { display:none; }
@@ -191,7 +196,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 <header class="top">
   <div class="top-linha">
     <div>
-      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v10</span></div>
+      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v11</span></div>
       <h1 id="titulo">Análise de Corte e Religação</h1>
     </div>
     <div class="filtros" id="filtros" hidden>
@@ -262,7 +267,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 
 <script>
 "use strict";
-const VERSAO_SITE = "v10-20261014";
+const VERSAO_SITE = "v11-20261015";
 
 // ===================== utilidades =====================
 const $ = (id) => document.getElementById(id);
@@ -304,12 +309,12 @@ function tabela(id, cabecalho, linhas, opcoes = {}) {
     const attr = ord ? ` data-ord="${esc(ord)}" tabindex="0" title="Ordenar"` : (opcoes.semOrd ? "" : ` data-sort="${i}" tabindex="0" title="Ordenar"`);
     return `<th${attr}>${esc(c)}${seta}</th>`;
   }).join("");
-  const corpo = linhas.map((l) => `<tr class="${l.classe || ""}">${l.celulas.map((c, i) => celula(c, i, opcoes)).join("")}</tr>`).join("");
+  const corpo = linhas.map((l) => `<tr class="${l.classe || ""}"${l.attrs || ""}>${l.celulas.map((c, i) => celula(c, i, opcoes)).join("")}</tr>`).join("");
   return `<div class="tabela-wrap${opcoes.longa ? " longa" : ""}"><table id="t-${id}"><thead><tr>${th}</tr></thead><tbody>${corpo}</tbody></table></div>`;
 }
 function celula(c, i, opcoes) {
   if (c && typeof c === "object") {
-    const at = (c.det != null ? ` data-det="${c.det}" tabindex="0" title="Ver os clientes"` : "") + (c.mat ? ` data-mat="${esc(c.mat)}" tabindex="0" title="Ver o histórico"` : "") + (c.bg ? ` style="background:${c.bg} !important"` : "");
+    const at = (c.grp ? ` tabindex="0" role="button" aria-expanded="${!!CTL.abertos[c.grp]}" title="Abrir ou recolher os tipos"` : "") + (c.det != null ? ` data-det="${c.det}" tabindex="0" title="Ver os clientes"` : "") + (c.mat ? ` data-mat="${esc(c.mat)}" tabindex="0" title="Ver o histórico"` : "") + (c.bg ? ` style="background:${c.bg} !important"` : "");
     if (c.selo) return `<td class="${c.classe || ""}"${at}><span class="selo selo-${c.selo}">${esc(c.txt ?? c.v)}</span></td>`;
     return `<td class="${c.classe || ""}"${at}>${esc(c.txt ?? c.v)}</td>`;
   }
@@ -431,9 +436,9 @@ const setaVar = (v) => (v > 0 ? "▲ " : v < 0 ? "▼ " : "") + nf1.format(Math.
 
 // ===================== estado =====================
 let DADOS = null, CORTES = [], SALDO = [], EVENTOS = [], R = null, HASH_PENDENTE = null, ULTIMO_MES = "";
-const CTL = Object.assign({ medidaSaldo: "economias", posCruzada: "todos", modoCruzada: "qtd", sitPos: "CORTADA", posPerm: "todos", modoPerm: "qtd", metricaEf: "pRel" }, le("cortes_ctl", {}));
+const CTL = Object.assign({ abertos: {}, medidaSaldo: "economias", posCruzada: "todos", modoCruzada: "qtd", sitPos: "CORTADA", posPerm: "todos", modoPerm: "qtd", metricaEf: "pRel" }, le("cortes_ctl", {}));
 Object.assign(CTL, { verTodos: false, ordem: null, busca: "" });
-const guardaCtl = () => guarda("cortes_ctl", Object.fromEntries(["medidaSaldo", "posCruzada", "modoCruzada", "sitPos", "posPerm", "modoPerm", "metricaEf"].map((k) => [k, CTL[k]])));
+const guardaCtl = () => guarda("cortes_ctl", Object.fromEntries(["abertos", "medidaSaldo", "posCruzada", "modoCruzada", "sitPos", "posPerm", "modoPerm", "metricaEf"].map((k) => [k, CTL[k]])));
 
 function linhasDe(col) {                                     // {col: [..]} -> [{col: v}]
   const chaves = Object.keys(col), n = chaves.length ? col[chaves[0]].length : 0, out = new Array(n);
@@ -568,10 +573,12 @@ function abaSaldo({ f, per }) {
   const linhas = [];
   const grupo = (cat, rotulo, sinal, comTipos) => {
     const vals = meses.map((m) => sinal * valor(cat, null, m));
-    linhas.push({ classe: "grupo", celulas: [rotulo, ...vals.map((v, i) => num(v, false, regDet(`${rotulo} — ${mesRot(meses[i])}`, detEv(cat, null, meses[i]), "eventos"))), num(soma(vals), false, regDet(`${rotulo} — ${per}`, detEv(cat, null, null), "eventos"))] });
+    const aberto = !!CTL.abertos[cat];                         // Corte e Religação abrem/recolhem os tipos (começam recolhidos)
+    const rot0 = comTipos ? { v: rotulo, txt: (aberto ? "▾ " : "▸ ") + rotulo, classe: "grupo-toggle", grp: cat } : rotulo;
+    linhas.push({ classe: "grupo", attrs: comTipos ? ` data-grp="${esc(cat)}"` : "", celulas: [rot0, ...vals.map((v, i) => num(v, false, regDet(`${rotulo} — ${mesRot(meses[i])}`, detEv(cat, null, meses[i]), "eventos"))), num(soma(vals), false, regDet(`${rotulo} — ${per}`, detEv(cat, null, null), "eventos"))] });
     if (comTipos) ordenaTipos(unicos(ev.filter((s) => s.categoria === cat).map((s) => s.tipo))).forEach((t) => {
       const v = meses.map((m) => sinal * valor(cat, t, m));
-      linhas.push({ classe: "sub-linha", celulas: [t, ...v.map((x, i) => num(x, false, regDet(`${rotulo} ${t} — ${mesRot(meses[i])}`, detEv(cat, t, meses[i]), "eventos"))), num(soma(v), false, regDet(`${rotulo} ${t} — ${per}`, detEv(cat, t, null), "eventos"))] });
+      linhas.push({ classe: "sub-linha" + (aberto ? "" : " fechado"), attrs: ` data-de="${esc(cat)}"`, celulas: [t, ...v.map((x, i) => num(x, false, regDet(`${rotulo} ${t} — ${mesRot(meses[i])}`, detEv(cat, t, meses[i]), "eventos"))), num(soma(v), false, regDet(`${rotulo} ${t} — ${per}`, detEv(cat, t, null), "eventos"))] });
     });
     return vals;
   };
@@ -598,8 +605,6 @@ function abaSaldo({ f, per }) {
   ]);
 
   // por tipo (gráfico da direita)
-  const tipos = ordenaTipos(unicos(ev.filter((s) => s.categoria === C.corte || s.categoria === C.religacao).map((s) => s.tipo)));
-  const porTipo = (cat) => tipos.map((t) => soma(ev.filter((s) => s.categoria === cat && s.tipo === t).map((s) => s[campo])));
   MEM.saldo = {
     graficos() {
       grafico("g-saldo-1", "bar", {
@@ -613,17 +618,12 @@ function abaSaldo({ f, per }) {
           { type: "line", label: "Saldo acumulado", data: acumulado, borderColor: COR.azulMed, borderDash: [6, 4], pointRadius: 0, borderWidth: 2, tension: 0, rotulos: false, order: 2 },
         ],
       }, opcoes({ empilhado: true, aoClicar: (i) => setFiltro(["fDe", "fAte"], meses[i], mesRot(meses[i])) }));
-      grafico("g-saldo-2", "bar", {
-        labels: tipos,
-        datasets: [barra("Corte", porTipo(C.corte), COR.laranja), barra("Religação", porTipo(C.religacao), COR.marinho)],
-      }, opcoes({ horizontal: true }));
     },
   };
   const nota = `Só OS <b>Finalizadas</b>; cada matrícula conta uma vez por dia e categoria. Economias = <code>TOTAL_ECO</code> do cadastro do mês da OS (sem esse mês, o mais recente).`
-    + (semCad ? ` <b>${fmtN(semCad)}</b> evento(s) sem cadastro contam 1 economia.` : "") + ` O filtro Tipo de corte não se aplica aqui: a abertura por tipo já aparece nas linhas. <b>Clique num número</b> para ver as matrículas.`;
+    + (semCad ? ` <b>${fmtN(semCad)}</b> evento(s) sem cadastro contam 1 economia.` : "") + ` O filtro Tipo de corte não se aplica aqui: a abertura por tipo já aparece nas linhas. Clique em <b>▸ Corte</b> ou <b>▸ Religação</b> para abrir os tipos; <b>clique num número</b> para ver as matrículas.`;
   const ctl = seletor("medidaSaldo", "Medida", [["economias", "Economias"], ["qtd", "Ligações (OS)"]], CTL.medidaSaldo);
-  return topo + `<div class="grid g21">${cartaoGraf("g-saldo-1", "Saldo mensal de economias" + (per ? " — " + per : ""), "Barras: cortes (para baixo), religações e implantações (para cima). Linhas: saldo do mês e acumulado.", ctl, "Saldo do mês = −corte + religação + implantação de ligação de água. Clique numa barra para filtrar o mês.")}
-    ${cartaoGraf("g-saldo-2", "Cortes × religações por tipo", "Total do período, por tipo de serviço.")}</div>`
+  return topo + `${cartaoGraf("g-saldo-1", "Saldo mensal de economias" + (per ? " — " + per : ""), "Barras: cortes (para baixo), religações e implantações (para cima). Linhas: saldo do mês e acumulado.", ctl, "Saldo do mês = −corte + religação + implantação de ligação de água. Clique numa barra para filtrar o mês.").replace('class="graf"', 'class="graf graf-alto"')}`
     + cartao("Tabela de apoio — saldo por mês" + (per ? " — " + per : ""), nota, tabela("saldo", ["Mês", ...meses.map(mesRot), "Total"], linhas, { semOrd: true }), "saldo");
 }
 
@@ -969,6 +969,14 @@ document.addEventListener("click", (e) => {
   if (o) { const col = o.dataset.ord; CTL.ordem = CTL.ordem && CTL.ordem.col === col ? { col, dir: -CTL.ordem.dir } : { col, dir: 1 }; desenha(); return; }
   const s = e.target.closest("th[data-sort]");
   if (s) { ordenaTabela(s); return; }
+  const g = e.target.closest("td.grupo-toggle");
+  if (g) {
+    const tr = g.closest("tr"), cat = tr.dataset.grp, aberto = !CTL.abertos[cat];
+    CTL.abertos = { ...CTL.abertos, [cat]: aberto }; guardaCtl();
+    tr.parentElement.querySelectorAll("tr[data-de]").forEach((r) => { if (r.dataset.de === cat) r.classList.toggle("fechado", !aberto); });
+    g.textContent = (aberto ? "▾ " : "▸ ") + g.textContent.replace(/^[▸▾] /, ""); g.setAttribute("aria-expanded", aberto);
+    return;
+  }
   const det = e.target.closest("[data-det]");
   if (det) { abreDetalhe(+det.dataset.det); return; }
   const mat = e.target.closest("[data-mat]");
@@ -1008,7 +1016,7 @@ function ordenaTabela(th) {
 // teclado: Enter/Espaço em cabeçalho e células clicáveis
 document.addEventListener("keydown", (e) => {
   const alvo = e.target;
-  if ((e.key === "Enter" || e.key === " ") && alvo.matches && alvo.matches("th[tabindex], td[data-det], td[data-mat], .info")) { e.preventDefault(); alvo.click(); return; }
+  if ((e.key === "Enter" || e.key === " ") && alvo.matches && alvo.matches("th[tabindex], td[data-det], td[data-mat], td.grupo-toggle, .info")) { e.preventDefault(); alvo.click(); return; }
   if (e.key === "Escape") {
     if (!$("gaveta").hidden) { fechaGaveta(); return; }
     if (document.body.classList.contains("apresentacao")) { apresentar(false); return; }
