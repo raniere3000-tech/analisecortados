@@ -191,11 +191,35 @@ td.clic:hover { text-decoration:underline; }
 .selo-neutro { background:var(--tint); color:var(--azul); }
 
 /* painel lateral de detalhe */
-#gaveta { position:fixed; top:0; right:0; height:100vh; width:min(640px,96vw); background:#fff; border-left:1px solid var(--line); box-shadow:-8px 0 24px rgba(17,42,66,.14); z-index:30; display:flex; flex-direction:column; }
-#gaveta .g-topo { padding:12px 16px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:10px; background:var(--tint); }
+#gFundo { position:fixed; inset:0; background:rgba(10,25,40,0); z-index:29; transition:background .18s; }
+#gFundo.visivel { background:rgba(10,25,40,.28); }
+#gaveta { position:fixed; top:0; right:0; height:100vh; width:min(720px,96vw); background:#fff; border-left:1px solid var(--line); box-shadow:-12px 0 32px rgba(17,42,66,.22); z-index:30; display:flex; flex-direction:column; }
+#gaveta.entrando { animation:gEntra .24s ease-out; }
+#gaveta.saindo { animation:gSai .18s ease-in forwards; }
+@keyframes gEntra { from { transform:translateX(40px); opacity:0; } to { transform:none; opacity:1; } }
+@keyframes gSai { to { transform:translateX(40px); opacity:0; } }
+#gaveta .g-topo { padding:12px 16px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:10px; background:linear-gradient(120deg,#102840,#174f70); }
+#gaveta .g-topo h2 { color:#fff; }
+#gaveta .g-topo .btn-just { background:rgba(255,255,255,.12); color:#fff; border-color:rgba(255,255,255,.35); }
 #gaveta h2 { font-size:14px; margin:0; color:var(--marinho); flex:1; }
-#gaveta .g-corpo { padding:10px 16px; overflow:auto; flex:1; }
+#gaveta .g-corpo { padding:12px 16px; overflow:auto; flex:1; }
 #gaveta .g-nota { font-size:11.5px; color:var(--azul-claro); margin:0 0 8px; }
+#gaveta .g-resumo { display:flex; gap:8px; margin-bottom:8px; }
+#gaveta .g-kpi { background:#eef4f9; border-radius:8px; padding:6px 12px; font-size:12px; color:#4a5a6b; }
+#gaveta .g-kpi b { font-size:15px; color:var(--marinho); margin-right:3px; }
+#gaveta .g-ferr { display:flex; flex-direction:column; gap:8px; margin:6px 0 10px; }
+#gBusca { border:1px solid var(--line); border-radius:8px; padding:7px 10px; font:13px var(--fonte); width:100%; box-sizing:border-box; }
+#gBusca:focus { outline:none; border-color:#16a5b8; box-shadow:0 0 0 3px rgba(22,165,184,.15); }
+#gaveta .g-chips { display:flex; flex-wrap:wrap; gap:6px; }
+#gaveta .g-chip { border:1px solid var(--line); background:#fff; border-radius:99px; padding:3px 10px; font:600 11.5px var(--fonte); color:var(--marinho); cursor:pointer; }
+#gaveta .g-chip span { color:#8a99aa; font-weight:500; margin-left:3px; }
+#gaveta .g-chip.ativo { background:#16a5b8; border-color:#16a5b8; color:#fff; }
+#gaveta .g-chip.ativo span { color:#e6f7f9; }
+#gaveta th[data-gord] { cursor:pointer; position:sticky; top:-12px; z-index:1; }
+#gaveta th[data-gord]::after { content:attr(data-seta); margin-left:4px; font-size:9px; }
+#gaveta tbody tr:hover td { background:#fff4e8 !important; }
+#gaveta .g-rodape { font-size:11.5px; color:#6b7d93; padding:10px 0 4px; display:flex; align-items:center; gap:10px; }
+#gaveta .vazio-g { text-align:center; color:#8a99aa; padding:16px; }
 
 /* esqueleto de carregamento */
 .esq { height:90px; border-radius:12px; background:#e9eef3; margin:10px auto; max-width:1800px; }
@@ -224,7 +248,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 @media print {
   @page { size:A4 landscape; margin:10mm; }
   body { background:#fff; }
-  .top, .nav, #toast, #gaveta, #btnSair, .acoes, .busca, .ver-todos, .esq, .dica { display:none !important; }
+  .top, .nav, #toast, #gaveta, #gFundo, #btnSair, .acoes, .busca, .ver-todos, .esq, .dica { display:none !important; }
   .so-impressao { display:block; font:600 15px var(--fonte); color:var(--marinho); margin:0 0 6px; }
   body.imprimindo #painel .view { page-break-before:always; break-before:page; padding:0; }
   body.imprimindo #painel #view-saldo { page-break-before:auto; break-before:auto; }
@@ -246,7 +270,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 <header class="top">
   <div class="top-linha">
     <div>
-      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v22</span></div>
+      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v23</span></div>
       <h1 id="titulo">Análise de Corte e Religação</h1>
     </div>
     <div class="ferramentas">
@@ -312,13 +336,14 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
     <section class="view" id="view-dados"></section>
   </div>
 </main>
+<div id="gFundo" hidden></div>
 <aside id="gaveta" hidden aria-label="Detalhe"></aside>
 <button type="button" class="btn-just" id="btnSair" hidden>✕ Sair da apresentação</button>
 <div id="toast" role="status" aria-live="polite"></div>
 
 <script>
 "use strict";
-const VERSAO_SITE = "v22-20261015";
+const VERSAO_SITE = "v23-20261015";
 
 // ===================== utilidades =====================
 const $ = (id) => document.getElementById(id);
@@ -1242,16 +1267,51 @@ function ligaDados() {
 const PILHA = [];
 const COLS_CORTES = [["matricula", "Matrícula"], ["cliente", "Cliente"], ["cidade", "Cidade"], ["tipo", "Tipo"], ["data", "Corte"], ["data_religacao", "Religação"], ["dias", "Dias"], ["data_pos", "Pós-corte"], ["regua", "Régua"], ["situacao", "Situação"], ["economias", "Economias"]];
 const COLS_EVENTOS = [["matricula", "Matrícula"], ["data", "Data"], ["categoria", "Categoria"], ["tipo", "Tipo"], ["economias", "Economias"], ["cidade", "Cidade"], ["recurso", "Recurso"]];
+// painel lateral dinâmico: entra deslizando, fundo escurecido (clique fora fecha), busca, chips por tipo, ordenação e "mostrar mais"
+const GAV = { cols: null, linhas: [], busca: "", chip: null, ordem: null, n: 200 };
 function abreGaveta(titulo, nota, cols, linhas, extra = "") {
-  const g = $("gaveta");
-  const limite = 200, mostra = linhas.slice(0, limite);
+  clearTimeout(GAV.timer);                                     // fechou e abriu de novo logo em seguida
+  const g = $("gaveta"), novo = g.hidden || g.classList.contains("saindo");
+  g.classList.remove("saindo");
+  Object.assign(GAV, { titulo, cols, linhas, busca: "", chip: null, ordem: null, n: 200 });
+  const campoChip = cols === COLS_EVENTOS ? "categoria" : "tipo";
+  const cont = {}; linhas.forEach((l) => { const k = l[campoChip] || "(vazio)"; cont[k] = (cont[k] || 0) + 1; });
+  const chips = Object.entries(cont).sort((a, b) => b[1] - a[1]);
+  GAV.campoChip = campoChip;
+  const eco = soma(linhas.map((l) => l.economias || 0));
+  g.hidden = false; $("gFundo").hidden = false;
+  if (novo) { g.classList.remove("saindo"); g.classList.add("entrando"); $("gFundo").classList.add("visivel"); setTimeout(() => g.classList.remove("entrando"), 260); }
+  g.innerHTML = `<div class="g-topo"><h2>${esc(titulo)}</h2>${PILHA.length > 1 ? `<button type="button" class="btn-just" data-acao="voltar">← Voltar</button>` : ""}<button type="button" class="btn-just btn-down" id="gCsv" title="Baixar o analítico (CSV) das linhas da busca/filtro atual" aria-label="Baixar em CSV">⬇</button><button type="button" class="btn-just" data-acao="fechar" aria-label="Fechar" title="Fechar (Esc ou clique fora)">✕</button></div>
+    <div class="g-corpo"><div class="g-resumo"><span class="g-kpi"><b>${fmtN(linhas.length)}</b> ${cols === COLS_EVENTOS ? "evento(s)" : "corte(s)"}</span><span class="g-kpi"><b>${fmtN(eco)}</b> economia(s)</span></div>
+    <p class="g-nota">${esc(nota)}</p>${extra}
+    ${linhas.length > 5 ? `<div class="g-ferr"><input id="gBusca" type="search" placeholder="Buscar matrícula, cliente, cidade…" aria-label="Buscar no painel">${chips.length > 1 ? `<div class="g-chips">${chips.map(([k, n]) => `<button type="button" class="g-chip" data-gchip="${esc(k)}">${esc(k)} <span>${fmtN(n)}</span></button>`).join("")}</div>` : ""}</div>` : ""}
+    <div class="tabela-wrap"><table><thead><tr>${cols.map(([k, t]) => `<th data-gord="${k}" tabindex="0" title="Ordenar">${esc(t)}</th>`).join("")}</tr></thead><tbody id="gCorpo"></tbody></table></div>
+    <div class="g-rodape" id="gRodape"></div></div>`;
+  $("gCsv").onclick = () => { const a = cols === COLS_EVENTOS ? analiticoEventos(gavFiltradas()) : analiticoCortes(gavFiltradas()); baixaCsv(a.cabecalho, a.linhas, titulo); };
+  const b = $("gBusca"); if (b) b.addEventListener("input", () => { GAV.busca = b.value; GAV.n = 200; gavDesenha(); });
+  gavDesenha();
+  const fechar = g.querySelector("[data-acao=fechar]"); if (fechar && novo) fechar.focus();
+  g.querySelector(".g-corpo").scrollTop = 0;
+}
+function gavFiltradas() {
+  const t = GAV.busca.trim().toLowerCase(), termos = t.split(/[\s,;]+/).filter(Boolean);
+  let l = GAV.linhas.filter((x) => (!GAV.chip || (x[GAV.campoChip] || "(vazio)") === GAV.chip)
+    && (!termos.length || termos.every((q) => [x.matricula, x.cliente, x.cidade, x.tipo, x.situacao, x.regua, x.recurso, x.categoria].join(" ").toLowerCase().includes(q))));
+  if (GAV.ordem) {
+    const { k, dir } = GAV.ordem;
+    l = [...l].sort((a, b) => { const x = a[k], y = b[k]; if (x == null && y == null) return 0; if (x == null) return 1; if (y == null) return -1;
+      return (typeof x === "number" && typeof y === "number" ? x - y : String(x).localeCompare(String(y), "pt-BR")) * dir; });
+  }
+  return l;
+}
+function gavDesenha() {
+  const corpo = $("gCorpo"); if (!corpo) return;
+  const l = gavFiltradas(), mostra = l.slice(0, GAV.n);
   const cel = (k, v) => (k === "matricula" ? `<td class="clic" data-mat="${esc(v)}" tabindex="0" title="Ver o histórico">${esc(v)}</td>` : (/^data/.test(k) ? `<td class="num">${dataRot(v)}</td>` : (typeof v === "number" ? `<td class="num">${fmtN(v)}</td>` : `<td class="txt">${esc(v ?? "")}</td>`)));
-  g.hidden = false;
-  g.innerHTML = `<div class="g-topo"><h2>${esc(titulo)}</h2>${PILHA.length > 1 ? `<button type="button" class="btn-just" data-acao="voltar">← Voltar</button>` : ""}<button type="button" class="btn-just btn-down" id="gCsv" title="Baixar ${esc(nomeArquivo(titulo))}.csv" aria-label="Baixar em CSV">⬇</button><button type="button" class="btn-just" data-acao="fechar" aria-label="Fechar">✕</button></div>
-    <div class="g-corpo"><p class="g-nota">${esc(nota)}${linhas.length > limite ? ` Mostrando ${limite} de ${fmtN(linhas.length)}; o ⬇ baixa todas.` : ""}</p>${extra}
-    <div class="tabela-wrap"><table><thead><tr>${cols.map(([, t]) => `<th>${esc(t)}</th>`).join("")}</tr></thead><tbody>${mostra.map((l) => `<tr>${cols.map(([k]) => cel(k, l[k])).join("")}</tr>`).join("")}</tbody></table></div></div>`;
-  $("gCsv").onclick = () => { const a = cols === COLS_EVENTOS ? analiticoEventos(linhas) : analiticoCortes(linhas); baixaCsv(a.cabecalho, a.linhas, titulo); };
-  const fechar = g.querySelector("[data-acao=fechar]"); if (fechar) fechar.focus();
+  corpo.innerHTML = mostra.map((x) => `<tr>${GAV.cols.map(([k]) => cel(k, x[k])).join("")}</tr>`).join("") || `<tr><td colspan="${GAV.cols.length}" class="txt vazio-g">Nada encontrado.</td></tr>`;
+  $("gRodape").innerHTML = `${fmtN(mostra.length)} de ${fmtN(l.length)}${l.length !== GAV.linhas.length ? ` (filtrado de ${fmtN(GAV.linhas.length)})` : ""}` + (l.length > GAV.n ? ` <button type="button" class="btn-just" data-acao="gmais">Mostrar mais ${fmtN(Math.min(200, l.length - GAV.n))}</button>` : "");
+  document.querySelectorAll("#gaveta [data-gchip]").forEach((c) => c.classList.toggle("ativo", c.dataset.gchip === GAV.chip));
+  document.querySelectorAll("#gaveta th[data-gord]").forEach((th) => { th.dataset.seta = GAV.ordem && GAV.ordem.k === th.dataset.gord ? (GAV.ordem.dir > 0 ? "▲" : "▼") : ""; });
 }
 function abreDetalhe(i) {
   const d = DET[i]; if (!d) return;
@@ -1271,7 +1331,12 @@ function abreHistorico(mat) {
   $("gaveta").querySelector(".g-corpo").insertAdjacentHTML("beforeend", resumo ? evHtml : evHtml);
   if (resumo) $("gaveta").querySelector(".g-nota").insertAdjacentHTML("afterend", resumo);
 }
-function fechaGaveta() { $("gaveta").hidden = true; PILHA.length = 0; }
+function fechaGaveta() {
+  const g = $("gaveta"); PILHA.length = 0;
+  if (g.hidden) return;
+  g.classList.add("saindo"); $("gFundo").classList.remove("visivel");
+  GAV.timer = setTimeout(() => { g.hidden = true; g.classList.remove("saindo"); $("gFundo").hidden = true; }, 180);
+}
 function voltaGaveta() {
   PILHA.pop(); const a = PILHA[PILHA.length - 1]; if (!a) return fechaGaveta();
   if (a.mat) { PILHA.pop(); abreHistorico(a.mat); } else abreDetalhe(a.i);
@@ -1279,6 +1344,12 @@ function voltaGaveta() {
 
 // ===================== interações globais =====================
 document.addEventListener("click", (e) => {
+  if (e.target.id === "gFundo") { fechaGaveta(); return; }                 // clique fora do painel lateral fecha
+  const gc = e.target.closest("[data-gchip]");
+  if (gc) { GAV.chip = GAV.chip === gc.dataset.gchip ? null : gc.dataset.gchip; GAV.n = 200; gavDesenha(); return; }
+  const go = e.target.closest("th[data-gord]");
+  if (go) { const k = go.dataset.gord; GAV.ordem = GAV.ordem && GAV.ordem.k === k ? { k, dir: -GAV.ordem.dir } : { k, dir: 1 }; gavDesenha(); return; }
+  if (e.target.closest("[data-acao=gmais]")) { GAV.n += 200; gavDesenha(); return; }
   const c = e.target.closest("[data-ctl]");
   if (c) { CTL[c.dataset.ctl] = c.dataset.val; guardaCtl(); desenha(); return; }
   const mu = e.target.closest("[data-multi]");

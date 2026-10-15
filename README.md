@@ -95,3 +95,5 @@ Os testes usam dados sintéticos (`tests/dados_sinteticos.py`) e rodam no GitHub
   situação e origem, economias, débitos, motivo e arquivo de origem.
 - O ⬇ da lista lateral (ao clicar num número) e o “Cortes filtrados (CSV)” da aba Dados usam as mesmas colunas.
 - Depois que a pasta termina de carregar, o cabeçalho fica limpo (sem a linha “Pasta… lidos às” nem “Detalhes da leitura”); essas informações ficam na aba Dados → Bases carregadas.
+- Painel lateral (ao clicar num número): entra deslizando sobre um fundo escurecido — clicar fora ou `Esc` fecha. Tem resumo (cortes e economias),
+  busca, chips por tipo/categoria para filtrar, ordenação clicando no cabeçalho e “Mostrar mais”; o ⬇ baixa as linhas filtradas.
