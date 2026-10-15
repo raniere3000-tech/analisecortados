@@ -196,7 +196,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 <header class="top">
   <div class="top-linha">
     <div>
-      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v13</span></div>
+      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v14</span></div>
       <h1 id="titulo">Análise de Corte e Religação</h1>
     </div>
     <div class="filtros" id="filtros" hidden>
@@ -268,7 +268,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 
 <script>
 "use strict";
-const VERSAO_SITE = "v13-20261015";
+const VERSAO_SITE = "v14-20261015";
 
 // ===================== utilidades =====================
 const $ = (id) => document.getElementById(id);
@@ -398,8 +398,35 @@ const pluginRotulos = {
     ctx.restore();
   },
 };
+// coluna sob o mouse: faixa clara atrás dela (mostra a qual coluna o balão se refere)
+const pluginFaixa = {
+  id: "faixaColuna",
+  beforeDatasetsDraw(chart) {
+    const ativos = chart.tooltip && chart.tooltip.getActiveElements ? chart.tooltip.getActiveElements() : [];
+    if (!ativos.length || chart.config.type === "doughnut" || chart.config.type === "pie") return;
+    const hor = chart.options.indexAxis === "y", eixo = hor ? chart.scales.y : chart.scales.x, n = (chart.data.labels || []).length;
+    if (!eixo || !n) return;
+    const passo = (hor ? eixo.height : eixo.width) / n, centro = eixo.getPixelForValue(ativos[0].index), a = chart.chartArea, ctx = chart.ctx;
+    ctx.save(); ctx.fillStyle = "rgba(22,165,184,.08)";
+    if (hor) ctx.fillRect(a.left, centro - passo / 2, a.right - a.left, passo); else ctx.fillRect(centro - passo / 2, a.top, passo, a.bottom - a.top);
+    ctx.restore();
+  },
+};
 if (window.Chart) {
-  Chart.register(pluginRotulos);
+  // balão preso à coluna: ao lado dela (barras em pé) ou na ponta (barras deitadas), apontando para ela
+  Chart.Tooltip.positioners.coluna = function (itens) {
+    if (!itens.length) return false;
+    const tipo = this.chart.config.type;
+    if (tipo === "doughnut" || tipo === "pie") return Chart.Tooltip.positioners.average.call(this, itens);
+    const els = itens.map((i) => i.element), ext = (e, k) => [e[k], e.base].filter((v) => Number.isFinite(v));
+    if (this.chart.options.indexAxis === "y") return { x: Math.max(...els.flatMap((e) => ext(e, "x"))), y: els[0].y, xAlign: "left", yAlign: "center" };
+    // ao lado da coluna (direita; perto da borda direita, esquerda), na altura do meio dela: a coluna fica à vista
+    const ys = els.flatMap((e) => ext(e, "y")), a = this.chart.chartArea;
+    const meia = Math.max(...els.map((e) => (Number.isFinite(e.width) ? e.width / 2 : 0))), x = els[0].x;
+    const y = Math.min(Math.max((Math.min(...ys) + Math.max(...ys)) / 2, a.top), a.bottom);
+    return x > (a.left + a.right) / 2 ? { x: x - meia, y, xAlign: "right", yAlign: "center" } : { x: x + meia, y, xAlign: "left", yAlign: "center" };
+  };
+  Chart.register(pluginRotulos, pluginFaixa);
   Chart.defaults.font.family = "'IBM Plex Sans','Segoe UI',Arial,sans-serif";
   Chart.defaults.font.size = 11;
   Chart.defaults.color = "#1f2d3d";
@@ -410,7 +437,7 @@ function opcoes({ horizontal = false, empilhado = false, pct = false, aoClicar =
   return {
     indexAxis: horizontal ? "y" : "x", responsive: true, maintainAspectRatio: false, animation: imprimindo ? false : undefined,
     layout: { padding: { top: 14, right: horizontal ? 24 : 4 } },
-    interaction: { mode: "index", intersect: false },
+    interaction: { mode: "index", intersect: false, axis: horizontal ? "y" : "x" },   // o balão abre com o mouse em qualquer altura da coluna
     onClick: aoClicar ? (ev, els, chart) => { const e = chart.getElementsAtEventForMode(ev, "nearest", { intersect: true }, true); if (e.length) aoClicar(e[0].index, e[0].datasetIndex); } : undefined,
     onHover: aoClicar ? (ev, els, chart) => { ev.native.target.style.cursor = chart.getElementsAtEventForMode(ev, "nearest", { intersect: true }, true).length ? "pointer" : "default"; } : undefined,
     scales: {
@@ -420,8 +447,18 @@ function opcoes({ horizontal = false, empilhado = false, pct = false, aoClicar =
     plugins: {
       legend: { display: legenda, position: "top", align: "end", labels: { usePointStyle: true, boxWidth: 8, boxHeight: 8, padding: 14 } },
       tooltip: {
-        backgroundColor: "#05050D", borderColor: "#394D73", borderWidth: 1, titleColor: "#fff", bodyColor: "#fff", padding: 12, cornerRadius: 8,
-        callbacks: { label: (c) => ` ${c.dataset.label}: ${(c.dataset.fmt || fmtN)(c.parsed[horizontal ? "x" : "y"])}${pct && !c.dataset.fmt ? "%" : ""}` },
+        position: "coluna", caretSize: 7, caretPadding: 6,
+        backgroundColor: "#05050D", borderColor: "#394D73", borderWidth: 1, titleColor: "#fff", bodyColor: "#fff", footerColor: "#9fdbe4", padding: 12, cornerRadius: 8,
+        boxPadding: 4, footerMarginTop: 8,
+        filter: (c) => c.parsed[horizontal ? "x" : "y"] !== 0 && c.parsed[horizontal ? "x" : "y"] != null,   // sem linhas zeradas
+        callbacks: {
+          label: (c) => ` ${c.dataset.label}: ${(c.dataset.fmt || fmtN)(c.parsed[horizontal ? "x" : "y"])}${pct && !c.dataset.fmt ? "%" : ""}`,
+          footer: (itens) => {                                 // total da coluna (barras empilhadas, só valores positivos)
+            if (!empilhado || pct || itens.length < 2) return "";
+            const v = itens.filter((c) => (c.dataset.type || c.chart.config.type) === "bar").map((c) => c.parsed[horizontal ? "x" : "y"]);
+            return v.length > 1 && v.every((x) => x >= 0) ? `Total: ${fmtN(v.reduce((a, b) => a + b, 0))}` : "";
+          },
+        },
       },
     },
   };
