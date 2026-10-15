@@ -196,7 +196,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 <header class="top">
   <div class="top-linha">
     <div>
-      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v15</span></div>
+      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v16</span></div>
       <h1 id="titulo">Análise de Corte e Religação</h1>
     </div>
     <div class="filtros" id="filtros" hidden>
@@ -268,7 +268,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 
 <script>
 "use strict";
-const VERSAO_SITE = "v15-20261015";
+const VERSAO_SITE = "v16-20261015";
 
 // ===================== utilidades =====================
 const $ = (id) => document.getElementById(id);
@@ -299,6 +299,7 @@ function le(chave, padrao) { try { const v = localStorage.getItem(chave); return
 
 // ===================== tabelas =====================
 const TABELAS = {};                                          // para o botão ⬇ (CSV)
+const ANALITICO = {};                                        // ⬇ das tabelas: as linhas (cortes/eventos) usadas no visual, com a classificação
 const DET = [];                                              // detalhes que abrem no painel lateral
 function regDet(titulo, obter, tipo) { DET.push({ titulo, obter, tipo }); return DET.length - 1; }
 
@@ -326,7 +327,44 @@ function celula(c, i, opcoes) {
 const nCel = (v, titulo, obter, tipo = "cortes", extra = {}) => ({ v, txt: v === 0 ? "-" : fmtN(v), classe: "num" + (v === 0 ? " vazio" : " clic"), det: v === 0 ? null : regDet(titulo, obter, tipo), ...extra });
 const pCel = (v) => ({ v, txt: fmtP(v), classe: "num" });
 
-const botaoCsv = (id, nome) => `<button type="button" class="btn-just btn-down" data-csv="${id}" data-nome="${esc(nome)}" title="Baixar ${esc(nomeArquivo(nome))}.csv" aria-label="Baixar ${esc(nome)} em CSV">⬇</button>`;
+const botaoCsv = (id, nome) => `<button type="button" class="btn-just btn-down" data-csv="${id}" data-nome="${esc(nome)}" title="${ANALITICO[id] ? "Baixar o analítico (CSV): uma linha por corte/OS usada nesta tabela, com a classificação de cada uma" : `Baixar ${esc(nomeArquivo(nome))}.csv`}" aria-label="Baixar ${esc(nome)} em CSV">⬇</button>`;
+
+// ===================== analítico (CSV para conferir os números) =====================
+const simNao = (v) => (v ? "Sim" : "Não");
+const mesDe = (d) => (d || "").slice(0, 7);
+const difMeses = (a, b) => (a && b ? (+b.slice(0, 4) - +a.slice(0, 4)) * 12 + (+b.slice(5, 7) - +a.slice(5, 7)) : null);
+const COLS_ANALITICO_CORTE = [
+  ["Matrícula", (c) => c.matricula], ["Cliente", (c) => c.cliente], ["Sup", (c) => c.sup], ["Cidade", (c) => c.cidade], ["Recurso", (c) => c.recurso],
+  ["Tipo de corte", (c) => c.tipo], ["Serviço do corte", (c) => c.servico], ["ID da OS de corte", (c) => c.id],
+  ["Data do corte", (c) => dataRot(c.data)], ["Mês do corte", (c) => mesRot(c.mes)],
+  ["Data da religação", (c) => dataRot(c.data_religacao)], ["Mês da religação", (c) => mesRot(mesDe(c.data_religacao))], ["Tipo de religação", (c) => c.tipo_religacao],
+  ["Dias até religar", (c) => c.dias], ["Meses até religar", (c) => difMeses(c.mes, mesDe(c.data_religacao))],
+  ["Religou no mesmo mês", (c) => (c.data_religacao ? simNao(mesDe(c.data_religacao) === c.mes) : "")],
+  ["Coluna da referência cruzada", (c) => mesRot(c.mes_religacao)],
+  ["Religou sem OS (ativa ou cortada de novo)", (c) => simNao(c.ativa_os)], ["Contado como religado (Ativas = religadas)", (c) => simNao(c.data_religacao || (CTX && CTX.f.ativas && c.ativa_os))],
+  ["Tem pós-corte", (c) => simNao(c.data_pos)], ["Data 1ª visita pós-corte", (c) => dataRot(c.data_pos)], ["Status 1ª visita pós-corte", (c) => c.status_pos],
+  ["Observação pós-corte", (c) => c.obs_pos], ["Data 1º pós-corte Finalizado", (c) => dataRot(c.data_pos_finalizada)],
+  ["Dias do corte ao pós-corte", (c) => (c.data_pos && c.data ? Math.round((Date.parse(c.data_pos) - Date.parse(c.data)) / 864e5) : null)],
+  ["Religou depois do pós-corte", (c) => (c.data_pos ? simNao(c.data_religacao && c.data_religacao >= c.data_pos) : "")],
+  ["Régua de cobrança", (c) => c.regua], ["Dias cortado (até hoje)", (c) => c.dias_cortado], ["Faixa de permanência", (c) => c.permanencia],
+  ["Situação no cadastro", (c) => c.situacao], ["Origem da situação", (c) => c.situacao_fonte],
+  ["Economias", (c) => c.economias], ["Subcategoria", (c) => c.sub_categoria], ["Valor dos débitos", (c) => c.valor_debito], ["Negociou o débito?", (c) => c.negociou],
+  ["Motivo de não execução", (c) => c.motivo], ["Arquivo de origem", (c) => c.arquivo],
+];
+// frente: [[título, (corte) => valor], ...] — a classificação da tabela (linha/coluna) vem antes das colunas comuns
+function analiticoCortes(lista, frente = []) {
+  const cols = [...frente, ...COLS_ANALITICO_CORTE];
+  return { cabecalho: cols.map(([t]) => t), linhas: lista.map((c) => cols.map(([, fn]) => { const v = fn(c); return v === undefined ? null : v; })) };
+}
+const COLS_ANALITICO_EVENTO = [
+  ["Matrícula", (e) => e.matricula], ["Data da OS", (e) => dataRot(e.data)], ["Mês", (e) => mesRot(e.mes)], ["Categoria", (e) => e.categoria], ["Tipo", (e) => e.tipo],
+  ["Serviço", (e) => e.servico], ["ID da OS", (e) => e.id], ["Sup", (e) => e.sup], ["Cidade", (e) => e.cidade], ["Recurso", (e) => e.recurso],
+  ["Economias", (e) => e.economias], ["Sem cadastro (conta 1 economia)", (e) => (e.sem_cadastro == null ? "" : simNao(e.sem_cadastro))], ["Arquivo de origem", (e) => e.arquivo],
+];
+function analiticoEventos(lista, frente = []) {
+  const cols = [...frente, ...COLS_ANALITICO_EVENTO];
+  return { cabecalho: cols.map(([t]) => t), linhas: lista.map((e) => cols.map(([, fn]) => { const v = fn(e); return v === undefined ? null : v; })) };
+}
 function baixaCsv(cabecalho, linhas, nome) {
   const q = (v) => { if (v == null) return ""; if (typeof v === "number") return String(v).replace(".", ","); const s = String(v); return /[;"\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
   const texto = "﻿" + [cabecalho, ...linhas].map((l) => l.map(q).join(";")).join("\r\n");
@@ -663,6 +701,20 @@ function abaSaldo({ f, per }) {
   const ativasOs = f.ativas ? cortesBase().filter((c) => c.ativa_os && (!f.de || c.mes >= f.de) && (!f.ate || c.mes <= f.ate) && bateLocal(c, f) && (!f.recurso || c.recurso === f.recurso)) : [];
   const ativaMes = meses.map((m) => { const l = ativasOs.filter((c) => c.mes === m); return campo === "economias" ? soma(l.map((c) => c.economias)) : l.length; });
   if (f.ativas) linhas.push({ classe: "grupo", celulas: ["(+) Ativa sem OS de religação", ...ativaMes.map((v, i) => num(v, false, regDet(`Ativa sem OS — ${mesRot(meses[i])}`, () => ativasOs.filter((c) => c.mes === meses[i]), "cortes"))), num(soma(ativaMes), false, regDet(`Ativa sem OS — ${per}`, () => ativasOs, "cortes"))] });
+  ANALITICO.saldo = () => {
+    const sinal = { [C.corte]: -1, [C.religacao]: 1, [C.implantacao]: 1 }, linhaT = { [C.corte]: "(−) Corte", [C.religacao]: "(+) Religação", [C.implantacao]: "(+) Implantação de ligação de água" };
+    const lista = EVENTOS.filter((e) => linhaT[e.categoria] && (!f.de || e.mes >= f.de) && (!f.ate || e.mes <= f.ate) && bateLocal(e, f) && (!f.recurso || e.recurso === f.recurso))
+      .sort((a, b) => (a.mes + a.categoria + a.tipo + a.matricula).localeCompare(b.mes + b.categoria + b.tipo + b.matricula));
+    const frente = [["Linha da tabela", (e) => linhaT[e.categoria]], ["Tipo (sub-linha)", (e) => (e.categoria === C.implantacao ? "" : e.tipo)], ["Coluna (mês)", (e) => mesRot(e.mes)],
+      ["Sinal no saldo", (e) => sinal[e.categoria]], ["Ligações com sinal", (e) => sinal[e.categoria]], ["Economias com sinal", (e) => sinal[e.categoria] * (e.economias || 0)]];
+    const a = analiticoEventos(lista, frente);
+    if (f.ativas) {                                           // religadas sem OS: entram como religação no mês do corte
+      const b = analiticoEventos(ativasOs.map((c) => ({ matricula: c.matricula, data: c.data, mes: c.mes, categoria: "Ativa sem OS de religação", tipo: c.tipo, servico: c.servico, id: c.id, sup: c.sup, cidade: c.cidade, recurso: c.recurso, economias: c.economias, arquivo: c.arquivo })),
+        [["Linha da tabela", () => "(+) Ativa sem OS de religação"], ["Tipo (sub-linha)", (e) => e.tipo], ["Coluna (mês)", (e) => mesRot(e.mes)], ["Sinal no saldo", () => 1], ["Ligações com sinal", () => 1], ["Economias com sinal", (e) => e.economias || 0]]);
+      a.linhas.push(...b.linhas);
+    }
+    return a;
+  };
   const saldo = meses.map((_, i) => corte[i] + relig[i] + lna[i] + ativaMes[i]);
   let acc = 0; const acumulado = saldo.map((v) => (acc += v));
   linhas.push({ classe: "linha-total", celulas: ["Saldo do mês", ...saldo.map((v) => num(v, true)), num(soma(saldo), true)] });
@@ -772,6 +824,10 @@ function abaCruzada({ f, cortes: todos, per }) {
         { ...opcoes({ eixoY: { beginAtZero: false, grace: "8%" } }), layout: { padding: { top: 22, right: 44, left: 4 } }, plugins: { ...opcoes().plugins, tooltip: { ...opcoes().plugins.tooltip, callbacks: { label: (c) => ` ${c.dataset.label}: ${nf1.format(c.parsed.y)}%` } } } });
     },
   };
+  ANALITICO.cruzada = () => analiticoCortes([...cortes].sort((a, b) => (a.mes + a.data + a.matricula).localeCompare(b.mes + b.data + b.matricula)), [
+    ["Linha: mês do corte", (c) => mesRot(c.mes)], ["Coluna: mês da religação", (c) => mesRot(c.mes_religacao)],
+    ["Destino (gráfico)", (c) => (c.data_religacao ? (mesDe(c.data_religacao) === c.mes ? "Religou no mesmo mês" : "Religou nos meses seguintes") : (c.mes_religacao === T.ativa ? "Ativa (sem OS)" : "Sem religação"))],
+    ["Filtro pós-corte da tela", () => ({ todos: "Todos", com: "Com", sem: "Sem" }[CTL.posCruzada])]]);
   const ctl = seletor("posCruzada", "Pós-corte", [["todos", "Todos"], ["com", "Com"], ["sem", "Sem"]], CTL.posCruzada) + seletor("modoCruzada", "Mostrar", [["qtd", "Quantidade"], ["pct", "%"]], CTL.modoCruzada);
   const nota = `Cada corte (matrícula + data, OS Finalizada) na linha do mês em que foi feito e na coluna do mês da 1ª religação depois dele (antes do próximo corte da mesma matrícula). <b>Ativa</b>: não há OS de religação, mas o cadastro mostra a ligação ATIVA (só no último corte da matrícula). <b>Sem Religação</b>: sem OS de religação e não ATIVA no cadastro. O fundo azul mostra onde se concentram as religações. <b>Clique num número</b> para ver os clientes.`;
   return topo + `<div class="grid g11">${cartaoGraf("g-cruzada-1", "Destino dos cortes de cada mês" + (per ? " — " + per : ""), pct ? "% dos cortes do mês, por situação da religação." : "Quantidade de cortes do mês, por situação da religação.", ctl, "Para cada mês de corte: quantos religaram no mesmo mês, nos meses seguintes, estão ativos sem OS ou seguem sem religação. Clique numa barra para filtrar o mês.")}
@@ -862,6 +918,14 @@ function abaPos({ f, cortes: todos, per }) {
   TABELAS.listaSemPos.linhas = lista.map((c) => cel(c).map((x) => (x && typeof x === "object" ? x.v : x)));
   const busca = `<span class="busca"><input id="busca" type="search" placeholder="Filtrar…" value="${esc(CTL.busca)}" aria-label="Filtrar a lista (matrículas separadas por espaço ou texto)"><button type="button" class="btn-just" data-acao="limpabusca" aria-label="Limpar filtro">✕</button></span><span>${fmtN(lista.length)} de ${fmtN(sem.length)}</span>`;
 
+  const ordenados = (l) => [...l].sort((a, b) => (a.mes + a.data + a.matricula).localeCompare(b.mes + b.data + b.matricula));
+  const sitTela = ["Situação filtrada na tela", () => sit || "Todas"];
+  ANALITICO.semPos = () => analiticoCortes(ordenados(sem), [["Linha: mês do corte", (c) => mesRot(c.mes)], ["Coluna: régua (sem pós-corte)", (c) => c.regua], sitTela]);
+  ANALITICO.regua = () => analiticoCortes(ordenados(cortes), [["Linha: mês do corte", (c) => mesRot(c.mes)], ["Coluna: régua de cobrança", (c) => c.regua], sitTela]);
+  ANALITICO.posFalha = () => analiticoCortes(ordenados(cortes), [["Linha: mês do corte", (c) => mesRot(c.mes)], ["Conta em: Com pós-corte", (c) => simNao(c.data_pos)],
+    ["Conta em: 1ª visita sem sucesso", (c) => simNao(c.data_pos && c.status_pos === sucesso)], ["Conta em: Depois Finalizado", (c) => simNao(c.data_pos && c.status_pos === sucesso && c.data_pos_finalizada)],
+    ["Conta em: Religaram", (c) => simNao(c.data_pos && c.status_pos === sucesso && c.data_religacao)], sitTela]);
+  ANALITICO.listaSemPos = () => analiticoCortes(lista, [["Régua (lista)", (c) => c.regua], sitTela, ["Filtro da busca", () => CTL.busca || ""]]);
   const ctl = semCadastro ? `<span class="selo selo-atencao" title="Coloque a planilha de cadastro na pasta para separar CORTADA e ATIVA">sem cadastro: todas as situações</span>`
     : seletor("sitPos", "Situação no cadastro", [["CORTADA", "Cortada"], ["", "Todas"], ["ATIVA", "Ativa"], [T.sem_cadastro, "Sem cadastro"]], sit);
   return topo + `<div class="grid g21">${cartaoGraf("g-pos-1", "Cortados sem a 1ª visita, por mês do corte" + (per ? " — " + per : ""), `Sem pós-corte e sem religação, pelos dias cortado até hoje (${dataRot(DADOS.hoje)}).`, ctl, "Quanto mais laranja-escuro, mais tempo o cliente está cortado sem visita. Clique numa barra para filtrar o mês.")}
@@ -925,6 +989,12 @@ function abaPermanencia({ f, cortes: todos, per }) {
       }, opcoes({ aoClicar: (i) => { if (grupos[i][0] !== "Total") setFiltro("fTipo", grupos[i][0], grupos[i][0]); } }));
     },
   };
+  const ordTipo = (l) => [...l].sort((a, b) => pesoTipo(a.tipo) - pesoTipo(b.tipo) || (a.tipo || "").localeCompare(b.tipo || "") || (a.data || "").localeCompare(b.data || ""));
+  ANALITICO.perm = () => analiticoCortes(ordTipo(cortes), [["Linha: tipo de corte", (c) => c.tipo], ["Coluna: faixa de permanência", (c) => c.permanencia],
+    ["Filtro pós-corte da tela", () => ({ todos: "Todos", com: "Com", sem: "Sem" }[CTL.posPerm])]]);
+  ANALITICO.eficacia = () => analiticoCortes(ordTipo(todos), [["Linha: tipo de corte", (c) => c.tipo], ["Grupo: com/sem pós-corte", (c) => (c.data_pos ? "Com pós" : "Sem pós")],
+    ["Conta como religado", (c) => simNao(c.data_religacao || (ativasOn && c.ativa_os))], [`Religou até ${P.faixas[0].ate} dias`, (c) => simNao(c.data_religacao && c.dias <= P.faixas[0].ate)],
+    ["Entra na mediana (religou com OS)", (c) => simNao(c.data_religacao)]]);
   const ctl = seletor("posPerm", "Pós-corte", [["todos", "Todos"], ["com", "Com"], ["sem", "Sem"]], CTL.posPerm) + seletor("modoPerm", "Mostrar", [["qtd", "Quantidade"], ["pct", "% do tipo"]], CTL.modoPerm);
   const ctl2 = seletor("metricaEf", "Métrica", [["pRel", "% religado"], ["p15", `% até ${P.faixas[0].ate} dias`], ["med", "Mediana de dias"]], CTL.metricaEf);
   return topo + `<div class="grid g11">${cartaoGraf("g-perm-1", "Permanência no corte por tipo" + (per ? " — " + per : ""), "% dos cortes de cada tipo em cada faixa de dias até a religação.", ctl, "Dias entre o corte e a religação. Religação no mesmo dia conta 0 dias. Clique numa barra para filtrar o tipo.")}
@@ -940,7 +1010,7 @@ function abaDados() {
   let html = `<div class="card"><div class="card-topo"><h2>Bases para conferir</h2>
     <div class="acoes"><button type="button" class="btn-just" id="btnExcel">⬇ Base calculada (Excel)</button><button type="button" class="btn-just" id="btnCsvCortes">⬇ Cortes filtrados (CSV)</button></div></div>
     <p class="nota-secao">Se algum arquivo ficar com erro de “leitura guardada”, use <button type="button" class="btn-just" id="btnLimparCache" title="Apaga as leituras guardadas neste navegador; a próxima análise lê todos os arquivos de novo">Limpar leituras guardadas</button>.</p>
-    <p class="nota-secao">A planilha calculada tem a base de cortes (todas as colunas usadas nas abas), os eventos do saldo, os arquivos lidos e os parâmetros. O CSV traz só os cortes dos filtros atuais. Em qualquer aba, clicar num número abre as matrículas por trás dele, com ⬇ para conferir no Excel.</p></div>`;
+    <p class="nota-secao">A planilha calculada tem a base de cortes (todas as colunas usadas nas abas), os eventos do saldo, os arquivos lidos e os parâmetros. O CSV traz só os cortes dos filtros atuais, com toda a classificação. Em qualquer aba, o ⬇ de cada tabela baixa o <b>analítico</b>: uma linha por corte ou OS usada nela, com as colunas “Linha”/“Coluna” dizendo onde cada uma foi contada (dá para conferir com uma tabela dinâmica). Clicar num número abre as matrículas por trás dele, também com ⬇.</p></div>`;
   html += cartao("Parâmetros da análise", "", tabela("info", ["Parâmetro", "Valor"], info, { semOrd: true }), "info");
   html += cartao("Arquivos da pasta", "Atividades, cadastro e catálogo são reconhecidos sozinhos; os demais aparecem como “não usado”. Arquivo com erro mostra o motivo.",
     tabela("arquivos", ["Arquivo", "Tipo", "Linhas", "Observação"], DADOS.arquivos.map((a) => ({ celulas: [a.arquivo, a.tipo === "erro" ? { v: "erro", txt: "erro", selo: "atencao" } : txt({ religacao_lisc: "religação LISC" }[a.tipo] || a.tipo), a.linhas, txt(a.obs)] })), { longa: true }), "arquivos");
@@ -962,8 +1032,8 @@ function ligaDados() {
   };
   $("btnLimparCache").onclick = () => { if (!confirm("Apagar as leituras guardadas neste navegador? A próxima análise vai ler todos os arquivos de novo.")) return; if (!worker) novoWorker(); worker.postMessage({ fase: "limparCache" }); };
   $("btnCsvCortes").onclick = () => {
-    const cols = Object.keys(DADOS.cortes).filter((k) => k !== "mes");
-    baixaCsv(cols, CTX.cortes.map((c) => cols.map((k) => c[k])), "Cortes filtrados");
+    const a = analiticoCortes(CTX.cortes);
+    baixaCsv(a.cabecalho, a.linhas, "Cortes filtrados - analitico");
   };
 }
 function explicacao() {
@@ -1008,7 +1078,7 @@ function abreGaveta(titulo, nota, cols, linhas, extra = "") {
   g.innerHTML = `<div class="g-topo"><h2>${esc(titulo)}</h2>${PILHA.length > 1 ? `<button type="button" class="btn-just" data-acao="voltar">← Voltar</button>` : ""}<button type="button" class="btn-just btn-down" id="gCsv" title="Baixar ${esc(nomeArquivo(titulo))}.csv" aria-label="Baixar em CSV">⬇</button><button type="button" class="btn-just" data-acao="fechar" aria-label="Fechar">✕</button></div>
     <div class="g-corpo"><p class="g-nota">${esc(nota)}${linhas.length > limite ? ` Mostrando ${limite} de ${fmtN(linhas.length)}; o ⬇ baixa todas.` : ""}</p>${extra}
     <div class="tabela-wrap"><table><thead><tr>${cols.map(([, t]) => `<th>${esc(t)}</th>`).join("")}</tr></thead><tbody>${mostra.map((l) => `<tr>${cols.map(([k]) => cel(k, l[k])).join("")}</tr>`).join("")}</tbody></table></div></div>`;
-  $("gCsv").onclick = () => baixaCsv(cols.map(([, t]) => t), linhas.map((l) => cols.map(([k]) => l[k])), titulo);
+  $("gCsv").onclick = () => { const a = cols === COLS_EVENTOS ? analiticoEventos(linhas) : analiticoCortes(linhas); baixaCsv(a.cabecalho, a.linhas, titulo); };
   const fechar = g.querySelector("[data-acao=fechar]"); if (fechar) fechar.focus();
 }
 function abreDetalhe(i) {
@@ -1040,6 +1110,7 @@ document.addEventListener("click", (e) => {
   const c = e.target.closest("[data-ctl]");
   if (c) { CTL[c.dataset.ctl] = c.dataset.val; guardaCtl(); desenha(); return; }
   const d = e.target.closest("[data-csv]");
+  if (d && ANALITICO[d.dataset.csv]) { const a = ANALITICO[d.dataset.csv](); baixaCsv(a.cabecalho, a.linhas, d.dataset.nome + " - analitico"); toast(`Analítico baixado: ${fmtN(a.linhas.length)} linha(s).`); return; }
   if (d && TABELAS[d.dataset.csv]) { baixaCsv(TABELAS[d.dataset.csv].cabecalho, TABELAS[d.dataset.csv].linhas, d.dataset.nome); return; }
   const o = e.target.closest("th[data-ord]");
   if (o) { const col = o.dataset.ord; CTL.ordem = CTL.ordem && CTL.ordem.col === col ? { col, dir: -CTL.ordem.dir } : { col, dir: 1 }; desenha(); return; }

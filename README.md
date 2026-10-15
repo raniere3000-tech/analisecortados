@@ -77,3 +77,13 @@ Os testes usam dados sintéticos (`tests/dados_sinteticos.py`) e rodam no GitHub
 - A Sup de cada cidade está em `cortes/regras.json` → `supervisao.cidades` (nome como em `Nome da Localidade`).
 - Nomes parecidos da mesma cidade (atividades, LISC, cadastro) viram um só: sem acento, pontuação, “de/do/São”, com abreviações
   (`S.FCO.DO ITABAPOANA` = `São Francisco de Itabapoana`) e sufixos (`RIO DE JANEIRO - A` = `RIO DE JANEIRO`). Cidade fora da lista fica em “Sem Sup”.
+
+## Downloads (⬇) — analítico
+
+- O ⬇ de cada tabela de apoio baixa o **analítico** em CSV (separador `;`, abre direto no Excel): uma linha por corte ou OS usada
+  na tabela, já com os filtros da tela. As primeiras colunas dizem onde cada linha foi contada (“Linha: mês do corte”,
+  “Coluna: mês da religação”, “Coluna: régua”, “Sinal no saldo”, “Economias com sinal”…), então uma tabela dinâmica refaz o número da tela.
+- Depois vêm as colunas comuns: matrícula, cliente, Sup, cidade, recurso, tipo e serviço do corte, datas e meses do corte e da religação,
+  dias e meses até religar, religou no mesmo mês, pós-corte (data, status, dias do corte ao pós, religou depois do pós), régua, permanência,
+  situação e origem, economias, débitos, motivo e arquivo de origem.
+- O ⬇ da lista lateral (ao clicar num número) e o “Cortes filtrados (CSV)” da aba Dados usam as mesmas colunas.

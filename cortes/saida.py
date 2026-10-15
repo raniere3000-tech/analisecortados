@@ -20,6 +20,7 @@ COLUNAS_CORTES = {
 COLUNAS_EVENTOS = {
     "matricula": "matricula", "data": "data", "categoria": "categoria", "tipo": "tipo", "economias": "economias",
     "cidade": "cidade", "sup": "sup", "recurso": "recurso", "servico": "servico", "id": "id",
+    "sem_cadastro": "sem_cadastro", "arquivo": "arquivo",
 }
 
 # nomes das colunas no Excel (como nas planilhas antigas, quando havia equivalente)
