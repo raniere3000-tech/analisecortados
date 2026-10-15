@@ -23,14 +23,21 @@ body { margin:0; background:var(--bg); color:var(--ink); font-family:"Segoe UI",
 .eyebrow { color:#9fe1e7; font-size:10px; letter-spacing:1.2px; font-weight:700; text-transform:uppercase; white-space:nowrap; }
 .versao { margin-left:6px; padding:0 7px; border-radius:99px; background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.4); font-size:9.5px; font-weight:800; color:#fff; text-transform:none; letter-spacing:.6px; }
 .top h1 { margin:0; font-size:14.5px; font-weight:600; white-space:nowrap; }
-.filtros, .ferramentas { display:flex; gap:6px 8px; align-items:center; }
-.filtros { flex-wrap:wrap; justify-content:center; }
-.fsel { display:flex; align-items:center; gap:6px; font-size:9px; font-weight:750; text-transform:uppercase; letter-spacing:.2px; color:#c8d6e5; transition:opacity .15s; }
+.ferramentas { display:flex; gap:6px 8px; align-items:center; }
+/* filtros: uma linha só, abaixo do título, rótulo em cima do campo */
+.filtros { display:flex; flex-wrap:wrap; align-items:flex-end; gap:8px 14px; margin-top:8px; padding-top:8px; border-top:1px solid rgba(255,255,255,.14); }
+.fsel { display:flex; flex-direction:column; align-items:flex-start; gap:3px; font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:#9fb6cc; transition:opacity .15s; }
 .fsel.apagado { opacity:.4; }
-.fsel select { max-width:102px; text-overflow:ellipsis; border:1px solid rgba(255,255,255,.35); border-radius:8px; background:rgba(255,255,255,.1); color:#fff; padding:5px 6px; font:inherit; font-size:12px; font-weight:400; text-transform:none; letter-spacing:0; }
+.fsel select { width:150px; text-overflow:ellipsis; border:1px solid rgba(255,255,255,.28); border-radius:7px; background:rgba(255,255,255,.08); color:#fff; padding:5px 8px; font:inherit; font-size:12.5px; font-weight:500; text-transform:none; letter-spacing:0; cursor:pointer; }
+.fsel select:hover, .fsel select:focus { border-color:rgba(159,225,231,.8); background:rgba(255,255,255,.14); outline:none; }
 .fsel select option { color:#111; }
-.fsel[data-f=de] select, .fsel[data-f=ate] select { max-width:132px; }
-.fsel[data-f=ativas] { cursor:pointer; }
+.fsel[data-f=de] select, .fsel[data-f=ate] select { width:138px; }
+.fsel[data-f=sup] select { width:112px; }
+.fsel[data-f=cidade] select { width:190px; }
+.f-sep { width:1px; align-self:stretch; background:rgba(255,255,255,.14); margin:2px 2px; }
+.fsel.f-check { flex-direction:row; align-items:center; gap:7px; cursor:pointer; padding-bottom:6px; font-size:10.5px; color:#c8d6e5; }
+.f-limpar { border:0; background:none; color:#9fe1e7; font:600 12px var(--fonte); padding:0 0 7px; cursor:pointer; text-decoration:underline; text-underline-offset:3px; margin-left:auto; }
+.f-limpar:hover { color:#fff; }
 .fsel input[type=checkbox] { accent-color:#16a5b8; width:14px; height:14px; margin:0; cursor:pointer; }
 .btn-top { padding:5px 8px; border-radius:8px; font:inherit; font-size:12px; cursor:pointer; background:rgba(255,255,255,.12); color:#fff; border:1px solid rgba(255,255,255,.3); text-decoration:none; white-space:nowrap; }
 .btn-top:hover:not(:disabled) { background:rgba(255,255,255,.22); }
@@ -229,18 +236,8 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 <header class="top">
   <div class="top-linha">
     <div>
-      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v20</span></div>
+      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v21</span></div>
       <h1 id="titulo">Análise de Corte e Religação</h1>
-    </div>
-    <div class="filtros" id="filtros" hidden>
-      <label class="fsel" data-f="de"><span>Mês inicial</span><select id="fDe" aria-label="Mês inicial"></select></label>
-      <label class="fsel" data-f="ate"><span>Mês final</span><select id="fAte" aria-label="Mês final"></select></label>
-      <label class="fsel" data-f="sup"><span>Sup</span><select id="fSup" aria-label="Sup"></select></label>
-      <label class="fsel" data-f="cidade"><span>Cidade</span><select id="fCidade" aria-label="Cidade"></select></label>
-      <label class="fsel" data-f="recurso"><span>Recurso</span><select id="fRecurso" aria-label="Recurso"></select></label>
-      <label class="fsel" data-f="tipo"><span>Tipo de corte</span><select id="fTipo" aria-label="Tipo de corte"></select></label>
-      <label class="fsel" data-f="ativas" title="Liga: a ligação cortada que está ATIVA no cadastro conta como religada, mesmo sem OS de religação"><input type="checkbox" id="fAtivas" aria-label="Ativas contam como religadas"><span>Ativas = religadas</span></label>
-      <button type="button" class="btn-top" id="btnLimpar">Limpar</button>
     </div>
     <div class="ferramentas">
       <button type="button" class="btn-top" id="btnConectar">📁 Conectar pasta</button>
@@ -249,6 +246,17 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
       <button type="button" class="btn-top" id="btnPdf" hidden title="Abre a impressão: escolha “Salvar como PDF”">📄 Executivo</button>
       <input type="file" id="inputPasta" webkitdirectory directory multiple hidden>
     </div>
+  </div>
+  <div class="filtros" id="filtros" hidden>
+    <label class="fsel" data-f="de"><span>Mês inicial</span><select id="fDe" aria-label="Mês inicial"></select></label>
+    <label class="fsel" data-f="ate"><span>Mês final</span><select id="fAte" aria-label="Mês final"></select></label>
+    <span class="f-sep" aria-hidden="true"></span>
+    <label class="fsel" data-f="sup"><span>Sup</span><select id="fSup" aria-label="Sup"></select></label>
+    <label class="fsel" data-f="cidade"><span>Cidade</span><select id="fCidade" aria-label="Cidade"></select></label>
+    <label class="fsel" data-f="tipo"><span>Tipo de corte</span><select id="fTipo" aria-label="Tipo de corte"></select></label>
+    <span class="f-sep" aria-hidden="true"></span>
+    <label class="fsel f-check" data-f="ativas" title="Liga: a ligação cortada que está ATIVA no cadastro conta como religada, mesmo sem OS de religação"><input type="checkbox" id="fAtivas" aria-label="Ativas contam como religadas"><span>Ativas = religadas</span></label>
+    <button type="button" class="f-limpar" id="btnLimpar" title="Volta todos os filtros ao padrão">Limpar filtros</button>
   </div>
   <div class="fonte-status" id="status" role="status"></div>
   <div class="barra-prog" id="progresso" hidden><div id="progBarra"></div></div>
@@ -300,7 +308,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 
 <script>
 "use strict";
-const VERSAO_SITE = "v20-20261015";
+const VERSAO_SITE = "v21-20261015";
 
 // ===================== utilidades =====================
 const $ = (id) => document.getElementById(id);
@@ -600,10 +608,9 @@ function carregaDados(d) {
   PREENCHE = preenche;
   preenche($("fSup"), unicos([...CORTES.map((c) => c.sup), ...SALDO.map((s) => s.sup)]));
   preencheCidades();
-  preenche($("fRecurso"), unicos([...CORTES.map((c) => c.recurso), ...SALDO.map((s) => s.recurso)]));
   preenche($("fTipo"), unicos(CORTES.map((c) => c.tipo)));
   if (HASH_PENDENTE) {                                       // estado vindo do endereço (link compartilhado)
-    for (const [k, id] of [["de", "fDe"], ["ate", "fAte"], ["sup", "fSup"], ["cidade", "fCidade"], ["recurso", "fRecurso"], ["tipo", "fTipo"]]) {
+    for (const [k, id] of [["de", "fDe"], ["ate", "fAte"], ["sup", "fSup"], ["cidade", "fCidade"], ["tipo", "fTipo"]]) {
       const v = HASH_PENDENTE[k], sel = $(id);
       if (v != null && [...sel.options].some((o) => o.value === v)) { sel.value = v; sel.dataset.escolhido = "1"; }
       if (id === "fSup") preencheCidades();
@@ -628,7 +635,7 @@ function preencheCidades() {
 const bateLocal = (x, f) => (!f.sup || x.sup === f.sup) && (!f.cidade || x.cidade === f.cidade);
 function filtro() {
   if ($("fDe").value && $("fAte").value && $("fDe").value > $("fAte").value) { const d = $("fDe").value; $("fDe").value = $("fAte").value; $("fAte").value = d; }   // período invertido
-  return { de: $("fDe").value, ate: $("fAte").value, sup: $("fSup").value, cidade: $("fCidade").value, recurso: $("fRecurso").value, tipo: $("fTipo").value, ativas: $("fAtivas").checked };
+  return { de: $("fDe").value, ate: $("fAte").value, sup: $("fSup").value, cidade: $("fCidade").value, recurso: "", tipo: $("fTipo").value, ativas: $("fAtivas").checked };
 }
 // "Ativas = religadas": o corte sem OS de religação cuja ligação está ATIVA no cadastro passa a valer como religado (sem data)
 let VISAO = { on: null, lista: null };
@@ -654,13 +661,13 @@ function setFiltro(ids, valor, rotulo) {
   for (const id of [].concat(ids)) { const sel = $(id); if (![...sel.options].some((o) => o.value === valor)) return; sel.value = valor; sel.dataset.escolhido = "1"; }
   setTimeout(() => { desenha(); toast(`Filtro aplicado: ${rotulo}. Clique em Limpar para voltar.`); }, 0);   // fora do evento do gráfico (que será refeito)
 }
-["fDe", "fAte", "fSup", "fCidade", "fRecurso", "fTipo"].forEach((id) => $(id).addEventListener("change", (e) => { e.target.dataset.escolhido = "1"; if (id === "fSup") preencheCidades(); CTL.verTodos = false; desenha(); }));
+["fDe", "fAte", "fSup", "fCidade", "fTipo"].forEach((id) => $(id).addEventListener("change", (e) => { e.target.dataset.escolhido = "1"; if (id === "fSup") preencheCidades(); CTL.verTodos = false; desenha(); }));
 $("fAtivas").addEventListener("change", (e) => {
   guarda("cortes_ativas", e.target.checked); CTL.verTodos = false; desenha();
   toast(e.target.checked ? "Ativas = religadas: ligações ATIVAS no cadastro, sem OS de religação, contam como religadas." : "Ativas = religadas desligado.");
 });
 $("btnLimpar").addEventListener("click", () => {
-  ["fSup", "fCidade", "fRecurso", "fTipo"].forEach((id) => { $(id).value = ""; });
+  ["fSup", "fCidade", "fTipo"].forEach((id) => { $(id).value = ""; });
   preencheCidades();
   ["fDe", "fAte"].forEach((id) => { delete $(id).dataset.escolhido; });
   const op = $("fDe").options; $("fDe").value = op.length ? op[0].value : ""; $("fAte").value = op.length ? op[op.length - 1].value : "";
@@ -1130,7 +1137,7 @@ function abaDados() {
       `Economias = <code>TOTAL_ECO</code> do cadastro do <b>mês da OS</b>; sem esse mês, a referência mais recente; matrícula fora do cadastro conta <b>1</b>.`,
       `Sinal: corte <b>−</b>, religação <b>+</b>, implantação <b>+</b>. Saldo do mês = −corte + religação + implantação; acumulado = soma dos meses até ali.`,
       `Com “Ativas = religadas”: os cortes sem OS de religação cuja ligação está ATIVA (ou que foram cortados de novo) entram como <b>+ religação no mês do corte</b>.`,
-      `Filtros: período, Sup, cidade e recurso. O tipo de corte não filtra esta página (a abertura por tipo já está nas linhas).`]))
+      `Filtros: período, Sup e cidade. O tipo de corte não filtra esta página (a abertura por tipo já está nas linhas).`]))
     + bloco("Como conferir", `<p>No analítico, cada linha é uma OS. Faça uma tabela dinâmica com <i>Linha da tabela</i> nas linhas, <i>Coluna (mês)</i> nas colunas e soma de <i>Economias com sinal</i> (ou <i>Ligações com sinal</i> para a medida Ligações).</p>`)
     + `<div class="linha-botoes">${btnAnalitico("saldo", "saldo", "Saldo de economias", "Analítico do saldo (CSV)")}</div>`);
 
