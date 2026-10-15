@@ -108,6 +108,16 @@ tr.fechado { display:none; }
 .gf-atalhos { display:inline-flex; gap:10px; font-size:11.5px; }
 .link-atalho { border:0; background:none; padding:0; color:#176b9c; font:600 11.5px var(--fonte); cursor:pointer; text-decoration:underline; text-underline-offset:2px; }
 .link-atalho:hover { color:var(--marinho); }
+table.calor { border-collapse:separate; border-spacing:3px; width:100%; }
+table.calor th { background:none !important; color:#5b6b7d !important; font-size:11px; font-weight:600; padding:2px 4px; text-align:center; border:0; }
+table.calor td { border:0; border-radius:5px; padding:7px 6px; text-align:center; font-size:12px; font-variant-numeric:tabular-nums; color:#1f2d3d; }
+table.calor td.txt { text-align:left; font-weight:600; color:var(--marinho); background:none; white-space:nowrap; }
+table.calor td.num:nth-child(2) { color:#5b6b7d; background:none; }
+table.calor td.esc { color:#fff; font-weight:600; }
+table.calor td.fut { color:#c9d3de; background:#f7f9fb; }
+table.calor td.clic { cursor:pointer; }
+table.calor td.clic:hover { outline:2px solid #E8710A; outline-offset:-2px; }
+table.calor tr:nth-child(even) td { background-image:none; }
 details.acc { border:1px solid var(--line); border-radius:10px; background:#fff; margin:10px 0 0; }
 details.acc > summary { list-style:none; cursor:pointer; padding:14px 18px; font-weight:700; font-size:14.5px; color:var(--marinho); display:flex; align-items:center; gap:10px; }
 details.acc > summary::-webkit-details-marker { display:none; }
@@ -236,7 +246,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 <header class="top">
   <div class="top-linha">
     <div>
-      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v21</span></div>
+      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v22</span></div>
       <h1 id="titulo">Análise de Corte e Religação</h1>
     </div>
     <div class="ferramentas">
@@ -308,7 +318,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 
 <script>
 "use strict";
-const VERSAO_SITE = "v21-20261015";
+const VERSAO_SITE = "v22-20261015";
 
 // ===================== utilidades =====================
 const $ = (id) => document.getElementById(id);
@@ -825,21 +835,42 @@ function abaCruzada({ f, cortes: todos, per }) {
   const linhas = mesesCorte.map((m) => linha(cortes.filter((c) => c.mes === m), mesRot(m)));
   linhas.push(linha(cortes, "Total Geral", "linha-total"));
 
-  // dados dos gráficos
-  const mesmo = [], depois = [], ativa = [], sem = [];
-  mesesCorte.forEach((m) => {
-    const l = cortes.filter((c) => c.mes === m), t = l.length || 1, f = (n) => (pct ? +(n / t * 100).toFixed(1) : n);
-    const a = l.filter((c) => c.mes_religacao === m).length, at = l.filter((c) => c.mes_religacao === T.ativa).length, s = l.filter((c) => c.mes_religacao === T.sem_religacao).length;
-    mesmo.push(f(a)); ativa.push(f(at)); sem.push(f(s)); depois.push(f(l.length - a - at - s));
-  });
+  // dados dos gráficos — destino em % do mês (barras de 100% deitadas): todos os meses ficam comparáveis
   const fim = idxMes(ULTIMO_MES || mesesCorte[mesesCorte.length - 1] || "2000-01");      // último mês com dados lidos
-  const coortes = mesesCorte.slice(-8), maxK = Math.max(0, ...coortes.map((m) => fim - idxMes(m)));
-  const paleta = [COR.ant, "#8da2bd", "#6c86a8", COR.azulMed, COR.ciano, COR.azul, COR.marinho, COR.laranja];
-  const curvas = coortes.map((m, k) => {
-    const l = cortes.filter((c) => c.mes === m), t = l.length || 1, lim = fim - idxMes(m);
-    return { label: mesCurto(m), data: Array.from({ length: maxK + 1 }, (_, j) => (j > lim ? null : +(l.filter((c) => c.data_religacao && idxMes(c.data_religacao.slice(0, 7)) - idxMes(m) <= j).length / t * 100).toFixed(1))),
-      borderColor: paleta[paleta.length - coortes.length + k] || COR.marinho, backgroundColor: paleta[paleta.length - coortes.length + k] || COR.marinho, borderWidth: k === coortes.length - 1 ? 3 : 2, pointRadius: 3, tension: .25, rotulos: false, rotuloFim: true, pointHoverRadius: 5, fmt: (v) => nf1.format(v) + "%" };
+  const emAberto = (m) => fim - idxMes(m) < 2;                                            // mês atual e o anterior: pouco tempo para religar
+  const qtd = { mesmo: [], depois: [], ativa: [], sem: [] }, totMes = [];
+  mesesCorte.forEach((m) => {
+    const l = cortes.filter((c) => c.mes === m);
+    const a = l.filter((c) => c.mes_religacao === m).length, at = l.filter((c) => c.mes_religacao === T.ativa).length, sm = l.filter((c) => c.mes_religacao === T.sem_religacao).length;
+    qtd.mesmo.push(a); qtd.ativa.push(at); qtd.sem.push(sm); qtd.depois.push(l.length - a - at - sm); totMes.push(l.length);
   });
+  const emPct = (arr) => arr.map((n, i) => (totMes[i] ? +(n / totMes[i] * 100).toFixed(1) : 0));
+  const rotMes = mesesCorte.map((m, i) => `${mesCurto(m)}${emAberto(m) ? "*" : ""}  ·  ${fmtN(totMes[i])}`);
+  const temAberto = mesesCorte.some(emAberto);
+
+  // velocidade: mapa de calor (safra) — % acumulado de religados com OS até cada mês depois do corte
+  const safras = mesesCorte.slice(-12), maxK = Math.max(0, ...safras.map((m) => fim - idxMes(m)));
+  const calor = safras.map((m) => {
+    const l = cortes.filter((c) => c.mes === m), t = l.length, lim = fim - idxMes(m);
+    const rel = l.filter((c) => c.data_religacao);
+    return { m, t, cel: Array.from({ length: maxK + 1 }, (_, j) => {
+      if (j > lim) return null;
+      const ate = rel.filter((c) => idxMes(c.data_religacao.slice(0, 7)) - idxMes(m) <= j);
+      return { p: t ? ate.length / t : 0, n: ate.length, lista: ate };
+    }) };
+  });
+  const valores = calor.flatMap((r) => r.cel.filter(Boolean).map((c) => c.p));
+  const lo = valores.length ? Math.min(...valores) : 0, hi = valores.length ? Math.max(...valores) : 1;
+  const tom = (p) => {                                         // claro (pouco religado) → marinho (muito religado)
+    const x = hi > lo ? (p - lo) / (hi - lo) : 1, a = [234, 242, 248], b = [23, 79, 112];
+    return { bg: `rgb(${a.map((v, k) => Math.round(v + (b[k] - v) * x)).join(",")})`, escuro: x > 0.55 };
+  };
+  const tabCalor = `<div class="tabela-wrap"><table class="calor"><thead><tr><th>Mês do corte</th><th>Cortes</th>${Array.from({ length: maxK + 1 }, (_, j) => `<th>${j === 0 ? "Mesmo mês" : "+" + j}</th>`).join("")}</tr></thead><tbody>${calor.map((r) =>
+    `<tr><td class="txt">${mesCurto(r.m)}${emAberto(r.m) ? "*" : ""}</td><td class="num">${fmtN(r.t)}</td>${r.cel.map((c, j) => {
+      if (!c) return `<td class="fut" title="Ainda não chegou">·</td>`;
+      const t = tom(c.p), det = c.n ? regDet(`${mesRot(r.m)} — religados até ${j === 0 ? "o mesmo mês" : "+" + j + " mês(es)"}`, () => c.lista) : null;
+      return `<td class="num${c.n ? " clic" : ""}${t.escuro ? " esc" : ""}" style="background:${t.bg}"${det != null ? ` data-det="${det}" tabindex="0"` : ""} title="${esc(mesRot(r.m))}: ${fmtN(c.n)} de ${fmtN(r.t)} religados até ${j === 0 ? "o mesmo mês" : "+" + j + " mês(es)"}">${fmtP(c.p)}</td>`;
+    }).join("")}</tr>`).join("")}</tbody></table></div>`;
   const nAtiva = cortes.filter((c) => c.mes_religacao === T.ativa).length, totRel = cortes.filter((c) => c.data_religacao).length + (f.ativas ? nAtiva : 0), nSem = cortes.filter((c) => c.mes_religacao === T.sem_religacao).length;
   const diasRel = cortes.filter((c) => c.data_religacao).map((c) => c.dias);
   const topo = kpis([
@@ -851,28 +882,34 @@ function abaCruzada({ f, cortes: todos, per }) {
   ]);
   MEM.cruzada = {
     graficos() {
+      const ds = [["Sem religação", qtd.sem, COR.laranja, "#fff"], ["Ativa (sem OS)", qtd.ativa, "#bfe6ea", "#1f2d3d"],
+        ["Religou nos meses seguintes", qtd.depois, "#9bbbd6", "#1f2d3d"], ["Religou no mesmo mês", qtd.mesmo, "#3f6f97", "#fff"]];
       grafico("g-cruzada-1", "bar", {
-        labels: mesesCorte.map(mesCurto),
-        datasets: [
-          barra("Religou no mesmo mês", mesmo, COR.marinho, { empilhado: true }),
-          barra("Religou nos meses seguintes", depois, COR.azulMed, { empilhado: true }),
-          barra("Ativa (sem OS)", ativa, COR.ciano, { empilhado: true }),
-          barra("Sem religação", sem, COR.laranja, { empilhado: true }),
-        ].map((d) => ({ ...d, fmt: pct ? (v) => nf0.format(v) + "%" : undefined })),
-      }, opcoes({ empilhado: true, pct, aoClicar: (i) => setFiltro(["fDe", "fAte"], mesesCorte[i], mesRot(mesesCorte[i])) }));
-      grafico("g-cruzada-2", "line", { labels: Array.from({ length: maxK + 1 }, (_, j) => (j === 0 ? "mesmo mês" : `+${j} mês(es)`)), datasets: curvas },
-        { ...opcoes({ eixoY: { beginAtZero: false, grace: "8%" } }), layout: { padding: { top: 22, right: 44, left: 4 } }, plugins: { ...opcoes().plugins, tooltip: { ...opcoes().plugins.tooltip, callbacks: { label: (c) => ` ${c.dataset.label}: ${nf1.format(c.parsed.y)}%` } } } });
+        labels: rotMes,
+        datasets: ds.map(([nome, arr, cor, txtCor]) => barra(nome, emPct(arr), mesesCorte.map((m) => (emAberto(m) ? cor + "99" : cor)),
+          { empilhado: true, corTexto: txtCor, qtd: arr, fmt: (v) => (v >= 4 ? nf0.format(v) + "%" : ""), categoryPercentage: .78, barPercentage: .9 })),
+      }, (() => {
+        const o = opcoes({ horizontal: true, empilhado: true, pct: true, aoClicar: (i) => setFiltro(["fDe", "fAte"], mesesCorte[i], mesRot(mesesCorte[i])) });
+        o.plugins.tooltip.callbacks.label = (c) => ` ${c.dataset.label}: ${nf1.format(c.parsed.x)}% (${fmtN(c.dataset.qtd[c.dataIndex])})`;
+        o.layout.padding.right = 8;
+        return o;
+      })());
     },
   };
   ANALITICO.cruzada = () => analiticoCortes([...cortes].sort((a, b) => (a.mes + a.data + a.matricula).localeCompare(b.mes + b.data + b.matricula)), [
     ["Linha: mês do corte", (c) => mesRot(c.mes)], ["Coluna: mês da religação", (c) => mesRot(c.mes_religacao)],
     ["Destino (gráfico)", (c) => (c.data_religacao ? (mesDe(c.data_religacao) === c.mes ? "Religou no mesmo mês" : "Religou nos meses seguintes") : (c.mes_religacao === T.ativa ? "Ativa (sem OS)" : "Sem religação"))],
     ["Filtro pós-corte da tela", () => ({ todos: "Todos", com: "Com", sem: "Sem" }[CTL.posCruzada])]]);
-  const ctl = seletor("posCruzada", "Pós-corte", [["todos", "Todos"], ["com", "Com"], ["sem", "Sem"]], CTL.posCruzada) + seletor("modoCruzada", "Mostrar", [["qtd", "Quantidade"], ["pct", "%"]], CTL.modoCruzada);
   const nota = `Cada corte (matrícula + data, OS Finalizada) na linha do mês em que foi feito e na coluna do mês da 1ª religação depois dele (antes do próximo corte da mesma matrícula). <b>Ativa</b>: não há OS de religação, mas o cadastro mostra a ligação ATIVA (só no último corte da matrícula). <b>Sem Religação</b>: sem OS de religação e não ATIVA no cadastro. O fundo azul mostra onde se concentram as religações. <b>Clique num número</b> para ver os clientes.`;
-  return topo + `<div class="grid g11">${cartaoGraf("g-cruzada-1", "Destino dos cortes de cada mês" + (per ? " — " + per : ""), pct ? "% dos cortes do mês, por situação da religação." : "Quantidade de cortes do mês, por situação da religação.", ctl, "Para cada mês de corte: quantos religaram no mesmo mês, nos meses seguintes, estão ativos sem OS ou seguem sem religação. Clique numa barra para filtrar o mês.")}
-    ${cartaoGraf("g-cruzada-2", "Velocidade de religação por mês do corte", "% acumulado de religados a cada mês depois do corte (últimos 8 meses de corte).", "", "Cada linha é um mês de corte; a linha só avança até o mês atual. Quanto mais alta e rápida, melhor a recuperação.")}</div>`
-    + cartao("Tabela de apoio — mês do corte × mês da religação" + (per ? " — " + per : ""), nota, tabela("cruzada", ["Mês do corte", ...colunas.map(rotCol), "Total Geral", "% religado"], linhas, { pct }), "cruzada");
+  const ctlGraf = seletor("posCruzada", "Pós-corte", [["todos", "Todos"], ["com", "Com"], ["sem", "Sem"]], CTL.posCruzada);
+  const ctlTab = seletor("modoCruzada", "Mostrar", [["qtd", "Quantidade"], ["pct", "%"]], CTL.modoCruzada);
+  const altura = Math.max(220, 34 * mesesCorte.length + 70);
+  const rodapeAberto = temAberto ? "* mês em aberto (o atual e o anterior): ainda teve pouco tempo para religar — cor mais clara." : "";
+  const cardCalor = `<div class="card"><div class="card-topo"><h2>Velocidade de religação${ajuda("Cada linha é um mês de corte (safra). Cada coluna mostra o % dos cortes daquele mês que já tinha religado (com OS) até aquele mês depois do corte. Quanto mais escuro, mais religou. As células com · ainda não chegaram. Clique numa célula para ver os clientes.")}</h2></div>
+    <p class="nota-secao">% acumulado de religados (com OS) até cada mês depois do corte. Mais escuro = mais religou.</p>${tabCalor}${rodapeAberto ? `<p class="dica">${rodapeAberto}</p>` : ""}</div>`;
+  return topo + `<div class="grid g11">${cartaoGraf("g-cruzada-1", "Destino dos cortes de cada mês" + (per ? " — " + per : ""), "% dos cortes do mês. <b>Sem religação</b> sempre à esquerda; ao lado do mês, a quantidade de cortes.", ctlGraf, "Cada barra soma 100% dos cortes do mês: sem religação, ativa sem OS, religou nos meses seguintes e religou no mesmo mês. Clique numa barra para filtrar o mês.", rodapeAberto).replace('class="graf"', `class="graf" style="height:${altura}px"`)}
+    ${cardCalor}</div>`
+    + cartao("Tabela de apoio — mês do corte × mês da religação" + (per ? " — " + per : ""), nota, tabela("cruzada", ["Mês do corte", ...colunas.map(rotCol), "Total Geral", "% religado"], linhas, { pct }), "cruzada", ctlTab);
 }
 
 // ===================== aba Pós-corte =====================
