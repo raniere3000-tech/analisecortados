@@ -41,7 +41,10 @@ A mesma atividade (mesmo *ID da Atividade*) em mais de um arquivo conta uma vez.
   cidade ou recurso), um gráfico por mês do corte e uma tabela mês do corte × colunas. Padrão: CORTADA + sem pós-corte.
   Filtro “Meses do corte” com vários meses (atalhos Todos, Últimos 3, Último). “Ver clientes” abre a lista do filtro; o ⬇ baixa o analítico.
 - **Permanência**: tipo de corte × faixa de dias até a religação e a eficácia de cada tipo com × sem pós-corte.
-- **Dados**: parâmetros, arquivos lidos, explicação de cada cálculo e downloads (base calculada em Excel, CSV de cada tabela).
+- **Dados**: tópicos que abrem e fecham — Avisos, Conferência rápida (números principais com os filtros atuais e como chegar
+  neles pelo analítico), Bases carregadas (pasta, hora da leitura, arquivos e detalhes técnicos), Parâmetros, Classificação dos
+  serviços, Bases para download e, de 1 a 4, cada página com o que mostra, bases e colunas, cálculo passo a passo, como conferir
+  e o ⬇ do analítico. Os tópicos abertos ficam guardados no navegador.
 
 Filtros no topo: mês inicial/final (mês do corte), cidade, recurso e tipo de corte.
 
@@ -51,9 +54,9 @@ Filtros no topo: mês inicial/final (mês do corte), cidade, recurso e tipo de c
 - **Clicar num número** (de qualquer tabela) abre, num painel lateral, as matrículas por trás dele, com ⬇ para baixar em CSV; clicar numa matrícula mostra o histórico do cliente.
 - Lista de clientes com **busca** (matrículas ou texto), ordenação pelo cabeçalho e "Mostrar todos"; qualquer tabela ordena pelo cabeçalho; tabelas largas arrastam para o lado.
 - **Ativas = religadas** (filtro no cabeçalho, vale para todas as abas): quando ligado, o corte sem OS de religação cuja ligação está ATIVA no cadastro passa a contar como religado — sai de "sem religação" e de "sem a 1ª visita", entra no % religado, na régua ("Ativa sem OS de religação"), na permanência ("Ativa sem OS") e, no saldo, como religação no mês do corte. Sem data de religação, esses casos não entram nos cálculos de dias. A escolha fica lembrada e vai no link.
-- **Atalhos:** `1`…`5` trocam de aba, `/` vai para a busca, `Esc` fecha o painel lateral ou o modo apresentação.
+- **Atalhos:** `1`…`5` trocam de aba, `/` vai para a busca, `Esc` fecha o painel lateral.
 - O endereço da página guarda a **aba e os filtros** (copie e envie o link); as escolhas dos botões ficam lembradas no navegador.
-- **🖥 Apresentar** (esconde o cabeçalho e aumenta gráficos e fontes) e **📄 Executivo** (abre a impressão em A4 paisagem; escolha "Salvar como PDF").
+- **📄 Executivo** (abre a impressão em A4 paisagem; escolha "Salvar como PDF").
 
 ## Regras de cálculo
 
@@ -89,3 +92,4 @@ Os testes usam dados sintéticos (`tests/dados_sinteticos.py`) e rodam no GitHub
   dias e meses até religar, religou no mesmo mês, pós-corte (data, status, dias do corte ao pós, religou depois do pós), régua, permanência,
   situação e origem, economias, débitos, motivo e arquivo de origem.
 - O ⬇ da lista lateral (ao clicar num número) e o “Cortes filtrados (CSV)” da aba Dados usam as mesmas colunas.
+- Depois que a pasta termina de carregar, o cabeçalho fica limpo (sem a linha “Pasta… lidos às” nem “Detalhes da leitura”); essas informações ficam na aba Dados → Bases carregadas.

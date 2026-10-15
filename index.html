@@ -87,13 +87,39 @@ tr.fechado { display:none; }
 .sub button { border:0; background:#fff; color:var(--marinho); font:600 12.5px var(--fonte); padding:5px 14px; cursor:pointer; }
 .sub button + button { border-left:1px solid var(--line); }
 .sub button.ativo { background:var(--marinho); color:#fff; }
-.filtros-aba { padding:14px 18px 6px; }
-.linha-filtros { display:flex; flex-wrap:wrap; align-items:center; gap:8px 14px; margin-bottom:10px; }
+.filtros-aba { padding:12px 18px 10px; }
+.gf-topo { margin-bottom:6px; }
+.gf-titulo { font-size:11px; font-weight:700; letter-spacing:.4px; text-transform:uppercase; color:var(--azul-claro, #6b7d93); }
+.gf-linha { display:flex; flex-wrap:wrap; gap:10px 22px; align-items:flex-end; margin-top:8px; }
+.gf { display:flex; flex-direction:column; gap:4px; }
+.gf-larga { flex:1 1 100%; }
+.gf-rot { font-size:10.5px; font-weight:600; color:#6b7d93; }
+.gf-ctl { display:flex; flex-wrap:wrap; align-items:center; gap:6px 10px; }
+.filtros-aba .sub button { font-size:12px; padding:4px 11px; }
 .sub.multi { flex-wrap:wrap; }
-.sub.multi button { padding:5px 11px; }
-.sub.multi button.ativo { background:var(--ciano, #16a5b8); color:#fff; }
-.btn-just.atalho { font-size:11.5px; padding:4px 9px; }
-.aviso-filtro { background:#fff4e8; border-left:3px solid var(--laranja, #E8710A); padding:6px 10px; border-radius:4px; }
+.sub.multi button.ativo { background:#16a5b8; color:#fff; }
+.gf-atalhos { display:inline-flex; gap:10px; font-size:11.5px; }
+.link-atalho { border:0; background:none; padding:0; color:#176b9c; font:600 11.5px var(--fonte); cursor:pointer; text-decoration:underline; text-underline-offset:2px; }
+.link-atalho:hover { color:var(--marinho); }
+details.acc { border:1px solid var(--line); border-radius:10px; background:#fff; margin:10px 0 0; }
+details.acc > summary { list-style:none; cursor:pointer; padding:14px 18px; font-weight:700; font-size:14.5px; color:var(--marinho); display:flex; align-items:center; gap:10px; }
+details.acc > summary::-webkit-details-marker { display:none; }
+details.acc > summary::before { content:"▶"; font-size:10px; transition:transform .15s; color:var(--marinho); }
+details.acc[open] > summary::before { transform:rotate(90deg); }
+details.acc > summary:hover { background:#f6f9fc; border-radius:10px; }
+.acc-corpo { padding:2px 20px 16px 38px; font-size:13px; line-height:1.55; color:var(--ink); }
+.acc-corpo h3 { font-size:13px; margin:14px 0 4px; color:var(--marinho); text-transform:uppercase; letter-spacing:.3px; }
+.acc-corpo p { margin:4px 0 8px; }
+.acc-corpo ol.passos { margin:4px 0 8px; padding-left:20px; }
+.acc-corpo ol.passos li { margin:3px 0; }
+.acc-corpo ul.avisos { margin:4px 0; padding-left:18px; }
+.acc-corpo ul.avisos li { margin:4px 0; }
+.linha-botoes { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0 4px; }
+.btn-baixar { font-weight:600; }
+.acc-log summary { cursor:pointer; font-size:12px; color:#176b9c; margin-top:8px; }
+.acc-log pre { max-height:260px; overflow:auto; background:#f6f9fc; padding:8px; border-radius:6px; font-size:11px; white-space:pre-wrap; }
+.dados-topo { padding-bottom:16px; }
+.aviso-filtro { margin:10px 0 0; font-size:12px; background:#fff4e8; border-left:3px solid #E8710A; padding:5px 10px; border-radius:4px; color:#7a3d06; }
 
 /* botões e campos */
 .btn-just { padding:5px 12px; border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--marinho); font:600 12.5px var(--fonte); cursor:pointer; }
@@ -203,7 +229,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 <header class="top">
   <div class="top-linha">
     <div>
-      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v19</span></div>
+      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v20</span></div>
       <h1 id="titulo">Análise de Corte e Religação</h1>
     </div>
     <div class="filtros" id="filtros" hidden>
@@ -220,7 +246,6 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
       <button type="button" class="btn-top" id="btnConectar">📁 Conectar pasta</button>
       <a class="btn-top" href="https://raniere3000-tech.github.io/bookcomercial/">🏠 Menu</a>
       <button type="button" class="btn-top" id="btnAtualizar" disabled title="Relê a mesma pasta (Chrome e Edge)">↻ Atualizar</button>
-      <button type="button" class="btn-top" id="btnApresentar" hidden title="Esconde o cabeçalho e aumenta gráficos e fontes (Esc sai)">🖥 Apresentar</button>
       <button type="button" class="btn-top" id="btnPdf" hidden title="Abre a impressão: escolha “Salvar como PDF”">📄 Executivo</button>
       <input type="file" id="inputPasta" webkitdirectory directory multiple hidden>
     </div>
@@ -275,7 +300,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 
 <script>
 "use strict";
-const VERSAO_SITE = "v19-20261015";
+const VERSAO_SITE = "v20-20261015";
 
 // ===================== utilidades =====================
 const $ = (id) => document.getElementById(id);
@@ -394,7 +419,7 @@ function cartaoGraf(id, titulo, nota, controles = "", dica = "", rodape = "") {
     ${nota ? `<p class="nota-secao">${nota}</p>` : ""}<div class="graf"><canvas id="${id}" role="img" aria-label="${esc(titulo)}"></canvas></div>${rodape ? `<p class="dica">${rodape}</p>` : ""}</div>`;
 }
 function seletor(id, rotulo, opcoes, valor) {
-  return `<span class="rot-ctl">${esc(rotulo)}</span><span class="sub" role="group" aria-label="${esc(rotulo)}">${opcoes.map(([v, t]) =>
+  return `${rotulo ? `<span class="rot-ctl">${esc(rotulo)}</span>` : ""}<span class="sub" role="group" aria-label="${esc(rotulo)}">${opcoes.map(([v, t]) =>
     `<button type="button" data-ctl="${id}" data-val="${esc(v)}" class="${v === valor ? "ativo" : ""}" aria-pressed="${v === valor}">${esc(t)}</button>`).join("")}</span>`;
 }
 function kpis(lista) {
@@ -544,6 +569,7 @@ const barra = (label, data, cor, extra = {}) => ({ type: "bar", label, data, bac
 const setaVar = (v) => (v > 0 ? "▲ " : v < 0 ? "▼ " : "") + nf1.format(Math.abs(v) * 100) + "%";
 
 // ===================== estado =====================
+let LEITURA = null;                                           // pasta e hora da última leitura (mostradas na aba Dados)
 let DADOS = null, CORTES = [], SALDO = [], EVENTOS = [], R = null, HASH_PENDENTE = null, ULTIMO_MES = "";
 const CTL = Object.assign({ abertos: {}, medidaSaldo: "economias", posCruzada: "todos", modoCruzada: "qtd", sitPos: "CORTADA", reguaPos: null, mesesPos: null, visitaPos: "todas", colPos: "regua", posPerm: "todos", modoPerm: "qtd", metricaEf: "pRel" }, le("cortes_ctl", {}));
 Object.assign(CTL, { verTodos: false, ordem: null, busca: "" });
@@ -587,7 +613,7 @@ function carregaDados(d) {
     HASH_PENDENTE = null;
   }
   $("inicio").classList.remove("ativo"); $("inicio").hidden = true; $("esqueleto").hidden = true;
-  $("painel").hidden = false; $("filtros").hidden = false; $("nav").hidden = false; $("btnApresentar").hidden = false; $("btnPdf").hidden = false;
+  $("painel").hidden = false; $("filtros").hidden = false; $("nav").hidden = false; $("btnPdf").hidden = false;
   const erros = d.arquivos.filter((a) => a.tipo === "erro").length;
   aviso(erros ? `${erros} arquivo(s) não puderam ser lidos e ficaram de fora dos números. Veja o motivo na aba Dados, em “Arquivos da pasta”.` : "");
   desenha();
@@ -846,9 +872,9 @@ function abaCruzada({ f, cortes: todos, per }) {
 const COR_REGUA = (rg) => ({ [ROT_ATIVA_OS]: COR.cianCl, [rg.faixas[0].nome]: COR.laranjaCl, [rg.faixas[1].nome]: COR.laranja, [rg.faixas[2].nome]: COR.laranjaEsc, [rg.com_pos]: COR.ciano, [rg.religado_apos_pos]: COR.azulMed, [rg.religado]: COR.marinho });
 // filtro de vários itens (como o "(Vários itens)" da tabela dinâmica)
 function multiSel(id, rotulo, opcoes, marcados, atalhos = []) {
-  return `<span class="rot-ctl">${esc(rotulo)}</span><span class="sub multi" role="group" aria-label="${esc(rotulo)}">${opcoes.map(([v, t]) => {
+  return `${rotulo ? `<span class="rot-ctl">${esc(rotulo)}</span>` : ""}<span class="sub multi" role="group" aria-label="${esc(rotulo)}">${opcoes.map(([v, t]) => {
     const on = marcados.includes(v);
-    return `<button type="button" data-multi="${id}" data-val="${esc(v)}" class="${on ? "ativo" : ""}" aria-pressed="${on}">${on ? "✓ " : ""}${esc(t)}</button>`;
+    return `<button type="button" data-multi="${id}" data-val="${esc(v)}" class="${on ? "ativo" : ""}" aria-pressed="${on}">${esc(t)}</button>`;
   }).join("")}</span>${atalhos.map(([t, vals]) => `<button type="button" class="btn-just atalho" data-multi-set="${id}" data-vals="${esc(vals.join("|"))}">${esc(t)}</button>`).join("")}`;
 }
 function abaPos({ f, cortes: todos, per }) {
@@ -921,17 +947,25 @@ function abaPos({ f, cortes: todos, per }) {
     sitTela, ["Meses marcados na aba", () => (todosMeses ? "Todos" : mesesMarc.map(mesCurto).join(", "))], ["Régua marcada na aba", () => marc.map((r) => nomeCurto[r] || r).join(", ")], ["1ª visita filtrada", () => (CTL.visitaPos === "falha" ? "Só sem sucesso" : "Todas")]]);
   const verLista = regDet(`Clientes do filtro (${fmtN(cortes.length)})`, () => [...cortes].sort((a, b) => (b.dias_cortado ?? -1) - (a.dias_cortado ?? -1)), "cortes");
 
-  const filtros = `<div class="card filtros-aba"><div class="linha-filtros">
-      ${semCadastro ? `<span class="selo selo-atencao" title="Coloque a planilha de cadastro na pasta para separar CORTADA e ATIVA">sem cadastro: todas as situações</span>`
-        : seletor("sitPos", "Situação", [["CORTADA", "Cortada"], ["ATIVA", "Ativa"], [T.sem_cadastro, "Sem cadastro"], ["", "Todas"]], sit)}
-      ${seletor("visitaPos", "1ª visita", [["todas", "Todas"], ["falha", "Sem sucesso"]], CTL.visitaPos || "todas")}
-      ${seletor("colPos", "Colunas por", [["regua", "Régua"], ["tipo", "Tipo de corte"], ["cidade", "Cidade"], ["recurso", "Recurso"]], dim)}</div>
-    <div class="linha-filtros">${multiSel("mesesPos", "Meses do corte", mesesDisp.map((m) => [m, mesCurto(m)]), todosMeses ? mesesDisp : mesesMarc,
-      [["Todos", mesesDisp], ["Últimos 3", mesesDisp.slice(-3)], ["Último", mesesDisp.slice(-1)]])}</div>
-    <div class="linha-filtros">${multiSel("reguaPos", "Régua de cobrança", opReg.map((r) => [r, nomeCurto[r] || r]), marc,
-      [["Sem pós-corte", semPos], ["Com pós-corte", [rg.com_pos, rg.religado_apos_pos]], ["Todas", opReg]])}</div>
-    ${falha ? `<p class="nota-secao aviso-filtro"><b>1ª visita sem sucesso:</b> clientes cuja 1ª vistoria pós-corte foi <i>${esc(sucesso)}</i>. Eles tiveram visita, então a régua usa só os itens com pós-corte${soSemPos ? " (os itens “sem pós-corte” marcados não se aplicam aqui)" : ""}.</p>` : ""}
-    <p class="nota-secao">Padrão = a tabela dinâmica de “clientes sem a 1ª visita”: situação <b>CORTADA</b> e régua <b>sem pós-corte</b> (−7, 7 a 15 e +15 dias, contados até hoje, ${dataRot(DADOS.hoje)}). “1ª visita: Sem sucesso” mostra quem teve a 1ª vistoria <i>${esc(sucesso)}</i>.</p></div>`;
+  // filtros da aba, enxutos: rótulo em cima, botões menores, atalhos como links e a explicação no ⓘ
+  const grupo = (rot, html, larga) => `<div class="gf${larga ? " gf-larga" : ""}"><span class="gf-rot">${esc(rot)}</span><div class="gf-ctl">${html}</div></div>`;
+  const opcoesSub = (id, ops, valor) => seletor(id, "", ops, valor);
+  const atalhos = (id, lista) => `<span class="gf-atalhos">${lista.map(([t, vals]) => `<button type="button" class="link-atalho" data-multi-set="${id}" data-vals="${esc(vals.join("|"))}">${esc(t)}</button>`).join("")}</span>`;
+  const dicaFiltros = `Padrão = tabela dinâmica de “clientes sem a 1ª visita”: situação CORTADA e régua sem pós-corte (−7, 7 a 15 e +15 dias cortado, contados até hoje, ${dataRot(DADOS.hoje)}). 1ª visita “Sem sucesso” = 1ª vistoria ${sucesso}. Clique num item para marcar ou desmarcar.`;
+  const filtros = `<div class="card filtros-aba"><div class="gf-topo"><span class="gf-titulo">Filtros da aba${ajuda(dicaFiltros)}</span></div>
+    <div class="gf-linha">
+      ${grupo("Situação", semCadastro ? `<span class="selo selo-atencao" title="Coloque a planilha de cadastro na pasta para separar CORTADA e ATIVA">sem cadastro</span>`
+        : opcoesSub("sitPos", [["CORTADA", "Cortada"], ["ATIVA", "Ativa"], [T.sem_cadastro, "Sem cadastro"], ["", "Todas"]], sit))}
+      ${grupo("1ª visita", opcoesSub("visitaPos", [["todas", "Todas"], ["falha", "Sem sucesso"]], CTL.visitaPos || "todas"))}
+      ${grupo("Colunas por", opcoesSub("colPos", [["regua", "Régua"], ["tipo", "Tipo"], ["cidade", "Cidade"], ["recurso", "Recurso"]], dim))}
+    </div>
+    <div class="gf-linha">
+      ${grupo("Meses do corte", multiSel("mesesPos", "", mesesDisp.map((m) => [m, mesCurto(m)]), todosMeses ? mesesDisp : mesesMarc) + atalhos("mesesPos", [["Todos", mesesDisp], ["Últimos 3", mesesDisp.slice(-3)], ["Último", mesesDisp.slice(-1)]]), true)}
+    </div>
+    <div class="gf-linha">
+      ${grupo("Régua de cobrança", multiSel("reguaPos", "", opReg.map((r) => [r, nomeCurto[r] || r]), marc) + atalhos("reguaPos", [["Sem pós-corte", semPos], ["Com pós-corte", [rg.com_pos, rg.religado_apos_pos]], ["Todas", opReg]]), true)}
+    </div>
+    ${falha ? `<p class="aviso-filtro">1ª visita sem sucesso: a régua usa só os itens com visita${soSemPos ? " (os itens sem pós-corte não se aplicam)" : ""}.</p>` : ""}</div>`;
 
   const perTit = todosMeses ? per : (mesesMarc.length > 4 ? `${mesesMarc.length} meses` : mesesMarc.map(mesCurto).join(", "));
   const titulo = ehPadrao ? "Clientes sem a 1ª visita" : (falha ? "Clientes com a 1ª visita sem sucesso" : "Clientes do filtro");
@@ -1011,25 +1045,137 @@ function abaPermanencia({ f, cortes: todos, per }) {
 }
 
 // ===================== aba Dados =====================
+// tópicos que abrem e fecham; cada página do painel com o cálculo passo a passo e o ⬇ do analítico
+const ABERTOS_DADOS = new Set(le("cortes_dados_abertos", []));
+function topico(id, titulo, corpo) {
+  return `<details class="acc" data-top="${id}"${ABERTOS_DADOS.has(id) ? " open" : ""}><summary>${titulo}</summary><div class="acc-corpo">${corpo}</div></details>`;
+}
+const btnAnalitico = (id, aba, nome, rot) => `<button type="button" class="btn-just btn-baixar" data-csv="${id}" data-aba="${aba}" data-nome="${esc(nome)}" title="Baixa em CSV as linhas usadas, com os filtros atuais">⬇ ${esc(rot)}</button>`;
 function abaDados() {
+  const f = CTX.f, T = R.textos, rg = R.regua, P = R.permanencia, S = R.status, C = R.categorias, cortes = CTX.cortes;
+  const filtrosTxt = [CTX.per, f.sup && "Sup " + f.sup, f.cidade, f.recurso, f.tipo, f.ativas && "Ativas = religadas"].filter(Boolean).join(" · ") || "sem filtros";
+
+  // avisos
+  const avisos = [];
+  const erros = DADOS.arquivos.filter((a) => a.tipo === "erro"), naoUsados = DADOS.arquivos.filter((a) => a.tipo === "não usado");
+  if (erros.length) avisos.push(`<b>${erros.length}</b> arquivo(s) com erro de leitura ficaram de fora dos números: ${erros.slice(0, 5).map((a) => esc(a.arquivo)).join(", ")}${erros.length > 5 ? "…" : ""}. O motivo está em “Bases carregadas”.`);
+  if (naoUsados.length) avisos.push(`<b>${naoUsados.length}</b> arquivo(s) da pasta não foram reconhecidos (não são atividades, religação LISC, cadastro nem catálogo) — veja o motivo em “Bases carregadas”.`);
+  if (DADOS.nao_classificados.length) avisos.push(`<b>${DADOS.nao_classificados.length}</b> serviço(s) com cara de corte/religação estão fora do catálogo e não entram no painel — lista em “Classificação dos serviços”.`);
+  for (const [k, v] of Object.entries(DADOS.info)) {
+    if (/fora da lista de Sup/.test(k) && v && v !== "nenhuma") avisos.push(`Cidades sem Sup (ficam em “Sem Sup”): ${esc(v)}.`);
+    if (/cidades que não estão nas atividades/.test(k) && v) avisos.push(`<b>${fmtN(v)}</b> linha(s) das planilhas LISC/autoreligação são de cidades fora das atividades e não contam.`);
+    if (k === "Cortes sem cadastro" && v) avisos.push(`<b>${fmtN(v)}</b> corte(s) sem a matrícula no cadastro: situação “${esc(T.sem_cadastro)}” e 1 economia.`);
+  }
+  if (!analiseNoWorker) avisos.push("O painel está mostrando a última leitura guardada; a pasta está sendo lida de novo.");
+
+  // conferência rápida com os filtros atuais
+  const ev = SALDO.filter((s) => (!f.de || s.mes >= f.de) && (!f.ate || s.mes <= f.ate) && bateLocal(s, f) && (!f.recurso || s.recurso === f.recurso));
+  const somaCat = (cat, k) => soma(ev.filter((s) => s.categoria === cat).map((s) => s[k]));
+  const ativasOs = f.ativas ? cortesBase().filter((c) => c.ativa_os && (!f.de || c.mes >= f.de) && (!f.ate || c.mes <= f.ate) && bateLocal(c, f) && (!f.recurso || c.recurso === f.recurso)) : [];
+  const ecoAtiva = soma(ativasOs.map((c) => c.economias || 0));
+  const saldoEco = -somaCat(C.corte, "economias") + somaCat(C.religacao, "economias") + somaCat(C.implantacao, "economias") + ecoAtiva;
+  const semPosN = cortes.filter((c) => c.situacao === "CORTADA" && rg.faixas.some((x) => x.nome === c.regua)).length;
+  const conf = [
+    ["Saldo de economias", "Cortes (economias)", fmtN(somaCat(C.corte, "economias")), "Analítico do saldo: some “Economias” das linhas “(−) Corte”."],
+    ["Saldo de economias", "Religações (economias)", fmtN(somaCat(C.religacao, "economias") + ecoAtiva), "Some “Economias” das linhas “(+) Religação”" + (f.ativas ? " e “(+) Ativa sem OS”." : ".")],
+    ["Saldo de economias", "Implantações (economias)", fmtN(somaCat(C.implantacao, "economias")), "Some “Economias” das linhas “(+) Implantação”."],
+    ["Saldo de economias", "Saldo do período", fmtN(saldoEco), "Some a coluna “Economias com sinal”."],
+    ["Corte × Religação", "Cortes no período", fmtN(cortes.length), "Conte as linhas do analítico da referência cruzada."],
+    ["Corte × Religação", "Religados com OS", fmtN(cortes.filter((c) => c.data_religacao).length), "Conte “Data da religação” preenchida."],
+    ["Corte × Religação", "Ativa (sem OS)", fmtN(cortes.filter((c) => c.mes_religacao === T.ativa).length), "Conte “Coluna da referência cruzada” = Ativa."],
+    ["Corte × Religação", "Sem religação", fmtN(cortes.filter((c) => c.mes_religacao === T.sem_religacao).length), "Conte “Coluna da referência cruzada” = Sem Religação."],
+    ["Pós-corte", "Cortados sem a 1ª visita (CORTADA)", fmtN(semPosN), "Analítico do pós-corte no padrão: conte as linhas."],
+    ["Permanência", "% religado", cortes.length ? fmtP((cortes.filter((c) => c.data_religacao).length + (f.ativas ? cortes.filter((c) => c.ativa_os).length : 0)) / cortes.length) : "-", "“Conta como religado” = Sim ÷ total de linhas (analítico de eficácia)."],
+  ];
+  const tabConf = `<div class="tabela-wrap"><table><thead><tr><th>Página</th><th>Indicador</th><th>Valor</th><th>Como conferir</th></tr></thead><tbody>${conf.map((r) => `<tr><td class="txt">${esc(r[0])}</td><td class="txt">${esc(r[1])}</td><td class="num"><b>${r[2]}</b></td><td class="txt">${esc(r[3])}</td></tr>`).join("")}</tbody></table></div>`;
+
   const info = Object.entries(DADOS.info).map(([k, v]) => ({ celulas: [k, txt(typeof v === "number" ? fmtN(v) : v)] }));
-  let html = `<div class="card"><div class="card-topo"><h2>Bases para conferir</h2>
-    <div class="acoes"><button type="button" class="btn-just" id="btnExcel">⬇ Base calculada (Excel)</button><button type="button" class="btn-just" id="btnCsvCortes">⬇ Cortes filtrados (CSV)</button></div></div>
-    <p class="nota-secao">Se algum arquivo ficar com erro de “leitura guardada”, use <button type="button" class="btn-just" id="btnLimparCache" title="Apaga as leituras guardadas neste navegador; a próxima análise lê todos os arquivos de novo">Limpar leituras guardadas</button>.</p>
-    <p class="nota-secao">A planilha calculada tem a base de cortes (todas as colunas usadas nas abas), os eventos do saldo, os arquivos lidos e os parâmetros. O CSV traz só os cortes dos filtros atuais, com toda a classificação. Em qualquer aba, o ⬇ de cada tabela baixa o <b>analítico</b>: uma linha por corte ou OS usada nela, com as colunas “Linha”/“Coluna” dizendo onde cada uma foi contada (dá para conferir com uma tabela dinâmica). Clicar num número abre as matrículas por trás dele, também com ⬇.</p></div>`;
-  html += cartao("Parâmetros da análise", "", tabela("info", ["Parâmetro", "Valor"], info, { semOrd: true }), "info");
-  html += cartao("Arquivos da pasta", "Atividades, cadastro e catálogo são reconhecidos sozinhos; os demais aparecem como “não usado”. Arquivo com erro mostra o motivo.",
-    tabela("arquivos", ["Arquivo", "Tipo", "Linhas", "Observação"], DADOS.arquivos.map((a) => ({ celulas: [a.arquivo, a.tipo === "erro" ? { v: "erro", txt: "erro", selo: "atencao" } : txt({ religacao_lisc: "religação LISC" }[a.tipo] || a.tipo), a.linhas, txt(a.obs)] })), { longa: true }), "arquivos");
   const st = linhasDe(DADOS.status);
-  html += cartao("Atividades por categoria e status", "Todas as atividades das categorias do painel, antes de filtrar o status.",
-    tabela("status", ["Categoria", "Status", "Atividades"], st.map((s) => ({ celulas: [s.categoria, txt(s.status), s.qtd] }))), "status");
-  if (DADOS.nao_classificados.length) html += cartao("Serviços com cara de corte/religação fora do catálogo",
-    "Estes serviços não estão no catálogo e por isso não entram no painel. Se algum deveria entrar, inclua o código na planilha Descrição serviço.",
-    tabela("naoClass", ["Código/Descrição", "Atividades"], DADOS.nao_classificados.map((s) => ({ celulas: [s.servico, s.qtd] }))), "naoClass");
-  html += explicacao();
+  const log = ($("log") && $("log").textContent.trim()) || "";
+  const lido = LEITURA ? `<p>Pasta <b>${esc(LEITURA.pasta)}</b> — ${fmtN(LEITURA.n)} arquivo(s) usados, lidos em ${esc(LEITURA.hora)}.</p>` : (pastaNome ? `<p>Pasta <b>${esc(pastaNome)}</b>.</p>` : "");
+  const listaPassos = (l) => `<ol class="passos">${l.map((x) => `<li>${x}</li>`).join("")}</ol>`;
+  const bloco = (titulo, html) => `<h3>${titulo}</h3>${html}`;
+
+  let html = `<div class="card dados-topo"><div class="card-topo"><h2>Dados e validação dos cálculos</h2></div>
+    <p class="nota-secao">Clique num tópico para abrir. De 1 a 4, cada página do painel: o que mostra, quais bases e colunas entram, o cálculo passo a passo e o <b>⬇</b> para baixar o analítico (uma linha por corte ou OS, com as colunas que dizem onde cada uma foi contada). Filtros atuais: <b>${esc(filtrosTxt)}</b>.</p>`;
+
+  html += topico("avisos", `Avisos (${avisos.length})`, avisos.length ? `<ul class="avisos">${avisos.map((a) => `<li>${a}</li>`).join("")}</ul>` : "<p>Nenhum aviso: todos os arquivos foram lidos e classificados.</p>");
+  html += topico("conferencia", "Conferência rápida — filtros atuais", `<p>Os números principais de cada página com os filtros de agora, e como chegar neles pelo analítico.</p>${tabConf}`);
+  html += topico("bases", "Bases carregadas", lido + `<p>Atividades, religação LISC/autoreligação, cadastro e catálogo são reconhecidos sozinhos (pelo nome “Atividades-” ou pelas colunas); os demais aparecem como “não usado”, com o motivo.</p>`
+    + tabela("arquivos", ["Arquivo", "Tipo", "Linhas", "Observação"], DADOS.arquivos.map((a) => ({ celulas: [a.arquivo, a.tipo === "erro" ? { v: "erro", txt: "erro", selo: "atencao" } : txt({ religacao_lisc: "religação LISC" }[a.tipo] || a.tipo), a.linhas, txt(a.obs)] })), { longa: true })
+    + `<div class="linha-botoes">${botaoTxt("arquivos", "Arquivos da pasta", "⬇ Lista de arquivos (CSV)")}</div>`
+    + (log ? `<details class="acc-log"><summary>Detalhes técnicos da leitura</summary><pre>${esc(log)}</pre></details>` : ""));
+  html += topico("parametros", "Parâmetros e contagens da leitura", tabela("info", ["Parâmetro", "Valor"], info, { semOrd: true }) + `<div class="linha-botoes">${botaoTxt("info", "Parametros da analise", "⬇ Parâmetros (CSV)")}</div>`);
+  html += topico("classificacao", "Classificação dos serviços", `<p>Cada atividade recebe <b>categoria</b> e <b>tipo</b>:</p>` + listaPassos([
+    `O código do serviço (números do início de <code>Código/Descrição</code>) é procurado no catálogo (<i>Descrição serviço</i>; sem a planilha, o catálogo padrão do painel). Sem código, vale a descrição.`,
+    `Categorias usadas: ${Object.values(C).map(esc).join(", ")}. Serviço fora delas não entra.`,
+    `O <b>tipo</b> sai da descrição: ${R.tipos.ordem.map(([t, n]) => `“${esc(t)}” → ${esc(n)}`).join("; ")}; sem nenhum, ${esc(R.tipos.outros)}. “AUTO RELIGAÇÃO” com espaço ou hífen = AUTORELIGAÇÃO.`,
+    `Só contam OS <b>${esc(S.finalizada)}</b> (no pós-corte também <i>${esc(S.pos_corte_sem_sucesso)}</i>). A mesma OS (<i>ID da Atividade</i>) em mais de um arquivo conta uma vez — vale a Finalizada e, depois, a mais recente.`,
+    `<b>Religação LISC / autoreligação</b> (planilhas separadas, reconhecidas pelas colunas Matrícula, Serviço Executado e Dt. Execução, aceitando variações dos nomes): cada linha com data de execução é uma religação Finalizada nessa data. Fora do catálogo, conta como religação se tiver “RELIG” no serviço; sem tipo no serviço, vale o tipo do nome do arquivo (ex.: Autoreligação.xlsx) ou LISC. Só valem as cidades que aparecem nas atividades (ou matrículas que têm atividade).`,
+    `<b>Cidades e Sup</b>: nomes parecidos (acento, pontuação, abreviação como “S.FCO.DO ITABAPOANA” = “São Francisco de Itabapoana”, sufixos “- A”) viram um só; a Sup vem da lista em <code>regras.json</code> → <code>supervisao</code>.`,
+  ]) + `<p>Atividades por categoria e status (antes de filtrar o status):</p>` + tabela("status", ["Categoria", "Status", "Atividades"], st.map((x) => ({ celulas: [x.categoria, txt(x.status), x.qtd] })))
+    + (DADOS.nao_classificados.length ? `<p>Serviços com cara de corte/religação fora do catálogo (não entram; inclua o código na planilha Descrição serviço se deveriam entrar):</p>` + tabela("naoClass", ["Código/Descrição", "Atividades"], DADOS.nao_classificados.map((x) => ({ celulas: [x.servico, x.qtd] }))) : ""));
+  html += topico("downloads", "Bases para download", `<p>Arquivos completos para conferir fora do painel.</p><div class="linha-botoes">
+      <button type="button" class="btn-just btn-baixar" id="btnExcel">⬇ Base calculada (Excel)</button>
+      <button type="button" class="btn-just btn-baixar" id="btnCsvCortes">⬇ Cortes filtrados (CSV)</button>
+      <button type="button" class="btn-just btn-baixar" id="btnCsvEventos">⬇ Eventos do saldo filtrados (CSV)</button></div>
+    <p class="nota-secao">A base calculada (Excel) tem todos os cortes com todas as colunas, os eventos do saldo, os arquivos lidos e os parâmetros (sem filtros). Os CSV respeitam os filtros atuais. Se algum arquivo ficar com erro de “leitura guardada”, use <button type="button" class="btn-just" id="btnLimparCache">Limpar leituras guardadas</button>.</p>`);
+
+  // 1. Saldo
+  html += topico("p1", "1. Saldo de economias", bloco("O que mostra", `<p>Mês a mês, quantas economias saíram (cortes) e voltaram (religações e implantações de ligação de água), o saldo do mês e o acumulado. A tabela abre Corte e Religação por tipo.</p>`)
+    + bloco("Bases e colunas", `<p>Atividades e planilhas LISC (<code>Código/Descrição</code>, <code>Data</code>, <code>Status da Atividade</code>, <code>Matrícula</code>, <code>Cidade</code>, <code>Recurso</code>) + cadastro (<code>NUM_LIGACAO</code>, <code>REFERENCIA</code>, <code>TOTAL_ECO</code>, <code>CIDADE</code>).</p>`)
+    + bloco("Cálculo passo a passo", listaPassos([
+      `Pega as OS <b>${esc(S.finalizada)}</b> das categorias ${esc(C.corte)}, ${esc(C.religacao)} e ${esc(C.implantacao)}.`,
+      `Cada matrícula conta <b>uma vez por dia e categoria</b> (OS principal + LISC no mesmo dia = 1).`,
+      `Economias = <code>TOTAL_ECO</code> do cadastro do <b>mês da OS</b>; sem esse mês, a referência mais recente; matrícula fora do cadastro conta <b>1</b>.`,
+      `Sinal: corte <b>−</b>, religação <b>+</b>, implantação <b>+</b>. Saldo do mês = −corte + religação + implantação; acumulado = soma dos meses até ali.`,
+      `Com “Ativas = religadas”: os cortes sem OS de religação cuja ligação está ATIVA (ou que foram cortados de novo) entram como <b>+ religação no mês do corte</b>.`,
+      `Filtros: período, Sup, cidade e recurso. O tipo de corte não filtra esta página (a abertura por tipo já está nas linhas).`]))
+    + bloco("Como conferir", `<p>No analítico, cada linha é uma OS. Faça uma tabela dinâmica com <i>Linha da tabela</i> nas linhas, <i>Coluna (mês)</i> nas colunas e soma de <i>Economias com sinal</i> (ou <i>Ligações com sinal</i> para a medida Ligações).</p>`)
+    + `<div class="linha-botoes">${btnAnalitico("saldo", "saldo", "Saldo de economias", "Analítico do saldo (CSV)")}</div>`);
+
+  // 2. Corte × Religação
+  html += topico("p2", "2. Corte × Religação", bloco("O que mostra", `<p>Para cada mês de corte, em que mês os clientes religaram (referência cruzada), quantos estão ativos sem OS e quantos seguem sem religação; e a velocidade de religação de cada mês.</p>`)
+    + bloco("Bases e colunas", `<p>Base de cortes (atividades de corte Finalizadas) + religações (atividades e LISC) + vistorias pós-corte + cadastro (<code>SIT_LIG</code>).</p>`)
+    + bloco("Cálculo passo a passo", listaPassos([
+      `Um <b>corte</b> = matrícula + data (OS de corte ${esc(S.finalizada)}). Dois cortes no mesmo dia contam um; o tipo segue a prioridade ${esc(R.tipos.prioridade_mesmo_dia.join(" > "))}.`,
+      `<b>Religação do corte</b> = a 1ª OS de religação ${esc(S.finalizada)} no dia do corte ou depois e até o dia do próximo corte da mesma matrícula. Religação no mesmo dia de um novo corte fica com o corte anterior; cada religação vale para um corte só.`,
+      `Linha = mês do corte; coluna = mês da religação.`,
+      `Sem religação: <b>${esc(T.ativa)}</b> quando o cadastro mostra a ligação ATIVA e este é o último corte da matrícula; senão <b>${esc(T.sem_religacao)}</b>. Com “Ativas = religadas”, o corte sem OS que está ATIVO ou foi cortado de novo vai para ${esc(T.ativa)} e nunca para ${esc(T.sem_religacao)}.`,
+      `% religado = (religados com OS${f.ativas ? " + ativas sem OS" : ""}) ÷ cortes da linha.`,
+      `Gráfico de destino: religou no mesmo mês do corte, nos meses seguintes, ativa sem OS ou sem religação. Velocidade: % acumulado de religados até cada mês depois do corte (só até o mês atual).`]))
+    + bloco("Como conferir", `<p>Tabela dinâmica com <i>Linha: mês do corte</i> nas linhas e <i>Coluna: mês da religação</i> nas colunas, contando <i>Matrícula</i>. A coluna <i>Destino (gráfico)</i> refaz o gráfico.</p>`)
+    + `<div class="linha-botoes">${btnAnalitico("cruzada", "cruzada", "Corte x Religacao", "Analítico da referência cruzada (CSV)")}</div>`);
+
+  // 3. Pós-corte
+  html += topico("p3", "3. Pós-corte", bloco("O que mostra", `<p>Os cortados sem a 1ª visita pós-corte (como a tabela dinâmica), por mês do corte e régua de cobrança, com filtros de situação, meses, régua e 1ª visita.</p>`)
+    + bloco("Bases e colunas", `<p>Base de cortes + vistorias pós-corte (status ${esc(S.pos_corte_aceitos.join(" ou "))}) + cadastro (<code>SIT_LIG</code>).</p>`)
+    + bloco("Cálculo passo a passo", listaPassos([
+      `<b>1ª visita pós-corte</b> = a 1ª vistoria pós-corte depois do corte e antes do próximo corte. Se ela foi <i>${esc(S.pos_corte_sem_sucesso)}</i>, é “1ª visita sem sucesso”.`,
+      `<b>Régua de cobrança</b>: religou → <b>${esc(rg.religado_apos_pos)}</b> (religação no dia do pós-corte ou depois) ou <b>${esc(rg.religado)}</b>; não religou e teve pós-corte → <b>${esc(rg.com_pos)}</b>; não religou e sem pós-corte → dias cortado = hoje (${dataRot(DADOS.hoje)}) − data do corte: ${rg.faixas.map((x) => `<b>${esc(x.nome)}</b>${x.ate != null ? ` (até ${x.ate} dias)` : " (acima)"}`).join(", ")}.`,
+      `<b>Situação</b> = <code>SIT_LIG</code> do cadastro mais recente da matrícula, se ele for do mês do corte ou depois; com cadastro mais antigo, é calculada (ATIVA se religou, senão CORTADA).`,
+      `Padrão da página = situação <b>CORTADA</b> + régua <b>sem pós-corte</b> (os 3 itens de dias): é a tabela “clientes sem a 1ª visita”. Os filtros da aba mudam o recorte; linhas = mês do corte, colunas = o campo escolhido em “Colunas por”.`,
+      `“1ª visita: Sem sucesso” mostra só quem teve a 1ª vistoria ${esc(S.pos_corte_sem_sucesso)} — a régua passa a usar os itens com visita.`]))
+    + bloco("Como conferir", `<p>Tabela dinâmica com <i>Linha: mês do corte</i> nas linhas e a coluna <i>Coluna: …</i> nas colunas, contando <i>Matrícula</i>. O analítico sai com os filtros da aba (situação, meses, régua, 1ª visita) — eles aparecem nas colunas do arquivo.</p>`)
+    + `<div class="linha-botoes">${btnAnalitico("posTabela", "pos", "Pos-corte", "Analítico do pós-corte (CSV)")}</div>`);
+
+  // 4. Permanência
+  html += topico("p4", "4. Permanência", bloco("O que mostra", `<p>Quanto tempo cada tipo de corte fica até a religação (faixas de dias) e se o pós-corte ajuda: % religado, % religado até ${P.faixas[0].ate} dias e mediana de dias, com × sem pós-corte.</p>`)
+    + bloco("Bases e colunas", `<p>Base de cortes com a religação e o pós-corte já ligados (ver página 2 e 3).</p>`)
+    + bloco("Cálculo passo a passo", listaPassos([
+      `Dias = data da religação − data do corte (religação no mesmo dia = 0).`,
+      `Faixas: ${P.faixas.map((x) => `${esc(x.nome)}${x.ate != null ? ` (até ${x.ate})` : ""}`).join(", ")}; sem religação: ${esc(P.sem_religacao)}${f.ativas ? `; ativas sem OS: ${esc(ROT_PERM_ATIVA)}` : ""}.`,
+      `% religado = cortes com religação${f.ativas ? " (e ativas sem OS)" : ""} ÷ cortes do tipo. % até ${P.faixas[0].ate} dias = religações em até ${P.faixas[0].ate} dias ÷ cortes. Mediana = dias do meio, só de quem religou com OS.`,
+      `Com × sem pós-corte: separa os cortes que tiveram 1ª visita pós-corte. Atenção: cortes recentes tiveram pouco tempo para religar — compare meses fechados.`]))
+    + bloco("Como conferir", `<p>Permanência: <i>Linha: tipo de corte</i> × <i>Coluna: faixa de permanência</i>, contando <i>Matrícula</i>. Eficácia: filtre <i>Grupo: com/sem pós-corte</i> e conte “Sim” em <i>Conta como religado</i> e <i>Religou até ${P.faixas[0].ate} dias</i>; a mediana usa <i>Dias até religar</i> onde <i>Entra na mediana</i> = Sim.</p>`)
+    + `<div class="linha-botoes">${btnAnalitico("perm", "perm", "Permanencia por tipo e faixa", "Analítico da permanência (CSV)")}${btnAnalitico("eficacia", "perm", "Eficacia com x sem pos-corte", "Analítico da eficácia (CSV)")}</div>`);
+
+  html += topico("atalhos", "Atalhos e link", `<p><kbd>1</kbd>…<kbd>5</kbd> trocam de aba · <kbd>Esc</kbd> fecha o painel lateral. O endereço da página guarda a aba e os filtros: copie e envie o link. As regras ficam em <code>cortes/regras.json</code>.</p>`);
+  html += `</div>`;
   MEM.dados = {};
   return html;
 }
+const botaoTxt = (id, nome, rot) => `<button type="button" class="btn-just btn-baixar" data-csv="${id}" data-nome="${esc(nome)}">${esc(rot)}</button>`;
 function ligaDados() {
   const b = $("btnExcel"); if (!b) return;
   b.onclick = () => {
@@ -1037,39 +1183,15 @@ function ligaDados() {
     b.disabled = true; mostraProgresso("Gerando a planilha…"); worker.postMessage({ fase: "excel" });
   };
   $("btnLimparCache").onclick = () => { if (!confirm("Apagar as leituras guardadas neste navegador? A próxima análise vai ler todos os arquivos de novo.")) return; if (!worker) novoWorker(); worker.postMessage({ fase: "limparCache" }); };
-  $("btnCsvCortes").onclick = () => {
-    const a = analiticoCortes(CTX.cortes);
-    baixaCsv(a.cabecalho, a.linhas, "Cortes filtrados - analitico");
+  $("btnCsvCortes").onclick = () => { const a = analiticoCortes(CTX.cortes); baixaCsv(a.cabecalho, a.linhas, "Cortes filtrados - analitico"); };
+  $("btnCsvEventos").onclick = () => {
+    const f = CTX.f, l = EVENTOS.filter((e) => (!f.de || e.mes >= f.de) && (!f.ate || e.mes <= f.ate) && bateLocal(e, f) && (!f.recurso || e.recurso === f.recurso));
+    const a = analiticoEventos(l); baixaCsv(a.cabecalho, a.linhas, "Eventos do saldo filtrados - analitico");
   };
-}
-function explicacao() {
-  const rg = R.regua, P = R.permanencia, S = R.status;
-  return `<div class="card explica"><div class="card-topo"><h2>Como cada número é calculado</h2></div>
-  <h3>Classificação das atividades</h3>
-  <p>O código do serviço (números do início de <code>Código/Descrição</code>) é procurado no catálogo (<i>Descrição serviço</i>); sem código, vale a descrição. Categorias usadas: ${Object.values(R.categorias).map(esc).join(", ")}.
-  O tipo (CAVALETE, LISC, RAMAL, REDE…) sai da descrição do serviço. Atividade repetida em mais de um arquivo (mesmo <i>ID da Atividade</i>) conta uma vez.</p>
-  <h3>Religação LISC (planilhas separadas)</h3>
-  <p>Planilha com as colunas <code>Matrícula</code>, <code>Serviço Executado</code> e <code>Dt. Execução</code> (o título acima do cabeçalho é ignorado). Cada O.S. com Dt. Execução vira uma religação Finalizada nessa data; serviço fora do catálogo conta como religação quando tem “RELIGA” no nome, e sem tipo no nome vale LISC. A mesma O.S. (Nº/Ano) em mais de um arquivo e a mesma religação já presente nas atividades (mesma matrícula e dia) contam uma vez. Cidade = <code>Nome da Localidade</code>; recurso = <code>Executor</code>. <b>Só valem as cidades que aparecem nos arquivos de atividades</b> ou matrículas que têm atividade; as demais linhas ficam de fora e aparecem contadas nos parâmetros acima.</p>
-  <p><b>Sup e cidades.</b> Cada cidade pertence a uma Sup (Leste ou Interior), conforme a lista em <code>cortes/regras.json</code> (<code>supervisao</code>). Nomes parecidos da mesma cidade nas atividades, na LISC e no cadastro (“São Francisco de Itabapoana” = “S.FCO.DO ITABAPOANA”, “RIO DE JANEIRO - A” = “RIO DE JANEIRO”, com ou sem acento) viram um nome só. Cidade fora da lista fica em “Sem Sup”; os nomes juntados e as cidades sem Sup aparecem nos parâmetros acima.</p>
-  <h3>Base de cortes</h3>
-  <ul><li>Uma linha por matrícula e data, só OS de corte <b>${esc(S.finalizada)}</b>. Dois cortes no mesmo dia (ex.: OS principal + LISC) contam um; o tipo segue a prioridade ${esc(R.tipos.prioridade_mesmo_dia.join(" > "))}.</li>
-  <li><b>Religação</b>: 1ª OS de religação ${esc(S.finalizada)} no dia do corte ou depois, e até o dia do próximo corte da mesma matrícula (religação no mesmo dia de um novo corte fica com o corte anterior). Cada religação vale para um corte só.</li>
-  <li><b>Pós-corte</b>: 1ª vistoria pós-corte (${esc(S.pos_corte_aceitos.join(" ou "))}) na mesma janela. Se ela foi <i>${esc(S.pos_corte_sem_sucesso)}</i>, a observação mostra que a visita foi sem sucesso, e a coluna <i>Data 1º pós corte Finalizado</i> mostra se houve uma visita com sucesso depois.</li>
-  <li><b>Situação</b> e <b>economias</b>: da planilha de cadastro (<code>SIT_LIG</code>, <code>TOTAL_ECO</code>), referência mais recente da matrícula. A situação só vale se essa referência for do mês do corte ou depois; com cadastro mais antigo que o corte, ela é calculada (ATIVA se houve religação, senão CORTADA) — coluna <i>Origem da situação</i> na planilha calculada. Matrículas são comparadas sem zeros à esquerda.</li>
-  <li><b>Mês da religação</b>: o mês da religação; sem religação, <b>Ativa</b> quando o cadastro mostra a ligação ATIVA e este é o último corte da matrícula, senão <b>Sem Religação</b>.</li></ul>
-  <h3>Filtro “Ativas = religadas”</h3>
-  <p>Desligado (padrão): corte sem OS de religação é “Sem Religação”, mesmo que a ligação esteja ATIVA no cadastro (aparece na coluna <b>Ativa</b>). Ligado: o corte sem OS de religação cuja ligação está ATIVA no cadastro, <b>ou que foi seguido de outro corte da mesma matrícula</b> (para ser cortada de novo, a ligação foi religada no meio), passa a contar como <b>religado sem OS</b> em todas as abas, na coluna <b>Ativa</b> e nunca em “Sem Religação” — fica fora de “sem a 1ª visita” e de “sem religação”, entra no % religado, na régua (<b>${esc(ROT_ATIVA_OS)}</b>), na permanência (<b>${esc(ROT_PERM_ATIVA)}</b>) e, no saldo, como religação no mês do corte. Como não há data de religação, esses casos não entram nos cálculos de dias nem na mediana.</p>
-  <h3>Régua de cobrança</h3>
-  <ul><li>Religou: <b>${esc(rg.religado_apos_pos)}</b> se a religação foi no dia do pós-corte ou depois; senão <b>${esc(rg.religado)}</b>.</li>
-  <li>Não religou e teve pós-corte: <b>${esc(rg.com_pos)}</b>.</li>
-  <li>Não religou e sem pós-corte: dias cortado = hoje (${dataRot(DADOS.hoje)}) − data do corte → ${rg.faixas.map((f) => `<b>${esc(f.nome)}</b>${f.ate != null ? ` (até ${f.ate} dias)` : ""}`).join(", ")}.</li></ul>
-  <h3>Permanência</h3>
-  <p>Dias = data da religação − data do corte. Faixas: ${P.faixas.map((f) => `${esc(f.nome)}${f.ate != null ? ` (até ${f.ate})` : ""}`).join(", ")}; sem religação: ${esc(P.sem_religacao)}.</p>
-  <h3>Saldo de economias</h3>
-  <p>Saldo do mês = −corte + religação + implantação de ligação de água, só OS ${esc(S.finalizada)}, uma vez por matrícula, dia e categoria. As economias vêm do cadastro do mesmo mês da OS; sem esse mês, do mais recente; sem cadastro, 1.</p>
-  <h3>Atalhos</h3>
-  <p><kbd>1</kbd>…<kbd>5</kbd> trocam de aba · <kbd>/</kbd> vai para o filtro da lista · <kbd>Esc</kbd> fecha o painel lateral ou o modo apresentação. O endereço da página guarda a aba e os filtros: copie e envie o link.</p>
-  <p class="nota-secao">As regras ficam em <code>cortes/regras.json</code> no repositório.</p></div>`;
+  document.querySelectorAll("#view-dados details.acc").forEach((d) => d.addEventListener("toggle", () => {
+    if (d.open) ABERTOS_DADOS.add(d.dataset.top); else ABERTOS_DADOS.delete(d.dataset.top);
+    guarda("cortes_dados_abertos", [...ABERTOS_DADOS]);
+  }));
 }
 
 // ===================== painel lateral: clientes por trás do número e histórico =====================
@@ -1125,6 +1247,7 @@ document.addEventListener("click", (e) => {
   const ms = e.target.closest("[data-multi-set]");
   if (ms) { CTL[ms.dataset.multiSet] = ms.dataset.vals.split("|"); guardaCtl(); desenha(); return; }
   const d = e.target.closest("[data-csv]");
+  if (d && d.dataset.aba && RENDER[d.dataset.aba] && CTX) RENDER[d.dataset.aba](CTX);     // botão da aba Dados: recalcula a página com os filtros atuais
   if (d && ANALITICO[d.dataset.csv]) { const a = ANALITICO[d.dataset.csv](); baixaCsv(a.cabecalho, a.linhas, d.dataset.nome + " - analitico"); toast(`Analítico baixado: ${fmtN(a.linhas.length)} linha(s).`); return; }
   if (d && TABELAS[d.dataset.csv]) { baixaCsv(TABELAS[d.dataset.csv].cabecalho, TABELAS[d.dataset.csv].linhas, d.dataset.nome); return; }
   const o = e.target.closest("th[data-ord]");
@@ -1219,7 +1342,6 @@ function apresentar(sim) {
   document.body.classList.toggle("apresentacao", sim); $("btnSair").hidden = !sim;
   Object.values(GRAFICOS).forEach((g) => g.resize());
 }
-$("btnApresentar").addEventListener("click", () => apresentar(true));
 $("btnSair").addEventListener("click", () => apresentar(false));
 $("btnPdf").addEventListener("click", () => {
   if (!DADOS) return;
@@ -1250,12 +1372,14 @@ function novoWorker() {
     const m = e.data;
     if (m.tipo === "etapa") progresso(null, m.texto);
     else if (m.tipo === "progresso") progresso(m.pct, m.texto);
-    else if (m.tipo === "log") { $("log").textContent += m.linha + "\n"; $("detalhes").hidden = false; }
+    else if (m.tipo === "log") { $("log").textContent += m.linha + "\n"; if (!analiseNoWorker || inicioAnalise) $("detalhes").hidden = false; }
     else if (m.tipo === "pronto") { if (!inicioAnalise) status(statusOcioso); }
     else if (m.tipo === "resultado") {
       escondeProgresso(); carregaDados(m.dados); analiseNoWorker = true;
       const n = m.dados.arquivos.filter((a) => a.tipo !== "erro" && a.tipo !== "não usado").length;
-      status(statusOcioso = `Pasta: ${pastaNome} — ${n} arquivo(s) lidos às ${new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`);
+      // leitura concluída: o cabeçalho fica limpo; pasta, hora e detalhes da leitura vão para a aba Dados
+      LEITURA = { pasta: pastaNome, n, hora: new Date().toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) };
+      status(statusOcioso = ""); $("detalhes").hidden = true; sujo.dados = true; if (abaAtual === "dados") renderAba("dados");
       toast("Painel atualizado — " + n + " arquivo(s) lidos");
       guardaUltimo(m.dados);
     } else if (m.tipo === "cacheLimpo") {
