@@ -46,7 +46,7 @@ A mesma atividade (mesmo *ID da Atividade*) em mais de um arquivo conta uma vez.
   serviços, Bases para download e, de 1 a 4, cada página com o que mostra, bases e colunas, cálculo passo a passo, como conferir
   e o ⬇ do analítico. Os tópicos abertos ficam guardados no navegador.
 
-Filtros no topo: mês inicial/final (mês do corte), cidade, recurso e tipo de corte.
+Filtros no topo (linha abaixo do título): mês inicial/final (mês do corte), Sup, cidade, tipo de corte e Ativas = religadas.
 
 ## Recursos do painel
 
