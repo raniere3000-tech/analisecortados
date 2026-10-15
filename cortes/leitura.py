@@ -31,6 +31,15 @@ def normaliza(texto):
     return re.sub(r"\s+", " ", t).strip().upper()
 
 
+def chave(texto):
+    """Nome de coluna para comparar: como `normaliza`, mas também sem pontos, espaços e símbolos ('Dt Execução' = 'Dt. Execução')."""
+    return re.sub(r"[^A-Z0-9]", "", normaliza(texto))
+
+
+def _apelidos(nomes):
+    return [nomes] if isinstance(nomes, str) else list(nomes)
+
+
 def lista_arquivos(pasta):
     """Todos os arquivos de planilha da pasta e subpastas (ignora temporários do Excel '~$')."""
     achados = []
@@ -141,8 +150,8 @@ def _le_colunas_plano(caminho, colunas):
     cab = _cabecalho_plano(xml)
     por_nome = {}
     for letra, nome in cab.items():
-        por_nome.setdefault(normaliza(nome), letra)
-    alvo = {c: por_nome.get(normaliza(c)) for c in colunas}
+        por_nome.setdefault(chave(nome), letra)
+    alvo = {c: por_nome.get(chave(c)) for c in colunas}
     if not any(alvo.values()):
         return None
     letras = sorted({l for l in alvo.values() if l}, key=lambda l: (len(l), l))
@@ -218,7 +227,7 @@ def _cabecalho(caminho, max_linhas=30):
     melhor, nota = 0, (-1, -1)
     for i in range(len(df)):
         valores = df.iloc[i]
-        n = (sum(1 for v in valores.dropna() if normaliza(v) in conhecidos), int(valores.notna().sum()))
+        n = (sum(1 for v in valores.dropna() if chave(v) in conhecidos), int(valores.notna().sum()))
         if n > nota:
             melhor, nota = i, n
     return melhor, [str(c).strip() for c in df.iloc[melhor].tolist()] if len(df) else []
@@ -230,13 +239,13 @@ def _le_colunas(caminho, linha, colunas):
         rapido = _le_colunas_plano(caminho, colunas)
         if rapido is not None:
             return rapido
-    alvo = {normaliza(c): c for c in colunas}
-    usar = lambda c: normaliza(c) in alvo  # noqa: E731
+    alvo = {chave(c): c for c in colunas}
+    usar = lambda c: chave(c) in alvo  # noqa: E731
     if caminho.lower().endswith(".csv"):
         df = _le_csv(caminho, skiprows=linha, header=0, usecols=usar)     # pula o título acima do cabeçalho
     else:
         df = pd.read_excel(_fonte(caminho), header=linha, dtype=str, usecols=usar, engine=_motor(caminho))
-    df.columns = [alvo[normaliza(c)] for c in df.columns]
+    df.columns = [alvo[chave(c)] for c in df.columns]
     df = df.loc[:, ~df.columns.duplicated()]
     for c in colunas:
         if c not in df.columns:
@@ -247,9 +256,34 @@ def _le_colunas(caminho, linha, colunas):
 def _nomes_conhecidos():
     """Nomes de coluna que o painel procura (para achar a linha do cabeçalho)."""
     arq = REGRAS["arquivos"]
-    nomes = list(REGRAS["colunas_atividades"].values()) + list(REGRAS["religacao_lisc"]["colunas"].values())
+    nomes = list(REGRAS["colunas_atividades"].values()) + [n for v in REGRAS["religacao_lisc"]["colunas"].values() for n in _apelidos(v)]
     nomes += arq["colunas_cadastro"] + arq["colunas_catalogo"] + COLUNAS_CADASTRO + COLUNAS_CATALOGO
-    return {normaliza(n) for n in nomes}
+    return {chave(n) for n in nomes}
+
+
+def _colunas_lisc(nomes):
+    """({campo: nome da coluna achada}, [campos obrigatórios que faltam]) para a planilha de religação LISC."""
+    nomes = {chave(n): n for n in nomes if n is not None and str(n).strip() and str(n) != "nan"}
+    achadas = {}
+    for campo, apelidos in REGRAS["religacao_lisc"]["colunas"].items():
+        for a in _apelidos(apelidos):
+            if chave(a) in nomes:
+                achadas[campo] = nomes[chave(a)]
+                break
+    return achadas, [c for c in REGRAS["religacao_lisc"]["obrigatorias"] if c not in achadas]
+
+
+def motivo_nao_usado(caminho):
+    """Por que um arquivo não foi reconhecido (para a aba Dados)."""
+    _, nomes = _cabecalho(caminho)
+    preenchidos = [n for n in nomes if n is not None and str(n).strip() and str(n) != "nan"]
+    if not preenchidos:
+        return "planilha vazia: nenhuma célula preenchida (abra no Excel e salve de novo com os dados, ou exporte outra vez)"
+    _, faltam = _colunas_lisc(preenchidos)
+    if "RELIG" in chave(os.path.basename(caminho)) or len(faltam) < len(REGRAS["religacao_lisc"]["obrigatorias"]):
+        nomes_campo = {"matricula": "Matrícula", "servico": "Serviço Executado", "data": "Dt. Execução"}
+        return "parece religação LISC/autoreligação, mas falta a coluna " + ", ".join(nomes_campo.get(c, c) for c in faltam)
+    return "não é atividades, religação LISC, cadastro nem catálogo"
 
 
 def tipo_arquivo(caminho):
@@ -258,12 +292,12 @@ def tipo_arquivo(caminho):
     if os.path.basename(caminho).lower().startswith(arq["prefixo_atividades"].lower()):
         return "atividades"
     _, nomes = _cabecalho(caminho)
-    nomes = {normaliza(n) for n in nomes}
-    if all(normaliza(c) in nomes for c in arq["colunas_religacao_lisc"]):
+    nomes = {chave(n) for n in nomes}
+    if not _colunas_lisc(nomes)[1]:
         return "religacao_lisc"
-    if all(normaliza(c) in nomes for c in arq["colunas_cadastro"]):
+    if all(chave(c) in nomes for c in arq["colunas_cadastro"]):
         return "cadastro"
-    if all(normaliza(c) in nomes for c in arq["colunas_catalogo"]):
+    if all(chave(c) in nomes for c in arq["colunas_catalogo"]):
         return "catalogo"
     return None
 
@@ -280,10 +314,14 @@ def le_atividades(caminho):
 
 def le_religacao_lisc(caminho):
     """Relatório de religação LISC no mesmo formato das atividades: cada O.S. com Dt. Execução é uma religação Finalizada."""
-    linha, _ = _cabecalho(caminho)
-    col = REGRAS["religacao_lisc"]["colunas"]
-    df = _le_colunas(caminho, linha, list(col.values()))
-    df.columns = list(col.keys())
+    linha, nomes = _cabecalho(caminho)
+    achadas, _ = _colunas_lisc(nomes)
+    campos = list(REGRAS["religacao_lisc"]["colunas"])
+    df = _le_colunas(caminho, linha, list(achadas.values()))
+    df.columns = list(achadas.keys())
+    for c in campos:
+        if c not in df.columns:
+            df[c] = None
     df = df.dropna(subset=["matricula"])
     os_ = df["os"].astype("string").str.strip().str.replace(r"\.0$", "", regex=True)
     ano = df["ano"].astype("string").str.strip().str.replace(r"\.0$", "", regex=True)
@@ -330,7 +368,7 @@ def le_pasta(pasta, progresso=None):
             else:
                 cache_arquivos.materializa(caminho)
                 tipo = tipo_arquivo(caminho)
-                df = LEITORES[tipo](caminho) if tipo else None
+                df = LEITORES[tipo](caminho) if tipo else motivo_nao_usado(caminho)   # sem tipo: guarda o motivo
                 cache_arquivos.guarda(caminho, (tipo, df))
         except Exception as erro:  # um arquivo com problema não para a análise
             relatorio.append({"arquivo": rel, "tipo": "erro", "linhas": 0,
@@ -340,7 +378,8 @@ def le_pasta(pasta, progresso=None):
             cache_arquivos.libera(caminho)
             _ULTIMO_PLANO.update(chave=None, xml=None)
         if tipo is None:
-            relatorio.append({"arquivo": rel, "tipo": "não usado", "linhas": 0, "obs": "não é atividades, religação LISC, cadastro nem catálogo"})
+            obs = df if isinstance(df, str) else "não é atividades, religação LISC, cadastro nem catálogo"
+            relatorio.append({"arquivo": rel, "tipo": "não usado", "linhas": 0, "obs": obs})
             continue
         df = df.assign(arquivo=rel)
         partes[DESTINO[tipo]].append(df)

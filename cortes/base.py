@@ -85,7 +85,7 @@ def catalogo(df_pasta=None):
 
 
 def tipo_servico(texto):
-    t = normaliza(texto)
+    t = re.sub(r"AUTO[\s\-_.]*RELIG", "AUTORELIG", normaliza(texto))   # 'AUTO RELIGAÇÃO', 'AUTO-RELIGAÇÃO' = AUTORELIGAÇÃO
     for termo, nome in REGRAS["tipos"]["ordem"]:
         if termo in t:
             return nome
@@ -106,10 +106,14 @@ def classifica(ativ, cat):
     df["tipo"] = descricao.fillna(texto).map(tipo_servico)
     if "fonte" in df.columns:                      # planilha de religação LISC: só entra como religação
         lisc = df["fonte"].eq("religacao_lisc").to_numpy(dtype=bool)
-        religa = texto.map(normaliza).str.contains("RELIGA", na=False).to_numpy(dtype=bool)
+        religa = texto.map(normaliza).str.contains("RELIG", na=False).to_numpy(dtype=bool)
         df.loc[lisc & df["categoria"].isna().to_numpy() & religa, "categoria"] = CAT["religacao"]
         padrao = lisc & df["categoria"].eq(CAT["religacao"]).to_numpy(dtype=bool) & df["tipo"].eq(REGRAS["tipos"]["outros"]).to_numpy(dtype=bool)
-        df.loc[padrao, "tipo"] = REGRAS["religacao_lisc"]["tipo_padrao"]
+        # sem tipo no nome do serviço: vale o tipo do nome do arquivo ('Autoreligação.xlsx' → AUTORELIGAÇÃO) ou LISC
+        arquivo = df["arquivo"] if "arquivo" in df.columns else pd.Series("", index=df.index)
+        do_arquivo = arquivo.fillna("").astype(str).map(lambda a: tipo_servico(a.rsplit("/", 1)[-1]))
+        do_arquivo = do_arquivo.where(do_arquivo.ne(REGRAS["tipos"]["outros"]), REGRAS["religacao_lisc"]["tipo_padrao"])
+        df.loc[padrao, "tipo"] = do_arquivo[padrao]
         df.loc[lisc & df["categoria"].ne(CAT["religacao"]).fillna(True).to_numpy(dtype=bool), "categoria"] = None   # corte/vistoria na LISC não conta
     return df
 
@@ -132,18 +136,47 @@ def prepara_atividades(ativ, cat):
     return df.reset_index(drop=True), duplicadas
 
 
+_ABREV_CIDADE = {"FCO": "FRANCISCO", "B": "BOM", "N": "NOVA", "STA": "SANTA", "STO": "SANTO", "PTO": "PORTO",
+                 "CONC": "CONCEICAO", "J": "JOSE", "MAL": "MARECHAL", "PRES": "PRESIDENTE", "GOV": "GOVERNADOR"}
+_TIRA_CIDADE = {"DE", "DA", "DO", "DAS", "DOS", "E", "S", "SAO", "SANTO", "SANTA", "MUNICIPIO", "CIDADE"}
+
+
+def chave_cidade(nome):
+    """Nome da cidade para comparar entre sistemas: 'S.FCO.DO ITABAPOANA' = 'São Francisco de Itabapoana'."""
+    if not isinstance(nome, str) or not nome.strip():
+        return None
+    partes = re.sub(r"[^A-Z0-9]+", " ", normaliza(nome)).split()
+    partes = [_ABREV_CIDADE.get(p, p) for p in partes]
+    return "".join(p for p in partes if p not in _TIRA_CIDADE) or None
+
+
+def _cidade_parecida(c, validas):
+    if c in validas:
+        return True
+    from difflib import SequenceMatcher
+    return any(v.startswith(c) or c.startswith(v) or SequenceMatcher(None, c, v).ratio() >= 0.88
+               for v in validas if min(len(c), len(v)) >= 5)
+
+
 def filtra_lisc_por_cidade(ativ):
-    """Planilhas de religação LISC: só valem as cidades que aparecem nos arquivos de atividades
-    (comparação sem acento e sem diferença de maiúsculas). Devolve (atividades, linhas tiradas)."""
+    """Planilhas de religação LISC/autoreligação: só valem as cidades que aparecem nos arquivos de atividades.
+    O nome da cidade é comparado sem acento, pontuação, 'de/do/São' e com as abreviações comuns
+    ('S.FCO.DO ITABAPOANA' = 'SAO FRANCISCO DE ITABAPOANA'); também vale a matrícula que tem atividade
+    (localidade/distrito com outro nome). Devolve (atividades, linhas tiradas, cidades tiradas)."""
     if "fonte" not in ativ.columns:
-        return ativ, 0
-    lisc = ativ["fonte"].eq("religacao_lisc").fillna(False)
+        return ativ, 0, ""
+    lisc = ativ["fonte"].eq("religacao_lisc").fillna(False).astype(bool)
     if not lisc.any():
-        return ativ, 0
-    cidade = ativ["cidade"].map(lambda c: normaliza(c) if isinstance(c, str) and c.strip() else None)
+        return ativ, 0, ""
+    cidade = ativ["cidade"].map(chave_cidade)
     validas = set(cidade[~lisc].dropna())
-    fora = lisc & ~cidade.isin(validas)
-    return ativ[~fora].reset_index(drop=True), int(fora.sum())
+    ok = {c: _cidade_parecida(c, validas) for c in set(cidade[lisc].dropna())}
+    cidade_ok = cidade.map(lambda c: ok.get(c, False) if c else False).astype(bool)
+    matricula_ok = ativ["matricula"].isin(set(ativ.loc[~lisc, "matricula"].dropna()))
+    fora = lisc & ~cidade_ok & ~matricula_ok
+    nomes = ativ.loc[fora, "cidade"].fillna("(sem cidade)").astype(str).str.strip().value_counts().head(15)
+    resumo = ", ".join(f"{n} ({q})" for n, q in nomes.items())
+    return ativ[~fora].reset_index(drop=True), int(fora.sum()), resumo
 
 
 # ===== Cadastro =====

@@ -83,3 +83,43 @@ def test_os_repetida_vale_a_finalizada():
 def test_referencia_do_cadastro_em_outros_formatos():
     d = base.datas(pd.Series(["09/2026", "202609", "2026-09-01", "01/09/2026"]))
     assert (d == pd.Timestamp("2026-09-01")).all()
+
+
+def test_autoreligacao_com_outro_cabecalho_e_cidade_abreviada(tmp_path):
+    ativ = [["R1", "1", "5000", "109001-CORTE DE ÁGUA NO CAVALETE - DÉBITO", "01/04/26", "Finalizada", "S.FCO.DO ITABAPOANA"],
+            ["R1", "2", "6000", "109001-CORTE DE ÁGUA NO CAVALETE - DÉBITO", "01/04/26", "Finalizada", "S.SEBASTIAO DO ALTO"],
+            ["R1", "3", "7000", "109001-CORTE DE ÁGUA NO CAVALETE - DÉBITO", "01/04/26", "Finalizada", "RIO BONITO"]]
+    pd.DataFrame(ativ, columns=COLS_ATIV).to_excel(tmp_path / "Atividades-IN_01_04_26.xlsx", index=False)
+    cols = ["Nº O.S", "Matricula", "Serviço", "Dt Execução", "Localidade"]       # nomes sem acento/ponto e outros apelidos
+    pd.DataFrame([["1", "5000", "AUTO RELIGAÇÃO", "03/04/2026", "SÃO FRANCISCO DE ITABAPOANA"],
+                  ["2", "6000", "RELIGAÇÃO", "04/04/2026", "São Sebastião do Alto"],
+                  ["3", "7000", "RELIGAÇÃO", "05/04/2026", "BOA ESPERANÇA"],              # distrito: vale pela matrícula
+                  ["4", "8000", "AUTO-RELIGAÇÃO", "05/04/2026", "NITERÓI"]],             # outra cidade e matrícula sem atividade
+                 columns=cols).to_excel(tmp_path / "Autoreligação.xlsx", index=False)
+    analise = Analise(str(tmp_path))
+    dados = analise.executar("2026-04-10")
+    tipos = {a["arquivo"]: a["tipo"] for a in dados["arquivos"]}
+    assert tipos["Autoreligação.xlsx"] == "religacao_lisc"
+    c = analise.cortes.set_index("matricula")
+    assert c.loc["5000", "tipo_religacao"] == "AUTORELIGAÇÃO"   # 'AUTO RELIGAÇÃO' com espaço
+    assert c.loc["6000", "tipo_religacao"] == "AUTORELIGAÇÃO"   # sem tipo no serviço: vale o nome do arquivo
+    assert c.loc["7000", "data_religacao"] == pd.Timestamp("2026-04-05")
+    assert "8000" not in set(analise.eventos["matricula"])
+    assert dados["info"]["… dessas, autoreligações"] == 3
+    assert "NITER" in dados["info"]["Cidades tiradas das planilhas LISC"]
+
+
+def test_planilha_vazia_explica_o_motivo(tmp_path):
+    pd.DataFrame([["R1", "1", "5000", "109001-CORTE DE ÁGUA NO CAVALETE - DÉBITO", "01/04/26", "Finalizada", "APERIBE"]],
+                 columns=COLS_ATIV).to_excel(tmp_path / "Atividades-IN.xlsx", index=False)
+    pd.DataFrame().to_excel(tmp_path / "Autoreligação.xlsx", index=False)
+    pd.DataFrame([["1", "x"]], columns=["Matrícula", "Serviço Executado"]).to_excel(tmp_path / "Religação LISC.xlsx", index=False)
+    obs = {a["arquivo"]: a["obs"] for a in leitura.le_pasta(str(tmp_path))["arquivos"]}
+    assert obs["Autoreligação.xlsx"].startswith("planilha vazia")
+    assert "Dt. Execução" in obs["Religação LISC.xlsx"]
+
+
+def test_chave_cidade():
+    assert base.chave_cidade("S.FCO.DO ITABAPOANA") == base.chave_cidade("São Francisco de Itabapoana")
+    assert base.chave_cidade("STA MARIA MADALENA") == base.chave_cidade("Santa Maria Madalena")
+    assert base.chave_cidade("RIO BONITO") != base.chave_cidade("RIO DAS OSTRAS")

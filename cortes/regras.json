@@ -11,11 +11,7 @@
       "SERVICO",
       "CATEGORIA"
     ],
-    "colunas_religacao_lisc": [
-      "Matrícula",
-      "Serviço Executado",
-      "Dt. Execução"
-    ]
+    "_leia_religacao_lisc": "A planilha de religação LISC/autoreligação é reconhecida pelas colunas obrigatórias de 'religacao_lisc'."
   },
   "colunas_atividades": {
     "id": "ID da Atividade",
@@ -141,16 +137,54 @@
     "pos_sem_sucesso": "1ª visita pós corte sem sucesso (Encerrada com Ocorrência)"
   },
   "religacao_lisc": {
-    "_leia": "Planilha de religação LISC (relatório de O.S. executadas): cada linha com Dt. Execução vira uma religação Finalizada. Serviço fora do catálogo conta como religação se tiver 'RELIGA' no nome; sem tipo no nome, vale LISC.",
+    "_leia": "Planilha de religação LISC / autoreligação (relatório de O.S. executadas): cada linha com data de execução vira uma religação Finalizada. Cada coluna aceita os nomes da lista (sem diferença de acento, ponto ou espaço). Serviço fora do catálogo conta como religação se tiver 'RELIG' no nome; sem tipo no nome do serviço, vale o tipo do nome do arquivo (ex.: 'Autoreligação.xlsx' → AUTORELIGAÇÃO) e, sem nenhum, LISC.",
     "colunas": {
-      "os": "Nº da O.S",
-      "ano": "Ano da O.S",
-      "matricula": "Matrícula",
-      "servico": "Serviço Executado",
-      "data": "Dt. Execução",
-      "cidade": "Nome da Localidade",
-      "recurso": "Executor"
+      "os": [
+        "Nº da O.S",
+        "Número da O.S",
+        "Nº O.S",
+        "O.S"
+      ],
+      "ano": [
+        "Ano da O.S",
+        "Ano O.S"
+      ],
+      "matricula": [
+        "Matrícula",
+        "Matricula",
+        "Matrícula do Imóvel",
+        "Nº da Matrícula"
+      ],
+      "servico": [
+        "Serviço Executado",
+        "Serviço",
+        "Descrição do Serviço",
+        "Tipo de Serviço"
+      ],
+      "data": [
+        "Dt. Execução",
+        "Data Execução",
+        "Data de Execução",
+        "Data da Execução"
+      ],
+      "cidade": [
+        "Nome da Localidade",
+        "Localidade",
+        "Município",
+        "Cidade",
+        "Nome do Município"
+      ],
+      "recurso": [
+        "Executor",
+        "Equipe",
+        "Recurso"
+      ]
     },
-    "tipo_padrao": "LISC"
+    "tipo_padrao": "LISC",
+    "obrigatorias": [
+      "matricula",
+      "servico",
+      "data"
+    ]
   }
 }

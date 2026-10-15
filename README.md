@@ -23,7 +23,7 @@ navegador baixa o Python (cerca de 30 MB), que depois fica em cache.
 | Arquivo | Como é reconhecido | Usado para |
 |---|---|---|
 | Atividades | nome começa com `Atividades-` (vários arquivos, em qualquer subpasta) | cortes, religações, implantações e vistorias pós-corte |
-| Religação LISC | colunas `Matrícula`, `Serviço Executado`, `Dt. Execução` (título acima do cabeçalho é ignorado) | religações LISC: cada O.S. com Dt. Execução vira religação Finalizada; só valem as cidades (`Nome da Localidade`) que aparecem nas atividades |
+| Religação LISC / autoreligação | colunas `Matrícula`, `Serviço Executado`, `Dt. Execução` — aceitam variações (`Matricula`, `Serviço`, `Dt Execução`, `Data de Execução`…; ver `religacao_lisc.colunas` no `regras.json`); título acima do cabeçalho é ignorado | cada O.S. com data de execução vira religação Finalizada. `AUTO RELIGAÇÃO`/`AUTO-RELIGAÇÃO` = AUTORELIGAÇÃO; serviço sem tipo usa o nome do arquivo (`Autoreligação.xlsx` → AUTORELIGAÇÃO), senão LISC. Só valem as cidades das atividades (`Nome da Localidade`/`Localidade`/`Município`, comparando sem acento, pontuação e com abreviações: `S.FCO.DO ITABAPOANA` = `São Francisco de Itabapoana`) ou matrículas que têm atividade. Planilha vazia ou sem as colunas aparece na aba Dados com o motivo |
 | Cadastro | colunas `NUM_LIGACAO`, `SIT_LIG`, `TOTAL_ECO` (cabeçalho pode estar abaixo de um título) | situação atual (ATIVA/CORTADA), economias, cliente |
 | Descrição serviço (opcional) | colunas `SERVICO` e `CATEGORIA` | código do serviço → categoria; sem ela vale `cortes/catalogo_servicos.json` |
 
