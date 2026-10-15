@@ -270,7 +270,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 <header class="top">
   <div class="top-linha">
     <div>
-      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v23</span></div>
+      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v24</span></div>
       <h1 id="titulo">Análise de Corte e Religação</h1>
     </div>
     <div class="ferramentas">
@@ -343,7 +343,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 
 <script>
 "use strict";
-const VERSAO_SITE = "v23-20261015";
+const VERSAO_SITE = "v24-20261015";
 
 // ===================== utilidades =====================
 const $ = (id) => document.getElementById(id);
@@ -907,8 +907,8 @@ function abaCruzada({ f, cortes: todos, per }) {
   ]);
   MEM.cruzada = {
     graficos() {
-      const ds = [["Sem religação", qtd.sem, COR.laranja, "#fff"], ["Ativa (sem OS)", qtd.ativa, "#bfe6ea", "#1f2d3d"],
-        ["Religou nos meses seguintes", qtd.depois, "#9bbbd6", "#1f2d3d"], ["Religou no mesmo mês", qtd.mesmo, "#3f6f97", "#fff"]];
+      const ds = [["Religou no mesmo mês", qtd.mesmo, "#3f6f97", "#fff"], ["Religou nos meses seguintes", qtd.depois, "#9bbbd6", "#1f2d3d"],
+        ["Ativa (sem OS)", qtd.ativa, "#bfe6ea", "#1f2d3d"], ["Sem religação", qtd.sem, COR.laranja, "#fff"]];   // sem religação na ponta direita
       grafico("g-cruzada-1", "bar", {
         labels: rotMes,
         datasets: ds.map(([nome, arr, cor, txtCor]) => barra(nome, emPct(arr), mesesCorte.map((m) => (emAberto(m) ? cor + "99" : cor)),
@@ -932,7 +932,7 @@ function abaCruzada({ f, cortes: todos, per }) {
   const rodapeAberto = temAberto ? "* mês em aberto (o atual e o anterior): ainda teve pouco tempo para religar — cor mais clara." : "";
   const cardCalor = `<div class="card"><div class="card-topo"><h2>Velocidade de religação${ajuda("Cada linha é um mês de corte (safra). Cada coluna mostra o % dos cortes daquele mês que já tinha religado (com OS) até aquele mês depois do corte. Quanto mais escuro, mais religou. As células com · ainda não chegaram. Clique numa célula para ver os clientes.")}</h2></div>
     <p class="nota-secao">% acumulado de religados (com OS) até cada mês depois do corte. Mais escuro = mais religou.</p>${tabCalor}${rodapeAberto ? `<p class="dica">${rodapeAberto}</p>` : ""}</div>`;
-  return topo + `<div class="grid g11">${cartaoGraf("g-cruzada-1", "Destino dos cortes de cada mês" + (per ? " — " + per : ""), "% dos cortes do mês. <b>Sem religação</b> sempre à esquerda; ao lado do mês, a quantidade de cortes.", ctlGraf, "Cada barra soma 100% dos cortes do mês: sem religação, ativa sem OS, religou nos meses seguintes e religou no mesmo mês. Clique numa barra para filtrar o mês.", rodapeAberto).replace('class="graf"', `class="graf" style="height:${altura}px"`)}
+  return topo + `<div class="grid g11">${cartaoGraf("g-cruzada-1", "Destino dos cortes de cada mês" + (per ? " — " + per : ""), "% dos cortes do mês. <b>Sem religação</b> sempre na ponta direita; ao lado do mês, a quantidade de cortes.", ctlGraf, "Cada barra soma 100% dos cortes do mês: religou no mesmo mês, religou nos meses seguintes, ativa sem OS e sem religação. Clique numa barra para filtrar o mês.", rodapeAberto).replace('class="graf"', `class="graf" style="height:${altura}px"`)}
     ${cardCalor}</div>`
     + cartao("Tabela de apoio — mês do corte × mês da religação" + (per ? " — " + per : ""), nota, tabela("cruzada", ["Mês do corte", ...colunas.map(rotCol), "Total Geral", "% religado"], linhas, { pct }), "cruzada", ctlTab);
 }
