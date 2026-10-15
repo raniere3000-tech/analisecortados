@@ -36,8 +36,10 @@ A mesma atividade (mesmo *ID da Atividade*) em mais de um arquivo conta uma vez.
 - **Saldo de economias**: por mês, −corte (por tipo) + religação (por tipo) + implantação de ligação de água, em
   economias (`TOTAL_ECO`) ou em ligações, com o saldo do mês e o acumulado.
 - **Corte × Religação**: mês do corte × mês da religação, com *Ativa* e *Sem Religação*, em quantidade ou %.
-- **Pós-corte**: clientes cortados sem a 1ª visita pela régua (−7, 7 a 15, +15 dias cortado até hoje), régua completa,
-  1ª visita sem sucesso (*Encerrada com Ocorrência*) e a lista para baixar.
+- **Pós-corte**: como a tabela dinâmica “clientes sem a 1ª visita” — filtros na própria aba (Situação; Régua de cobrança com
+  vários itens: −7, 7 a 15, +15 dias, pós realizado, religou após o pós, religado; 1ª visita sem sucesso; colunas por régua, tipo,
+  cidade ou recurso), um gráfico por mês do corte e uma tabela mês do corte × colunas. Padrão: CORTADA + sem pós-corte.
+  “Ver clientes” abre a lista do filtro; o ⬇ baixa o analítico.
 - **Permanência**: tipo de corte × faixa de dias até a religação e a eficácia de cada tipo com × sem pós-corte.
 - **Dados**: parâmetros, arquivos lidos, explicação de cada cálculo e downloads (base calculada em Excel, CSV de cada tabela).
 

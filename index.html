@@ -87,6 +87,12 @@ tr.fechado { display:none; }
 .sub button { border:0; background:#fff; color:var(--marinho); font:600 12.5px var(--fonte); padding:5px 14px; cursor:pointer; }
 .sub button + button { border-left:1px solid var(--line); }
 .sub button.ativo { background:var(--marinho); color:#fff; }
+.filtros-aba { padding:14px 18px 6px; }
+.linha-filtros { display:flex; flex-wrap:wrap; align-items:center; gap:8px 14px; margin-bottom:10px; }
+.sub.multi { flex-wrap:wrap; }
+.sub.multi button { padding:5px 11px; }
+.sub.multi button.ativo { background:var(--ciano, #16a5b8); color:#fff; }
+.btn-just.atalho { font-size:11.5px; padding:4px 9px; }
 
 /* botões e campos */
 .btn-just { padding:5px 12px; border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--marinho); font:600 12.5px var(--fonte); cursor:pointer; }
@@ -196,7 +202,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 <header class="top">
   <div class="top-linha">
     <div>
-      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v16</span></div>
+      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v17</span></div>
       <h1 id="titulo">Análise de Corte e Religação</h1>
     </div>
     <div class="filtros" id="filtros" hidden>
@@ -268,7 +274,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 
 <script>
 "use strict";
-const VERSAO_SITE = "v16-20261015";
+const VERSAO_SITE = "v17-20261015";
 
 // ===================== utilidades =====================
 const $ = (id) => document.getElementById(id);
@@ -538,9 +544,9 @@ const setaVar = (v) => (v > 0 ? "▲ " : v < 0 ? "▼ " : "") + nf1.format(Math.
 
 // ===================== estado =====================
 let DADOS = null, CORTES = [], SALDO = [], EVENTOS = [], R = null, HASH_PENDENTE = null, ULTIMO_MES = "";
-const CTL = Object.assign({ abertos: {}, medidaSaldo: "economias", posCruzada: "todos", modoCruzada: "qtd", sitPos: "CORTADA", posPerm: "todos", modoPerm: "qtd", metricaEf: "pRel" }, le("cortes_ctl", {}));
+const CTL = Object.assign({ abertos: {}, medidaSaldo: "economias", posCruzada: "todos", modoCruzada: "qtd", sitPos: "CORTADA", reguaPos: null, visitaPos: "todas", colPos: "regua", posPerm: "todos", modoPerm: "qtd", metricaEf: "pRel" }, le("cortes_ctl", {}));
 Object.assign(CTL, { verTodos: false, ordem: null, busca: "" });
-const guardaCtl = () => guarda("cortes_ctl", Object.fromEntries(["abertos", "medidaSaldo", "posCruzada", "modoCruzada", "sitPos", "posPerm", "modoPerm", "metricaEf"].map((k) => [k, CTL[k]])));
+const guardaCtl = () => guarda("cortes_ctl", Object.fromEntries(["abertos", "medidaSaldo", "posCruzada", "modoCruzada", "sitPos", "reguaPos", "visitaPos", "colPos", "posPerm", "modoPerm", "metricaEf"].map((k) => [k, CTL[k]])));
 
 function linhasDe(col) {                                     // {col: [..]} -> [{col: v}]
   const chaves = Object.keys(col), n = chaves.length ? col[chaves[0]].length : 0, out = new Array(n);
@@ -837,105 +843,89 @@ function abaCruzada({ f, cortes: todos, per }) {
 
 // ===================== aba Pós-corte =====================
 const COR_REGUA = (rg) => ({ [ROT_ATIVA_OS]: COR.cianCl, [rg.faixas[0].nome]: COR.laranjaCl, [rg.faixas[1].nome]: COR.laranja, [rg.faixas[2].nome]: COR.laranjaEsc, [rg.com_pos]: COR.ciano, [rg.religado_apos_pos]: COR.azulMed, [rg.religado]: COR.marinho });
+// filtro de vários itens (como o "(Vários itens)" da tabela dinâmica)
+function multiSel(id, rotulo, opcoes, marcados, atalhos = []) {
+  return `<span class="rot-ctl">${esc(rotulo)}</span><span class="sub multi" role="group" aria-label="${esc(rotulo)}">${opcoes.map(([v, t]) => {
+    const on = marcados.includes(v);
+    return `<button type="button" data-multi="${id}" data-val="${esc(v)}" class="${on ? "ativo" : ""}" aria-pressed="${on}">${on ? "✓ " : ""}${esc(t)}</button>`;
+  }).join("")}</span>${atalhos.map(([t, vals]) => `<button type="button" class="btn-just atalho" data-multi-set="${id}" data-vals="${esc(vals.join("|"))}">${esc(t)}</button>`).join("")}`;
+}
 function abaPos({ f, cortes: todos, per }) {
   const rg = R.regua, T = R.textos, semCadastro = !CORTES.some((c) => c.situacao && c.situacao !== R.textos.sem_cadastro);
   const sit = semCadastro ? "" : CTL.sitPos;                  // sem planilha de cadastro não existe CORTADA/ATIVA
-  const cortes = sit ? todos.filter((c) => c.situacao === sit) : todos;
+  const sucesso = R.status.pos_corte_sem_sucesso, cores = COR_REGUA(rg);
+  const semPos = rg.faixas.map((x) => x.nome);
+  const opReg = [...semPos, rg.com_pos, rg.religado_apos_pos, rg.religado, ...(f.ativas ? [ROT_ATIVA_OS] : [])];
+  const nomeCurto = { [semPos[0]]: "-7 dias", [semPos[1]]: "7 a 15 dias", [semPos[2]]: "+15 dias", [rg.com_pos]: "Pós realizado, sem religar", [rg.religado_apos_pos]: "Religou após o pós", [rg.religado]: "Religado", [ROT_ATIVA_OS]: "Ativa sem OS" };
+  const marc = (Array.isArray(CTL.reguaPos) && CTL.reguaPos.filter((r) => opReg.includes(r)).length) ? CTL.reguaPos.filter((r) => opReg.includes(r)) : semPos;
+  const cortes = todos.filter((c) => (!sit || c.situacao === sit) && marc.includes(c.regua) && (CTL.visitaPos !== "falha" || c.status_pos === sucesso));
   const meses = unicos(cortes.map((c) => c.mes));
-  const semPos = rg.faixas.map((f) => f.nome);
-  const ordem = [...semPos, rg.com_pos, rg.religado_apos_pos, rg.religado, ...(f.ativas ? [ROT_ATIVA_OS] : [])];
-  const sem = cortes.filter((c) => semPos.includes(c.regua));
-  const sucesso = R.status.pos_corte_sem_sucesso;
-  const cores = COR_REGUA(rg);
+  const ehPadrao = marc.length === semPos.length && semPos.every((r) => marc.includes(r));
 
-  const linhaMes = (lista, cols, rot, classe) => {
-    const cel = cols.map((col) => { const s = lista.filter((c) => c.regua === col); return nCel(s.length, `${rot} — ${col}`, () => s); });
-    return { classe, celulas: [rot, ...cel, soma(cel.map((c) => c.v))] };
-  };
-  const l1 = meses.map((m) => linhaMes(sem.filter((c) => c.mes === m), semPos, mesRot(m))).filter((l) => l.celulas[l.celulas.length - 1] > 0);
-  l1.push(linhaMes(sem, semPos, "Total Geral", "linha-total"));
-  const l2 = meses.map((m) => linhaMes(cortes.filter((c) => c.mes === m), ordem, mesRot(m)));
-  l2.push(linhaMes(cortes, ordem, "Total Geral", "linha-total"));
-  const linhaFalha = (lista, rot, classe) => {
-    const comPos = lista.filter((c) => c.data_pos), falha = comPos.filter((c) => c.status_pos === sucesso);
-    return { classe, celulas: [rot, nCel(lista.length, `${rot} — cortes`, () => lista), nCel(comPos.length, `${rot} — com pós-corte`, () => comPos), nCel(falha.length, `${rot} — 1ª visita sem sucesso`, () => falha),
-      pCel(comPos.length ? falha.length / comPos.length : null), nCel(falha.filter((c) => c.data_pos_finalizada).length, `${rot} — depois Finalizado`, () => falha.filter((c) => c.data_pos_finalizada)), nCel(falha.filter((c) => c.data_religacao).length, `${rot} — religaram`, () => falha.filter((c) => c.data_religacao))] };
-  };
-  const l3 = meses.map((m) => linhaFalha(cortes.filter((c) => c.mes === m), mesRot(m)));
-  l3.push(linhaFalha(cortes, "Total Geral", "linha-total"));
+  // colunas da tabela (e séries do gráfico): régua, tipo, cidade ou recurso — muitas cidades/recursos: as 8 maiores + Outros
+  const dim = CTL.colPos || "regua";
+  const chave = (c) => (dim === "regua" ? c.regua : (c[dim] || "(vazio)"));
+  let colunas;
+  if (dim === "regua") colunas = opReg.filter((r) => marc.includes(r));
+  else if (dim === "tipo") colunas = ordenaTipos(unicos(cortes.map(chave)));
+  else { const cont = {}; cortes.forEach((c) => { const k = chave(c); cont[k] = (cont[k] || 0) + 1; }); colunas = Object.entries(cont).sort((a, b) => b[1] - a[1]).map(([k]) => k); }
+  const OUTROS = "Outros", corta = dim !== "regua" && dim !== "tipo" && colunas.length > 9;
+  const principais = corta ? colunas.slice(0, 8) : colunas;
+  if (corta) colunas = [...principais, OUTROS];
+  const colDe = (c) => { const k = chave(c); return corta && !principais.includes(k) ? OUTROS : k; };
+  const rotCol = (k) => (dim === "regua" ? (nomeCurto[k] || k) : k);
 
-  const total = sem.length, ult = semPos[semPos.length - 1];
-  const comPos = cortes.filter((c) => c.data_pos), falhas = comPos.filter((c) => c.status_pos === sucesso);
+  const linhaMes = (lista, rot, classe) => {
+    const cel = colunas.map((col) => { const l = lista.filter((c) => colDe(c) === col); return nCel(l.length, `${rot} — ${rotCol(col)}`, () => l); });
+    return { classe, celulas: [rot, ...cel, nCel(lista.length, `${rot} — total`, () => lista)] };
+  };
+  const linhas = meses.map((m) => linhaMes(cortes.filter((c) => c.mes === m), mesRot(m)));
+  linhas.push(linhaMes(cortes, "Total Geral", "linha-total"));
+
+  const mais15 = cortes.filter((c) => c.regua === semPos[2]).length, dias = cortes.map((c) => c.dias_cortado).filter((v) => v != null);
+  const debito = soma(cortes.map((c) => c.valor_debito || 0)), eco = soma(cortes.map((c) => c.economias || 0));
   const topo = kpis([
-    { rot: "Cortes no período", val: fmtN(cortes.length), det: sit ? `situação ${sit}` : "todas as situações" },
-    { rot: "Sem a 1ª visita", val: fmtN(total), det: "sem pós-corte e sem religação", neg: total > 0, ajuda: "Cortados que ainda não tiveram vistoria pós-corte nem religação." },
-    { rot: "Há mais de 15 dias", val: fmtN(sem.filter((c) => c.regua === ult).length), det: ult, neg: true, ajuda: "Dias cortado contados até hoje (" + dataRot(DADOS.hoje) + ")." },
-    { rot: "Com pós-corte", val: fmtN(comPos.length), det: cortes.length ? fmtP(comPos.length / cortes.length) + " dos cortes" : "1ª visita realizada" },
-    { rot: "1ª visita sem sucesso", val: fmtN(falhas.length), det: comPos.length ? fmtP(falhas.length / comPos.length) + " das visitas" : sucesso, ajuda: "1ª vistoria pós-corte Encerrada com Ocorrência." },
+    { rot: "Clientes no filtro", val: fmtN(cortes.length), det: ehPadrao ? "sem a 1ª visita pós-corte" : `${marc.length} item(ns) da régua`, ajuda: "Cortes (matrícula + data) que passam pelos filtros desta aba e do cabeçalho." },
+    { rot: "Há mais de 15 dias", val: fmtN(mais15), det: cortes.length ? fmtP(mais15 / cortes.length) + " do filtro" : "-", neg: mais15 > 0, ajuda: "Sem pós-corte e sem religação há mais de 15 dias (até hoje)." },
+    { rot: "Mediana de dias cortado", val: dias.length ? nf0.format(mediana(dias)) + " dias" : "-", det: "até hoje, de quem segue sem religar" },
+    { rot: "Economias", val: fmtN(eco), det: "dos clientes do filtro" },
+    { rot: "Valor dos débitos", val: nfBRL.format(debito), det: "soma do filtro" },
   ]);
 
-  // gráficos
-  const porCidade = {}; sem.forEach((c) => { const k = c.cidade || "(sem cidade)"; porCidade[k] = (porCidade[k] || 0) + 1; });
-  const topCid = Object.entries(porCidade).sort((a, b) => b[1] - a[1]).slice(0, 10);
-  const distrib = ordem.map((col) => cortes.filter((c) => c.regua === col).length);
+  const paleta = [COR.marinho, COR.azulMed, COR.ciano, COR.laranja, COR.azul, COR.laranjaEsc, COR.ant, COR.laranjaCl, COR.cianCl];
+  const corDe = (col, i) => (dim === "regua" ? cores[col] : (col === OUTROS ? "#c9d3de" : paleta[i % paleta.length]));
+  const claras = [COR.laranjaCl, COR.cianCl, COR.ant, "#c9d3de"];
   MEM.pos = {
     graficos() {
       grafico("g-pos-1", "bar", {
         labels: meses.map(mesCurto),
-        datasets: semPos.map((f, i) => barra(f, meses.map((m) => sem.filter((c) => c.mes === m && c.regua === f).length), cores[f], { empilhado: true, corTexto: i === 0 ? "#1f2d3d" : "#fff" })),
-      }, opcoes({ empilhado: true, aoClicar: (i) => setFiltro(["fDe", "fAte"], meses[i], mesRot(meses[i])) }));
-      grafico("g-pos-2", "bar", { labels: topCid.map((c) => c[0]), datasets: [barra("Sem a 1ª visita", topCid.map((c) => c[1]), COR.laranja)] },
-        opcoes({ horizontal: true, legenda: false, aoClicar: (i) => setFiltro("fCidade", topCid[i][0], topCid[i][0]) }));
-      grafico("g-pos-3", "doughnut", { labels: ordem, datasets: [{ data: distrib, backgroundColor: ordem.map((o) => cores[o]), borderColor: "#fff", borderWidth: 2, rotulos: false }] },
-        { responsive: true, maintainAspectRatio: false, animation: imprimindo ? false : undefined, cutout: "58%", layout: { padding: 4 },
-          plugins: { legend: { position: "right", labels: { usePointStyle: true, boxWidth: 8, boxHeight: 8, padding: 10 } },
-            tooltip: { ...opcoes().plugins.tooltip, callbacks: { label: (c) => ` ${c.label}: ${fmtN(c.parsed)} (${fmtP(c.parsed / (cortes.length || 1))})` } } } });
-      grafico("g-pos-4", "bar", { labels: meses.map(mesCurto), datasets: [
-        barra("Com pós-corte", meses.map((m) => comPos.filter((c) => c.mes === m).length), COR.marinho),
-        barra("1ª visita sem sucesso", meses.map((m) => falhas.filter((c) => c.mes === m).length), COR.laranja)] },
-        opcoes({ aoClicar: (i) => setFiltro(["fDe", "fAte"], meses[i], mesRot(meses[i])) }));
+        datasets: colunas.map((col, i) => barra(rotCol(col), meses.map((m) => cortes.filter((c) => c.mes === m && colDe(c) === col).length), corDe(col, i), { empilhado: true, corTexto: claras.includes(corDe(col, i)) ? "#1f2d3d" : "#fff" })),
+      }, opcoes({ empilhado: true, legenda: colunas.length > 1, aoClicar: (i) => setFiltro(["fDe", "fAte"], meses[i], mesRot(meses[i])) }));
     },
   };
 
-  // lista com busca, ordenação e "ver todos"
-  const colunasLista = { matricula: "Matrícula", cliente: "Cliente", cidade: "Cidade", recurso: "Recurso", tipo: "Tipo", data: "Data do corte", dias_cortado: "Dias cortado", regua: "Régua", situacao: "Situação", valor_debito: "Valor dos débitos", negociou: "Negociou?" };
-  const idx = Object.keys(colunasLista);
-  const termos = CTL.busca.toLowerCase().split(/[\s,;]+/).filter(Boolean), soNumeros = termos.length && termos.every((t) => /^\d{4,}$/.test(t));
-  const bate = (c) => !termos.length || (soNumeros ? termos.some((t) => (c.matricula || "").includes(t)) : (() => { const b = [c.matricula, c.cliente, c.cidade, c.recurso, c.tipo, c.regua, c.situacao].join(" ").toLowerCase(); return termos.every((t) => b.includes(t)); })());
-  const ord = CTL.ordem && colunasLista[CTL.ordem.col] ? CTL.ordem : { col: "dias_cortado", dir: -1 };
-  const lista = sem.filter(bate).sort((a, b) => {
-    const x = a[ord.col], y = b[ord.col];
-    if (x == null && y == null) return 0; if (x == null) return 1; if (y == null) return -1;
-    return (typeof x === "number" && typeof y === "number" ? x - y : String(x).localeCompare(String(y), "pt-BR")) * ord.dir;
-  });
-  const seloSit = (s) => ({ v: s ?? "", txt: s ?? "", selo: s === "ATIVA" ? "ok" : (s === "CORTADA" ? "atencao" : "neutro") });
-  const cel = (c) => [{ v: c.matricula, txt: c.matricula, classe: "clic", mat: c.matricula }, txt(c.cliente), txt(c.cidade), txt(c.recurso), txt(c.tipo), { v: c.data, txt: dataRot(c.data), classe: "num" }, c.dias_cortado,
-    txt(c.regua), seloSit(c.situacao), { v: c.valor_debito, txt: c.valor_debito == null ? "" : nfBRL.format(c.valor_debito), classe: "num" }, txt(c.negociou)];
-  const limite = CTL.verTodos ? 1000 : 15;
-  const linhasL = lista.slice(0, limite).map((c) => ({ celulas: cel(c) }));
-  let corpo = tabela("listaSemPos", idx.map((k) => colunasLista[k]), linhasL, { longa: true, ordem: idx });
-  if (lista.length > 15) corpo += `<button type="button" class="btn-just ver-todos" data-acao="vertodos">${CTL.verTodos ? "Mostrar só os 15 primeiros" : `Mostrar todos (${fmtN(Math.min(lista.length, 1000))})`}</button>`;
-  TABELAS.listaSemPos.linhas = lista.map((c) => cel(c).map((x) => (x && typeof x === "object" ? x.v : x)));
-  const busca = `<span class="busca"><input id="busca" type="search" placeholder="Filtrar…" value="${esc(CTL.busca)}" aria-label="Filtrar a lista (matrículas separadas por espaço ou texto)"><button type="button" class="btn-just" data-acao="limpabusca" aria-label="Limpar filtro">✕</button></span><span>${fmtN(lista.length)} de ${fmtN(sem.length)}</span>`;
+  const sitTela = ["Situação filtrada na aba", () => sit || "Todas"];
+  ANALITICO.posTabela = () => analiticoCortes([...cortes].sort((a, b) => (a.mes + a.data + a.matricula).localeCompare(b.mes + b.data + b.matricula)), [
+    ["Linha: mês do corte", (c) => mesRot(c.mes)], [`Coluna: ${{ regua: "régua", tipo: "tipo de corte", cidade: "cidade", recurso: "recurso" }[dim]}`, (c) => rotCol(colDe(c))],
+    sitTela, ["Régua marcada na aba", () => marc.map((r) => nomeCurto[r] || r).join(", ")], ["1ª visita filtrada", () => (CTL.visitaPos === "falha" ? "Só sem sucesso" : "Todas")]]);
+  const verLista = regDet(`Clientes do filtro (${fmtN(cortes.length)})`, () => [...cortes].sort((a, b) => (b.dias_cortado ?? -1) - (a.dias_cortado ?? -1)), "cortes");
 
-  const ordenados = (l) => [...l].sort((a, b) => (a.mes + a.data + a.matricula).localeCompare(b.mes + b.data + b.matricula));
-  const sitTela = ["Situação filtrada na tela", () => sit || "Todas"];
-  ANALITICO.semPos = () => analiticoCortes(ordenados(sem), [["Linha: mês do corte", (c) => mesRot(c.mes)], ["Coluna: régua (sem pós-corte)", (c) => c.regua], sitTela]);
-  ANALITICO.regua = () => analiticoCortes(ordenados(cortes), [["Linha: mês do corte", (c) => mesRot(c.mes)], ["Coluna: régua de cobrança", (c) => c.regua], sitTela]);
-  ANALITICO.posFalha = () => analiticoCortes(ordenados(cortes), [["Linha: mês do corte", (c) => mesRot(c.mes)], ["Conta em: Com pós-corte", (c) => simNao(c.data_pos)],
-    ["Conta em: 1ª visita sem sucesso", (c) => simNao(c.data_pos && c.status_pos === sucesso)], ["Conta em: Depois Finalizado", (c) => simNao(c.data_pos && c.status_pos === sucesso && c.data_pos_finalizada)],
-    ["Conta em: Religaram", (c) => simNao(c.data_pos && c.status_pos === sucesso && c.data_religacao)], sitTela]);
-  ANALITICO.listaSemPos = () => analiticoCortes(lista, [["Régua (lista)", (c) => c.regua], sitTela, ["Filtro da busca", () => CTL.busca || ""]]);
-  const ctl = semCadastro ? `<span class="selo selo-atencao" title="Coloque a planilha de cadastro na pasta para separar CORTADA e ATIVA">sem cadastro: todas as situações</span>`
-    : seletor("sitPos", "Situação no cadastro", [["CORTADA", "Cortada"], ["", "Todas"], ["ATIVA", "Ativa"], [T.sem_cadastro, "Sem cadastro"]], sit);
-  return topo + `<div class="grid g21">${cartaoGraf("g-pos-1", "Cortados sem a 1ª visita, por mês do corte" + (per ? " — " + per : ""), `Sem pós-corte e sem religação, pelos dias cortado até hoje (${dataRot(DADOS.hoje)}).`, ctl, "Quanto mais laranja-escuro, mais tempo o cliente está cortado sem visita. Clique numa barra para filtrar o mês.")}
-    ${cartaoGraf("g-pos-2", "Cidades com mais cortados sem visita", "Top 10 cidades. Clique numa barra para filtrar a cidade.")}</div>`
-    + `<div class="grid g12">${cartaoGraf("g-pos-3", "Régua de cobrança", "Situação de todos os cortes do filtro.", "", "Religado após pós corte: religou no dia do pós-corte ou depois. Realizado pós corte: teve pós-corte e ainda não religou.")}
-    ${cartaoGraf("g-pos-4", "1ª visita pós-corte: com pós-corte × sem sucesso" + (per ? " — " + per : ""), `Sem sucesso = 1ª vistoria <i>${esc(sucesso)}</i>.`)}</div>`
-    + cartao("Tabela de apoio — cortados sem a 1ª visita" + (per ? " — " + per : ""), "Os mesmos números do primeiro gráfico. <b>Clique num número</b> para ver os clientes.", tabela("semPos", ["Mês do corte", ...semPos, "Total"], l1), "semPos")
-    + cartao("Tabela de apoio — régua de cobrança por mês do corte" + (per ? " — " + per : ""), `A 1ª visita conta mesmo se foi <i>Encerrada com Ocorrência</i>.`, tabela("regua", ["Mês do corte", ...ordem, "Total"], l2), "regua")
-    + cartao("Tabela de apoio — 1ª visita pós-corte sem sucesso" + (per ? " — " + per : ""), `Quantos tiveram depois um pós-corte Finalizado e quantos religaram.`, tabela("posFalha", ["Mês do corte", "Cortes", "Com pós-corte", "1ª visita sem sucesso", "% sem sucesso", "Depois Finalizado", "Religaram"], l3), "posFalha")
-    + cartao(`Lista — clientes sem a 1ª visita (${fmtN(sem.length)})`, "Clique no cabeçalho para ordenar e na matrícula para ver o histórico do cliente. Tecla <kbd>/</kbd> vai para o filtro." + (lista.length > 1000 ? " O ⬇ baixa a lista inteira; a tela mostra no máximo 1.000 linhas." : ""), corpo, "listaSemPos", busca);
+  const filtros = `<div class="card filtros-aba"><div class="linha-filtros">
+      ${semCadastro ? `<span class="selo selo-atencao" title="Coloque a planilha de cadastro na pasta para separar CORTADA e ATIVA">sem cadastro: todas as situações</span>`
+        : seletor("sitPos", "Situação", [["CORTADA", "Cortada"], ["ATIVA", "Ativa"], [T.sem_cadastro, "Sem cadastro"], ["", "Todas"]], sit)}
+      ${seletor("visitaPos", "1ª visita", [["todas", "Todas"], ["falha", "Sem sucesso"]], CTL.visitaPos || "todas")}
+      ${seletor("colPos", "Colunas por", [["regua", "Régua"], ["tipo", "Tipo de corte"], ["cidade", "Cidade"], ["recurso", "Recurso"]], dim)}</div>
+    <div class="linha-filtros">${multiSel("reguaPos", "Régua de cobrança", opReg.map((r) => [r, nomeCurto[r] || r]), marc,
+      [["Sem pós-corte", semPos], ["Com pós-corte", [rg.com_pos, rg.religado_apos_pos]], ["Todas", opReg]])}</div>
+    <p class="nota-secao">Padrão = a tabela dinâmica de “clientes sem a 1ª visita”: situação <b>CORTADA</b> e régua <b>sem pós-corte</b> (−7, 7 a 15 e +15 dias, contados até hoje, ${dataRot(DADOS.hoje)}). “1ª visita sem sucesso” = a 1ª vistoria foi <i>${esc(sucesso)}</i> (marque “Com pós-corte” na régua).</p></div>`;
+
+  const titDim = { regua: "régua de cobrança", tipo: "tipo de corte", cidade: "cidade", recurso: "recurso" }[dim];
+  const nota = `Linhas: mês do corte. Colunas: ${titDim}${corta ? " (as 8 maiores; o resto em Outros)" : ""}. Conta cada corte (matrícula + data) uma vez. <b>Clique num número</b> para ver os clientes; o ⬇ baixa o analítico.`;
+  const btnLista = `<button type="button" class="btn-just" data-det="${verLista}" title="Abre a lista com todos os clientes do filtro (do maior tempo cortado ao menor)">Ver clientes (${fmtN(cortes.length)})</button>`;
+  return topo + filtros
+    + cartaoGraf("g-pos-1", (ehPadrao ? "Clientes sem a 1ª visita pós-corte, por mês do corte" : "Clientes do filtro, por mês do corte") + (per ? " — " + per : ""), `Barras por ${titDim}.`, "", "Clique numa barra para filtrar o mês.")
+    + cartao((ehPadrao ? "Clientes sem a 1ª visita" : "Clientes do filtro") + " — mês do corte × " + titDim + (per ? " — " + per : ""), nota,
+      cortes.length ? tabela("posTabela", ["Mês do corte", ...colunas.map(rotCol), "Total Geral"], linhas) : `<p class="nota-secao">Nenhum cliente com esses filtros.</p>`, "posTabela", btnLista);
 }
 
 // ===================== aba Permanência =====================
@@ -1109,6 +1099,15 @@ function voltaGaveta() {
 document.addEventListener("click", (e) => {
   const c = e.target.closest("[data-ctl]");
   if (c) { CTL[c.dataset.ctl] = c.dataset.val; guardaCtl(); desenha(); return; }
+  const mu = e.target.closest("[data-multi]");
+  if (mu) {
+    const k = mu.dataset.multi, atuais = [...mu.parentElement.querySelectorAll("[data-multi].ativo")].map((b) => b.dataset.val), v = mu.dataset.val;
+    const novo = atuais.includes(v) ? atuais.filter((x) => x !== v) : [...atuais, v];
+    if (!novo.length) { toast("Deixe pelo menos um item marcado."); return; }
+    CTL[k] = novo; guardaCtl(); desenha(); return;
+  }
+  const ms = e.target.closest("[data-multi-set]");
+  if (ms) { CTL[ms.dataset.multiSet] = ms.dataset.vals.split("|"); guardaCtl(); desenha(); return; }
   const d = e.target.closest("[data-csv]");
   if (d && ANALITICO[d.dataset.csv]) { const a = ANALITICO[d.dataset.csv](); baixaCsv(a.cabecalho, a.linhas, d.dataset.nome + " - analitico"); toast(`Analítico baixado: ${fmtN(a.linhas.length)} linha(s).`); return; }
   if (d && TABELAS[d.dataset.csv]) { baixaCsv(TABELAS[d.dataset.csv].cabecalho, TABELAS[d.dataset.csv].linhas, d.dataset.nome); return; }
