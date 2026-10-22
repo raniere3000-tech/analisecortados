@@ -42,9 +42,9 @@ A mesma atividade (mesmo *ID da Atividade*) em mais de um arquivo conta uma vez.
   (Sem/Com/Todos), **Situação no cadastro**, 1ª visita sem sucesso, meses do corte (vários) e colunas por régua, tipo, cidade ou recurso.
   Padrão: sem pós-corte, sem religação e CORTADA (“Voltar ao padrão” restaura). Um gráfico e uma tabela mês do corte × colunas;
   “Ver clientes” abre a lista do filtro; o ⬇ baixa o analítico.
-  Embaixo, **Efeito do pós-corte na religação**: gráfico de linhas com as semanas antes e depois da 1ª visita (linha tracejada na visita):
-  laranja = taxa semanal de religação dos visitados; escura = clientes sem visita no mesmo tempo de corte. Indicadores: % que religa em
-  até 7/15/30 dias depois da visita × sem visita (diferença em p.p.) e mediana de dias da visita à religação; filtro Todas/Finalizadas/Sem sucesso.
+  Embaixo, **A visita pós-corte faz o cliente religar?**: frase-resumo (“de cada 100 visitados, X religam em até 15 dias; sem visita, Y”),
+  indicadores (visitados, religaram depois, tempo até religar, visita sem necessidade), barras em até 7/15/30 dias com × sem visita
+  e a curva acumulada de religação a partir da visita. Comparação com clientes sem visita no mesmo tempo de corte; filtro Todas/Finalizadas/Sem sucesso.
 - **Permanência**: tipo de corte × faixa de dias até a religação e a eficácia de cada tipo com × sem pós-corte.
 - **Dados**: tópicos que abrem e fecham — Avisos, Conferência rápida (números principais com os filtros atuais e como chegar
   neles pelo analítico), Bases carregadas (pasta, hora da leitura, arquivos e detalhes técnicos), Parâmetros, Classificação dos
