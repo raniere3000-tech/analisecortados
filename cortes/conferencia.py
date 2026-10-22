@@ -15,7 +15,11 @@ CAT, ST, TXT, RG = REGRAS["categorias"], REGRAS["status"], REGRAS["textos"], REG
 LIMITE = 60000                                   # linhas mandadas ao site (o resumo conta todas)
 # analítico comparativo: uma linha por corte, cada campo lado a lado (planilha × painel)
 CAMPOS_COMP = ["resultado", "matricula", "data", "diferencas", "motivos", "rel_x", "rel_p", "mesrel_x", "mesrel_p", "pos_x", "pos_p",
-               "regua_x", "regua_p", "sit_x", "sit_p", "dias_x", "dias_p", "perm_x", "perm_p", "tipo_corte", "cidade", "sit_fonte", "os_corte", "arquivo"]
+               "regua_x", "regua_p", "sit_x", "sit_p", "dias_x", "dias_p", "perm_x", "perm_p", "tipo_corte", "cidade", "sit_fonte", "os_corte", "arquivo",
+               # diagnóstico: o que há nos arquivos para entender por que conta ou não conta
+               "na_atividade", "os_no_dia", "corte_anterior", "proximo_corte", "religacoes_arq", "vistorias_arq",
+               "cad_sit", "cad_ref", "economias", "dias_cortado", "conta_saldo", "conta_pos", "por_que_pos", "arquivos_mat"]
+MAX_OS = 6                                       # OS listadas por célula no diagnóstico
 
 
 def _d(v):
@@ -89,7 +93,7 @@ def _mes_txt(v):
     return d.strftime("%Y-%m") if pd.notna(d) else str(v)
 
 
-def compara(conf, cortes, ativ, hoje):
+def compara(conf, cortes, ativ, hoje, cad=None):
     """Devolve o pacote da conferência para o site: resumo por tipo de diferença e as linhas com o motivo."""
     if conf is None or conf.empty:
         return None
@@ -137,6 +141,58 @@ def compara(conf, cortes, ativ, hoje):
         return f"a OS de {_d(dia)} está nos arquivos, mas não foi a 1ª depois do corte"
 
     linhas, cont, comp, atual = [], {}, [], {"difs": [], "motivos": []}
+    ult = base.ultimo_cadastro(cad) if cad is not None else None
+
+    def lista_os(g, filtro, desde=None, ate=None):
+        """'dd/mm/aaaa serviço (status) [arquivo]' das OS da matrícula, em ordem de data."""
+        if g is None:
+            return ""
+        h = g[filtro(g)] if filtro else g
+        if desde is not None:
+            h = h[h["data"] >= desde]
+        if ate is not None and pd.notna(ate):
+            h = h[h["data"] <= ate]
+        h = h.sort_values("data")
+        itens = [f"{_d(o.data)} {str(o.servico)[:60]} ({o.status if isinstance(o.status, str) else 'sem status'}) [{o.arquivo}]" for o in h.head(MAX_OS).itertuples()]
+        return " ; ".join(itens) + (f" ; … +{len(h) - MAX_OS}" if len(h) > MAX_OS else "")
+
+    def diagnostico(mat, dia, c):
+        g = por_mat.get(mat)
+        outros = cortes_por_mat.get(mat)
+        ant = prox = None
+        if outros is not None:
+            antes, depois = outros[outros["data"] < dia]["data"], outros[outros["data"] > dia]["data"]
+            ant = antes.max() if len(antes) else None
+            prox = depois.min() if len(depois) else None
+        cat = lambda k: (lambda h: h["categoria"].eq(CAT[k]).fillna(False))  # noqa: E731
+        d = {
+            "na_atividade": "Sim" if g is not None else "Não",
+            "os_no_dia": lista_os(g, None, dia, dia),
+            "corte_anterior": _d(ant), "proximo_corte": _d(prox),
+            "religacoes_arq": lista_os(g, cat("religacao"), dia),
+            "vistorias_arq": lista_os(g, cat("pos_corte"), dia),
+            "arquivos_mat": ", ".join(sorted(set(g["arquivo"].astype(str)))[:5]) if g is not None else "",
+        }
+        if ult is not None and mat in ult.index:
+            u = ult.loc[mat]
+            d.update(cad_sit=_txt(u.get("SIT_LIG")), cad_ref=(u["ref"].strftime("%m/%Y") if pd.notna(u.get("ref")) else ""), economias=_num(u.get("economias")))
+        else:
+            d.update(cad_sit="fora do cadastro" if cad is not None else "sem cadastro na pasta", cad_ref="", economias="")
+        if c:
+            d["dias_cortado"] = _num(c.get("dias_cortado"))
+            d["conta_saldo"] = "Sim (corte Finalizado)"
+            motivos = []
+            if pd.notna(c.get("data_pos")):
+                motivos.append(f"teve pós-corte em {_d(c.get('data_pos'))}")
+            if pd.notna(c.get("data_religacao")):
+                motivos.append(f"religou em {_d(c.get('data_religacao'))}")
+            if normaliza(c.get("situacao") or "") != "CORTADA":
+                motivos.append(f"situação {c.get('situacao')}" + (f" ({c.get('situacao_fonte')})" if c.get("situacao_fonte") else ""))
+            d["conta_pos"] = "Não" if motivos else "Sim"
+            d["por_que_pos"] = "; ".join(motivos) if motivos else "sem pós-corte, sem religação e CORTADA"
+        else:
+            d.update(dias_cortado="", conta_saldo="Não (não virou corte no painel)", conta_pos="Não", por_que_pos="não virou corte no painel")
+        return d
 
     def add(tipo, mat, dia, campo, v_excel, v_painel, motivo, c=None):
         cont[tipo] = cont.get(tipo, 0) + 1
@@ -166,6 +222,7 @@ def compara(conf, cortes, ativ, hoje):
                 "perm_x": _txt(x("permanencia")), "perm_p": _txt(c.get("permanencia")),
                 "tipo_corte": _txt(c.get("tipo")) or _txt(x("descricao")), "cidade": _txt(c.get("cidade")),
                 "sit_fonte": _txt(c.get("situacao_fonte")), "os_corte": _txt(c.get("id")), "arquivo": _txt(c.get("arquivo")),
+                **diagnostico(mat, dia, c),
             })
 
     for r in df.itertuples(index=False):

@@ -62,7 +62,7 @@ class Analise:
         self.eventos = base.monta_saldo(ativ, cad)
         if lido.get("conferencia") is not None:                 # planilha antiga: compara linha a linha (matrícula + data do corte)
             self.progresso(95, "Conferindo com a planilha de conferência…")
-        self.conferencia = conferencia.compara(lido.get("conferencia"), self.cortes, ativ, hoje)
+        self.conferencia = conferencia.compara(lido.get("conferencia"), self.cortes, ativ, hoje, cad)
         for df in (self.cortes, self.eventos):
             df["sup"] = base.sup(df["cidade"])
         sem_sup = pd.concat([self.cortes.loc[self.cortes["sup"].eq(REGRAS["supervisao"]["sem_sup"]), "cidade"],

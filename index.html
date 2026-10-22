@@ -274,7 +274,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 <header class="top">
   <div class="top-linha">
     <div>
-      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v27</span></div>
+      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v28</span></div>
       <h1 id="titulo">Análise de Corte e Religação</h1>
     </div>
     <div class="ferramentas">
@@ -347,7 +347,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 
 <script>
 "use strict";
-const VERSAO_SITE = "v27-20261022";
+const VERSAO_SITE = "v28-20261022";
 
 // ===================== utilidades =====================
 const $ = (id) => document.getElementById(id);
@@ -1256,7 +1256,13 @@ const CAB_COMP = [["resultado", "Resultado"], ["matricula", "Matrícula"], ["dat
   ["pos_x", "Data Pós Corte (planilha)"], ["pos_p", "Data Pós Corte (painel)"], ["regua_x", "Régua (planilha)"], ["regua_p", "Régua (painel)"],
   ["sit_x", "Situação (planilha)"], ["sit_p", "Situação (painel)"], ["dias_x", "Dias (planilha)"], ["dias_p", "Dias (painel)"],
   ["perm_x", "Permanência (planilha)"], ["perm_p", "Permanência (painel)"], ["tipo_corte", "Tipo de corte"], ["cidade", "Cidade"],
-  ["sit_fonte", "Origem da situação (painel)"], ["os_corte", "OS de corte (painel)"], ["arquivo", "Arquivo (painel)"]];
+  ["sit_fonte", "Origem da situação (painel)"], ["os_corte", "OS de corte (painel)"], ["arquivo", "Arquivo (painel)"],
+  // diagnóstico: o que há nos arquivos lidos para entender por que conta ou não conta
+  ["conta_saldo", "Conta no painel (saldo, corte × religação)?"], ["conta_pos", "Conta no Pós-corte padrão?"], ["por_que_pos", "Por quê (Pós-corte)"],
+  ["dias_cortado", "Dias cortado até hoje (painel)"], ["corte_anterior", "Corte anterior da matrícula (painel)"], ["proximo_corte", "Próximo corte da matrícula (painel)"],
+  ["os_no_dia", "OS da matrícula no dia do corte (serviço, status, arquivo)"], ["religacoes_arq", "Religações nos arquivos desde o corte (status, arquivo)"],
+  ["vistorias_arq", "Vistorias pós-corte nos arquivos desde o corte (status, arquivo)"], ["cad_sit", "SIT_LIG no cadastro da pasta"], ["cad_ref", "Referência do cadastro"],
+  ["economias", "Economias (cadastro)"], ["na_atividade", "Matrícula nos arquivos de atividades?"], ["arquivos_mat", "Arquivos com a matrícula"]];
 function baixaComparativo() {
   const cf = DADOS && DADOS.conferencia;
   if (!cf) { toast("Coloque na pasta a planilha com “conferencia” no nome e clique em ↻ Atualizar.", true); return; }
@@ -1293,12 +1299,12 @@ function topicoConferencia() {
   const linhasTop = top.map(([k, n]) => { const [t, ...m] = k.split(" — "); return `<tr><td class="txt">${esc(t)}</td><td class="txt">${esc(m.join(" — "))}</td><td class="num">${fmtN(n)}</td></tr>`; }).join("");
   const todas = regDet(`Conferência — todas as diferenças`, () => l, "conferencia");
   return topico("conf", `Conferência com a planilha (${esc(cf.arquivo)})`,
-    `<p>Planilha <b>${esc(cf.arquivo)}</b>${cf.aba ? `, aba <b>${esc(cf.aba)}</b>` : ""}: ${fmtN(cf.comparadas)} corte(s) comparados (matrícula + data do corte), de ${esc(cf.periodo)}${cf.duplicadas ? `; ${fmtN(cf.duplicadas)} linha(s) repetidas contadas uma vez` : ""}. Os filtros do cabeçalho não se aplicam aqui. Clique num número para ver as linhas; na lista, a matrícula abre o histórico do cliente.</p>
+    `<p>Planilha <b>${esc(cf.arquivo)}</b>${cf.aba ? `, aba <b>${esc(cf.aba)}</b>` : ""}: ${fmtN(cf.comparadas)} corte(s) comparados (matrícula + data do corte), de ${esc(cf.periodo)}${DADOS.info["Período das atividades"] ? ` — as atividades lidas cobrem <b>${esc(DADOS.info["Período das atividades"])}</b>` : ""}${cf.duplicadas ? `; ${fmtN(cf.duplicadas)} linha(s) repetidas contadas uma vez` : ""}. Os filtros do cabeçalho não se aplicam aqui. Clique num número para ver as linhas; na lista, a matrícula abre o histórico do cliente.</p>
     <div class="tabela-wrap"><table><thead><tr><th>Resultado</th><th>Linhas</th><th>% da planilha</th><th>O que significa</th></tr></thead><tbody>${linhasRes}</tbody></table></div>
     ${top.length ? `<h3>Motivos mais comuns</h3><div class="tabela-wrap"><table><thead><tr><th>Diferença</th><th>Motivo</th><th>Linhas</th></tr></thead><tbody>${linhasTop}</tbody></table></div>` : ""}
     ${cf.cortadas ? `<p class="nota-secao">São muitas diferenças: a lista mostra as primeiras 60.000 (o resumo conta todas).</p>` : ""}
     <div class="linha-botoes">${btnComparativo()}<button type="button" class="btn-just btn-baixar" id="btnCsvConf" title="Só as diferenças, uma linha por campo diferente">⬇ Só as diferenças (CSV)</button><button type="button" class="btn-just btn-baixar" data-det="${todas}">Ver as diferenças na tela (${fmtN(l.length)})</button></div>
-    <p class="nota-secao">O <b>analítico comparativo</b> tem uma linha por corte da planilha (e os que só o painel tem): Resultado (Bate em tudo, Diferente, Corte não encontrado, Corte só no painel), os campos diferentes, os motivos e cada campo lado a lado — <i>planilha</i> × <i>painel</i>.</p>`);
+    <p class="nota-secao">O <b>analítico comparativo</b> tem uma linha por corte da planilha (e os que só o painel tem): Resultado (Bate em tudo, Diferente, Corte não encontrado, Corte só no painel), os campos diferentes, os motivos e cada campo lado a lado — <i>planilha</i> × <i>painel</i>. No fim, o <b>diagnóstico</b>: se conta no painel e no Pós-corte padrão (e por quê), as OS da matrícula no dia do corte, as religações e vistorias encontradas nos arquivos desde o corte (com status e arquivo), o corte anterior e o próximo, e o cadastro (SIT_LIG, referência, economias).</p>`);
 }
 const botaoTxt = (id, nome, rot) => `<button type="button" class="btn-just btn-baixar" data-csv="${id}" data-nome="${esc(nome)}">${esc(rot)}</button>`;
 function ligaDados() {

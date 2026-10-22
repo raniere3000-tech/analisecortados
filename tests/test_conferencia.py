@@ -55,3 +55,11 @@ def test_analitico_comparativo_lado_a_lado(tmp_path):
     assert "Pendente" in cp.loc["2000", "motivos"] and cp.loc["2000", "diferencas"] == "Data Religação"
     assert cp.loc["3000", "rel_p"] == "09/04/2026" and cp.loc["4000", "resultado"] == "Corte não encontrado no painel"
     assert cp.loc["5000", "resultado"] == "Corte só no painel"
+
+
+def test_comparativo_traz_diagnostico(tmp_path):
+    cp = pd.DataFrame(Analise(str(_pasta(tmp_path))).executar("2026-05-10")["conferencia"]["comparativo"]).set_index("matricula")
+    assert "Pendente" in cp.loc["2000", "religacoes_arq"] and "Atividades-IN.xlsx" in cp.loc["2000", "religacoes_arq"]
+    assert cp.loc["4000", "conta_saldo"].startswith("Não") and "Cancelada" in cp.loc["4000", "os_no_dia"]
+    assert cp.loc["1000", "conta_pos"] == "Sim" or "situação" in cp.loc["1000", "por_que_pos"]
+    assert cp.loc["3000", "conta_pos"] == "Não" and "religou em 09/04/2026" in cp.loc["3000", "por_que_pos"]
