@@ -45,6 +45,9 @@ A mesma atividade (mesmo *ID da Atividade*) em mais de um arquivo conta uma vez.
   Embaixo, **A visita pós-corte faz o cliente religar?**: frase-resumo (“de cada 100 visitados, X religam em até 15 dias; sem visita, Y”),
   indicadores (visitados, religaram depois, tempo até religar, visita sem necessidade), barras em até 7/15/30 dias com × sem visita
   e a curva acumulada de religação a partir da visita. Comparação com clientes sem visita no mesmo tempo de corte; filtro Todas/Finalizadas/Sem sucesso.
+  Mais: “Quando visitar?” (efeito por tempo de corte no dia da visita: 0–3, 4–7, 8–15, 16–30, +30 dias, com a diferença em p.p. acima
+  das barras), evolução mês a mês, tabela de detalhamento (por tempo até a visita, tipo, cidade, Sup, mês ou resultado da visita, com
+  % em 7/15/30 dias com × sem visita, efeito, mediana e visitas sem necessidade; números clicáveis) e ⬇ analítico das visitas.
 - **Permanência**: tipo de corte × faixa de dias até a religação e a eficácia de cada tipo com × sem pós-corte.
 - **Dados**: tópicos que abrem e fecham — Avisos, Conferência rápida (números principais com os filtros atuais e como chegar
   neles pelo analítico), Bases carregadas (pasta, hora da leitura, arquivos e detalhes técnicos), Parâmetros, Classificação dos

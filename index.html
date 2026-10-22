@@ -139,6 +139,7 @@ details.acc > summary:hover { background:#f6f9fc; border-radius:10px; }
 .acc-log pre { max-height:260px; overflow:auto; background:#f6f9fc; padding:8px; border-radius:6px; font-size:11px; white-space:pre-wrap; }
 .dados-topo { padding-bottom:16px; }
 .secao-efeito { margin-top:22px; }
+td.pos-txt { color:#166534 !important; font-weight:700; }
 .efeito-ctl { margin-left:auto; display:flex; align-items:center; gap:6px; font-size:12px; font-weight:500; }
 .efeito-frase { background:#fff; border:1px solid var(--line); border-left:4px solid #E8710A; border-radius:10px; padding:12px 16px; font-size:15px; line-height:1.5; color:var(--ink); margin:0 0 12px; }
 .efeito-frase .laranja, .laranja { color:#E8710A; }
@@ -280,7 +281,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 <header class="top">
   <div class="top-linha">
     <div>
-      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v31</span></div>
+      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v32</span></div>
       <h1 id="titulo">Análise de Corte e Religação</h1>
     </div>
     <div class="ferramentas">
@@ -353,7 +354,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 
 <script>
 "use strict";
-const VERSAO_SITE = "v31-20261022";
+const VERSAO_SITE = "v32-20261022";
 
 // ===================== utilidades =====================
 const $ = (id) => document.getElementById(id);
@@ -545,6 +546,22 @@ const pluginBase = {
     ctx.stroke(); ctx.restore();
   },
 };
+// diferença (p.p.) escrita acima de cada par de barras com × sem visita
+const pluginEfeitoTopo = {
+  id: "efeitoTopo",
+  afterDatasetsDraw(chart, _, op) {
+    if (!op || !op.valores) return;
+    const m0 = chart.getDatasetMeta(0), m1 = chart.getDatasetMeta(1), ctx = chart.ctx;
+    ctx.save(); ctx.font = "700 11px 'IBM Plex Sans',Arial,sans-serif"; ctx.textAlign = "center";
+    op.valores.forEach((v, i) => {
+      if (v == null || !m0.data[i] || !m1.data[i]) return;
+      const x = (m0.data[i].x + m1.data[i].x) / 2, y = Math.min(m0.data[i].y, m1.data[i].y) - 10;
+      ctx.fillStyle = v >= 0.5 ? "#166534" : v <= -0.5 ? "#9a3412" : "#6b7d93";
+      ctx.fillText((v >= 0 ? "+" : "−") + nf1.format(Math.abs(v)) + " p.p.", x, y);
+    });
+    ctx.restore();
+  },
+};
 // marco de um evento (ex.: a visita pós-corte): área sombreada depois e linha tracejada no meio entre dois pontos
 const pluginEvento = {
   id: "evento",
@@ -586,7 +603,7 @@ if (window.Chart) {
     const y = Math.min(Math.max((Math.min(...ys) + Math.max(...ys)) / 2, a.top), a.bottom);
     return x > (a.left + a.right) / 2 ? { x: x - meia, y, xAlign: "right", yAlign: "center" } : { x: x + meia, y, xAlign: "left", yAlign: "center" };
   };
-  Chart.register(pluginRotulos, pluginFaixa, pluginBase, pluginEvento);
+  Chart.register(pluginRotulos, pluginFaixa, pluginBase, pluginEvento, pluginEfeitoTopo);
   Chart.defaults.font.family = "'IBM Plex Sans','Segoe UI',Arial,sans-serif";
   Chart.defaults.font.size = 11;
   Chart.defaults.color = "#1f2d3d";
@@ -637,9 +654,9 @@ const setaVar = (v) => (v > 0 ? "▲ " : v < 0 ? "▼ " : "") + nf1.format(Math.
 // ===================== estado =====================
 let LEITURA = null;                                           // pasta e hora da última leitura (mostradas na aba Dados)
 let DADOS = null, CORTES = [], SALDO = [], EVENTOS = [], R = null, HASH_PENDENTE = null, ULTIMO_MES = "";
-const CTL = Object.assign({ abertos: {}, medidaSaldo: "economias", posCruzada: "todos", modoCruzada: "qtd", sitPos: "CORTADA", efeitoPos: "todas", posPos: "sem", relPos: "sem", mesesPos: null, visitaPos: "todas", colPos: "regua", posPerm: "todos", modoPerm: "qtd", metricaEf: "pRel" }, le("cortes_ctl", {}));
+const CTL = Object.assign({ abertos: {}, medidaSaldo: "economias", posCruzada: "todos", modoCruzada: "qtd", sitPos: "CORTADA", efeitoPos: "todas", detEfeito: "faixa", posPos: "sem", relPos: "sem", mesesPos: null, visitaPos: "todas", colPos: "regua", posPerm: "todos", modoPerm: "qtd", metricaEf: "pRel" }, le("cortes_ctl", {}));
 Object.assign(CTL, { verTodos: false, ordem: null, busca: "" });
-const guardaCtl = () => guarda("cortes_ctl", Object.fromEntries(["abertos", "medidaSaldo", "posCruzada", "modoCruzada", "sitPos", "efeitoPos", "posPos", "relPos", "mesesPos", "visitaPos", "colPos", "posPerm", "modoPerm", "metricaEf"].map((k) => [k, CTL[k]])));
+const guardaCtl = () => guarda("cortes_ctl", Object.fromEntries(["abertos", "medidaSaldo", "posCruzada", "modoCruzada", "sitPos", "efeitoPos", "detEfeito", "posPos", "relPos", "mesesPos", "visitaPos", "colPos", "posPerm", "modoPerm", "metricaEf"].map((k) => [k, CTL[k]])));
 
 function linhasDe(col) {                                     // {col: [..]} -> [{col: v}]
   const chaves = Object.keys(col), n = chaves.length ? col[chaves[0]].length : 0, out = new Array(n);
@@ -1076,12 +1093,15 @@ function abaPos({ f, cortes: todos, per }) {
 // Clientes que receberam a 1ª visita pós-corte e ainda estavam cortados no dia dela: quantos religaram (OS Finalizada)
 // em até 7, 15, 30 dias… depois da visita. Comparação justa: clientes SEM visita, contando a partir do mesmo tempo de corte.
 const diaN = (iso) => (iso ? Math.floor(Date.parse(iso.slice(0, 10) + "T00:00:00Z") / 864e5) : null);
+const FAIXAS_VISITA = [[0, 3, "0 a 3 dias"], [4, 7, "4 a 7 dias"], [8, 15, "8 a 15 dias"], [16, 30, "16 a 30 dias"], [31, 1e9, "+30 dias"]];
+const faixaVisita = (d) => (FAIXAS_VISITA.find(([a, b]) => d >= a && d <= b) || [0, 0, "-"])[2];
 function efeitoPos(todos) {
   const hoje = diaN(DADOS.hoje), sucesso = R.status.pos_corte_sem_sucesso, modo = CTL.efeitoPos || "todas";
-  const base = todos.map((c) => ({ t0: diaN(c.data), r: diaN(c.data_religacao), v: diaN(c.data_pos), st: c.status_pos })).filter((x) => x.t0 != null);
+  const base = todos.map((c) => ({ c, t0: diaN(c.data), r: diaN(c.data_religacao), v: diaN(c.data_pos), st: c.status_pos })).filter((x) => x.t0 != null);
   const todasVisitas = base.filter((x) => x.v != null && (modo === "todas" || (modo === "falha" ? x.st === sucesso : x.st !== sucesso)));
-  const antes = todasVisitas.filter((x) => x.r != null && x.r < x.v).length;          // já tinham religado antes da visita
+  const antesL = todasVisitas.filter((x) => x.r != null && x.r < x.v);                // já tinham religado antes da visita
   const visit = todasVisitas.filter((x) => !(x.r != null && x.r < x.v));              // ainda cortados no dia da visita
+  visit.forEach((x) => { x.k = x.v - x.t0; x.faixa = faixaVisita(x.k); x.mesV = new Date(x.v * 864e5).toISOString().slice(0, 7); x.res = x.st === sucesso ? "Sem sucesso" : "Finalizada"; });
   const controle = base.filter((x) => x.v == null);
   const memo = {};
   // sem visita: dos ainda cortados com "a" dias de corte, % que religa nos L dias seguintes
@@ -1096,45 +1116,93 @@ function efeitoPos(todos) {
     return (memo[k] = risco ? ev / risco : null);
   };
   // em até L dias depois da visita: visitados × sem visita (mesmo tempo de corte), só quem já teve L dias para religar
-  const prazo = (L) => {
+  const prazo = (L, lista = visit) => {
     let n = 0, ev = 0, soma = 0, nC = 0;
-    for (const x of visit) {
+    for (const x of lista) {
       if (hoje - x.v < L - 1) continue;
       n++; if (x.r != null && x.r - x.v <= L - 1) ev++;
-      const c = pc(x.v - x.t0, L); if (c != null) { soma += c; nC++; }
+      const c = pc(x.k, L); if (c != null) { soma += c; nC++; }
     }
     return { n, com: n ? ev / n : null, sem: nC ? soma / nC : null };
   };
-  const PRAZOS = [7, 15, 30], res = PRAZOS.map(prazo);
-  const SEMANAS = [0, 1, 2, 3, 4, 5, 6, 8];                      // curva acumulada a partir do dia da visita
+  const PRAZOS = [7, 15, 30], res = PRAZOS.map((L) => prazo(L));
+  const SEMANAS = [0, 1, 2, 3, 4, 5, 6, 8];
   const curva = SEMANAS.map((w) => (w === 0 ? { com: 0, sem: 0, n: visit.length } : prazo(7 * w)));
   const diasAte = visit.filter((x) => x.r != null).map((x) => x.r - x.v);
-  const r15 = res[1], pct = (v) => (v == null ? "-" : nf0.format(v * 100) + "%");
-  const cada100 = (v) => (v == null ? "-" : nf0.format(v * 100));
-  const dif = r15.com != null && r15.sem != null ? (r15.com - r15.sem) * 100 : null;
+  const r15 = res[1], cada100 = (v) => (v == null ? "-" : nf0.format(v * 100));
+  const pp = (a, b) => (a == null || b == null ? null : (a - b) * 100);
+  const fmtPP = (v) => (v == null ? "-" : (v >= 0 ? "+" : "−") + nf1.format(Math.abs(v)) + " p.p.");
+  const dif = pp(r15.com, r15.sem);
+
+  // quando visitar? (tempo de corte no dia da visita) e evolução por mês da visita
+  const porFaixa = FAIXAS_VISITA.map(([, , nome]) => ({ nome, ...prazo(15, visit.filter((x) => x.faixa === nome)), total: visit.filter((x) => x.faixa === nome).length })).filter((f) => f.total > 0);
+  const meses = unicos(visit.map((x) => x.mesV));
+  const porMes = meses.map((m) => ({ m, ...prazo(15, visit.filter((x) => x.mesV === m)) }));
+  const melhor = porFaixa.filter((f) => f.n >= 20 && pp(f.com, f.sem) != null).sort((a, b) => pp(b.com, b.sem) - pp(a.com, a.sem))[0];
+
   const frase = dif == null ? `<p class="efeito-frase">Ainda não há clientes visitados com 15 dias depois da visita para comparar.</p>`
     : `<p class="efeito-frase">De cada <b>100 clientes visitados</b>, <b class="laranja">${cada100(r15.com)}</b> religam em até 15 dias.
        Sem visita, no mesmo tempo de corte, <b>${cada100(r15.sem)}</b>.
-       ${dif >= 0.5 ? `A visita <b class="ok">traz ${nf0.format(dif)} religações a mais</b> a cada 100 clientes.` : dif <= -0.5 ? `Os visitados <b class="neg">religam ${nf0.format(-dif)} a menos</b> a cada 100 — a visita não está fazendo diferença (ou está indo para os casos mais difíceis).` : "Praticamente <b>não há diferença</b> entre visitar e não visitar."}</p>`;
+       ${dif >= 0.5 ? `A visita <b class="ok">traz ${nf0.format(dif)} religações a mais</b> a cada 100 clientes.` : dif <= -0.5 ? `Os visitados <b class="neg">religam ${nf0.format(-dif)} a menos</b> a cada 100 — a visita não está fazendo diferença (ou está indo para os casos mais difíceis).` : "Praticamente <b>não há diferença</b> entre visitar e não visitar."}
+       ${melhor ? `<br>O maior efeito aparece quando a visita é feita com <b>${esc(melhor.nome)}</b> de corte (${fmtPP(pp(melhor.com, melhor.sem))}).` : ""}
+       ${antesL.length ? `<br><b class="neg">${fmtN(antesL.length)}</b> visita(s) aconteceram depois que o cliente já tinha religado.` : ""}</p>`;
   const kpi = kpis([
     { rot: "Clientes visitados", val: fmtN(visit.length), det: "ainda cortados no dia da visita", ajuda: "1ª vistoria pós-corte (Finalizada ou Encerrada com Ocorrência) de um cliente que ainda estava cortado." },
     { rot: "Religaram depois da visita", val: fmtN(visit.filter((x) => x.r != null).length), det: visit.length ? fmtP(visit.filter((x) => x.r != null).length / visit.length) + " dos visitados" : "-" },
     { rot: "Tempo até religar", val: diasAte.length ? nf0.format(mediana(diasAte)) + " dias" : "-", det: "mediana, contando da visita" },
-    { rot: "Visita sem necessidade", val: fmtN(antes), det: "já tinham religado antes da visita", neg: antes > 0, ajuda: "Clientes que religaram antes da 1ª vistoria pós-corte: a visita aconteceu depois da religação." },
+    { rot: "Tempo de corte na visita", val: visit.length ? nf0.format(mediana(visit.map((x) => x.k))) + " dias" : "-", det: "mediana: do corte até a 1ª visita", ajuda: "Quantos dias depois do corte a 1ª visita costuma acontecer." },
+    { rot: "Visita sem necessidade", val: fmtN(antesL.length), det: "já tinham religado antes da visita", neg: antesL.length > 0, ajuda: "Clientes que religaram antes da 1ª vistoria pós-corte: a visita aconteceu depois da religação." },
   ]);
+
+  // detalhamento por segmento
+  const dimE = CTL.detEfeito || "faixa";
+  const chaveE = { faixa: (x) => x.faixa, tipo: (x) => x.c.tipo || "(vazio)", cidade: (x) => x.c.cidade || "(vazio)", sup: (x) => x.c.sup || "(vazio)", mes: (x) => x.mesV, resultado: (x) => x.res }[dimE];
+  let grupos = unicos(visit.map(chaveE));
+  if (dimE === "faixa") grupos = FAIXAS_VISITA.map(([, , n]) => n).filter((n) => grupos.includes(n));
+  else if (dimE === "tipo") grupos = ordenaTipos(grupos);
+  else if (dimE !== "mes") grupos.sort((a, b) => visit.filter((x) => chaveE(x) === b).length - visit.filter((x) => chaveE(x) === a).length);
+  const pcel = (v) => ({ v, txt: v == null ? "-" : fmtP(v), classe: "num" });
+  const ppcel = (v) => ({ v, txt: fmtPP(v), classe: "num" + (v == null ? "" : v >= 0.5 ? " pos-txt" : v <= -0.5 ? " neg-txt" : "") });
+  const linhaSeg = (lista, rot, classe) => {
+    const [a7, a15, a30] = PRAZOS.map((L) => prazo(L, lista));
+    const rel = lista.filter((x) => x.r != null), dd = rel.map((x) => x.r - x.v);
+    const antesSeg = antesL.filter((x) => (rot === "Total" ? true : chaveE(Object.assign(x, { faixa: faixaVisita(x.v - x.t0), mesV: new Date(x.v * 864e5).toISOString().slice(0, 7), res: x.st === sucesso ? "Sem sucesso" : "Finalizada" })) === rot));
+    return { classe, celulas: [dimE === "mes" && rot !== "Total" ? mesRot(rot) : rot, nCel(lista.length, `Visitados — ${rot}`, () => lista.map((x) => x.c)),
+      pcel(a7.com), pcel(a15.com), pcel(a15.sem), ppcel(pp(a15.com, a15.sem)), pcel(a30.com), pcel(a30.sem), ppcel(pp(a30.com, a30.sem)),
+      { v: dd.length ? mediana(dd) : null, txt: dd.length ? nf0.format(mediana(dd)) : "-", classe: "num" },
+      nCel(antesSeg.length, `Visita sem necessidade — ${rot}`, () => antesSeg.map((x) => x.c))] };
+  };
+  const linhasSeg = grupos.map((g) => linhaSeg(visit.filter((x) => chaveE(x) === g), g));
+  linhasSeg.push(linhaSeg(visit, "Total", "linha-total"));
+  const nomesDim = { faixa: "Tempo de corte na visita", tipo: "Tipo de corte", cidade: "Cidade", sup: "Sup", mes: "Mês da visita", resultado: "Resultado da visita" };
+  const ctlDet = seletor("detEfeito", "Detalhar por", [["faixa", "Tempo até a visita"], ["tipo", "Tipo"], ["cidade", "Cidade"], ["sup", "Sup"], ["mes", "Mês"], ["resultado", "Resultado"]], dimE);
+  ANALITICO.efeitoPos = () => analiticoCortes([...visit, ...antesL].map((x) => Object.assign(x.c, { _x: x })), [
+    ["Grupo", (c) => (c._x.r != null && c._x.r < c._x.v ? "Visita sem necessidade (religou antes)" : "Visitado ainda cortado")],
+    ["Dias de corte na visita", (c) => c._x.v - c._x.t0], ["Tempo até a visita", (c) => faixaVisita(c._x.v - c._x.t0)],
+    ["Resultado da visita", (c) => (c._x.st === sucesso ? "Sem sucesso" : "Finalizada")],
+    ["Dias da visita até religar", (c) => (c._x.r != null && c._x.r >= c._x.v ? c._x.r - c._x.v : null)],
+    ...PRAZOS.map((L) => [`Religou em até ${L} dias da visita`, (c) => (c._x.r != null && c._x.r < c._x.v ? "" : hoje - c._x.v < L - 1 ? "ainda sem prazo" : simNao(c._x.r != null && c._x.r - c._x.v <= L - 1))]),
+    ...PRAZOS.map((L) => [`Sem visita: % que religa em ${L} dias (mesmo tempo de corte)`, (c) => { const v = pc(c._x.v - c._x.t0, L); return v == null ? null : +(v * 100).toFixed(1); }]),
+  ]);
+
   const ctl = seletor("efeitoPos", "Visitas", [["todas", "Todas"], ["sucesso", "Finalizadas"], ["falha", "Sem sucesso"]], modo);
   const html = `<div class="secao-efeito"><h3 class="titulo-secao">A visita pós-corte faz o cliente religar?${ajuda("Comparamos clientes que receberam a 1ª visita pós-corte com clientes que não receberam, contando a partir do mesmo tempo de corte (ex.: visita no 10º dia de corte é comparada com quem estava cortado há 10 dias e não teve visita). Só religação com OS Finalizada; usa os filtros do cabeçalho.")}<span class="efeito-ctl">${ctl}</span></h3>
     ${frase}${kpi}
     <div class="grid g11">${cartaoGraf("g-pos-2", "Religaram depois da visita", "Em até 7, 15 e 30 dias. <b class=\"laranja\">Laranja</b>: com visita · <b>cinza</b>: sem visita (mesmo tempo de corte).", "", "Quanto maior a barra laranja em relação à cinza, mais a visita ajuda.")}
-    ${cartaoGraf("g-pos-3", "Religação acumulada a partir da visita", "% que já religou a cada semana depois da visita. A distância entre as linhas é o efeito da visita.", "", "Começa em 0% no dia da visita. Cada ponto só usa clientes que já tiveram aquele tempo para religar.")}</div></div>`;
+    ${cartaoGraf("g-pos-3", "Religação acumulada a partir da visita", "% que já religou a cada semana depois da visita. A distância entre as linhas é o efeito da visita.", "", "Começa em 0% no dia da visita. Cada ponto só usa clientes que já tiveram aquele tempo para religar.")}</div>
+    <div class="grid g11">${cartaoGraf("g-pos-4", "Quando visitar? Efeito por tempo de corte na visita", "% que religa em até 15 dias, pelo tempo de corte no dia da visita. O número acima de cada par é o efeito da visita.", "", "Mostra em que momento a visita mais faz diferença: logo depois do corte ou mais tarde.", `Visitados em cada faixa: ${porFaixa.map((f) => `${f.nome} ${fmtN(f.total)}`).join(" · ")}.`)}
+    ${cartaoGraf("g-pos-5", "Evolução por mês da visita", "% que religa em até 15 dias depois da visita, mês a mês, com × sem visita.", "", "Os meses mais recentes ainda não tiveram os 15 dias para todos os clientes: conta só quem já teve.")}</div>
+    ${cartao("Detalhamento do efeito da visita", `Por grupo: visitados (ainda cortados na visita), % que religou em até 7, 15 e 30 dias depois da visita, o mesmo % para clientes <b>sem visita</b> no mesmo tempo de corte, o <b>efeito</b> (diferença em pontos percentuais), a mediana de dias da visita à religação e as visitas sem necessidade. <b>Clique num número</b> para ver os clientes; o ⬇ baixa o analítico das visitas.`,
+      tabela("efeitoPos", [nomesDim[dimE], "Visitados", "Religou em 7 dias", "Religou em 15 dias", "Sem visita 15 dias", "Efeito 15 dias", "Religou em 30 dias", "Sem visita 30 dias", "Efeito 30 dias", "Mediana dias até religar", "Visita sem necessidade"], linhasSeg), "efeitoPos", ctlDet)}</div>`;
   const desenha = () => {
+    const pctv = (v) => (v == null ? null : +(v * 100).toFixed(1));
     const op1 = opcoes({ pct: true, eixoY: { max: 100 } });
     op1.plugins.tooltip.callbacks.label = (c) => ` ${c.dataset.label}: ${nf1.format(c.parsed.y)}%` + (c.datasetIndex === 0 ? ` (${fmtN(res[c.dataIndex].n)} visitados)` : "");
     grafico("g-pos-2", "bar", {
       labels: PRAZOS.map((d) => `Em até ${d} dias`),
       datasets: [
-        barra("Com visita", res.map((r) => (r.com == null ? null : +(r.com * 100).toFixed(1))), COR.laranja, { fmt: (v) => nf0.format(v) + "%" }),
-        barra("Sem visita", res.map((r) => (r.sem == null ? null : +(r.sem * 100).toFixed(1))), "#A7B5CB", { fmt: (v) => nf0.format(v) + "%", corTexto: "#1f2d3d" }),
+        barra("Com visita", res.map((r) => pctv(r.com)), COR.laranja, { fmt: (v) => nf0.format(v) + "%" }),
+        barra("Sem visita", res.map((r) => pctv(r.sem)), "#A7B5CB", { fmt: (v) => nf0.format(v) + "%", corTexto: "#1f2d3d" }),
       ],
     }, op1);
     const op2 = opcoes({ eixoY: { beginAtZero: true, max: 100 } });
@@ -1143,10 +1211,29 @@ function efeitoPos(todos) {
     grafico("g-pos-3", "line", {
       labels: SEMANAS.map((w) => (w === 0 ? "Visita" : `${w} sem.`)),
       datasets: [
-        { label: "Com visita", data: curva.map((r) => (r.com == null ? null : +(r.com * 100).toFixed(1))), borderColor: COR.laranja, backgroundColor: COR.laranja, borderWidth: 3, pointRadius: 4, tension: 0.25, fmt: (v) => (v ? nf0.format(v) + "%" : ""), spanGaps: true },
-        { label: "Sem visita", data: curva.map((r) => (r.sem == null ? null : +(r.sem * 100).toFixed(1))), borderColor: "#7d8ea6", backgroundColor: "#7d8ea6", borderWidth: 3, pointRadius: 4, tension: 0.25, fmt: (v) => (v ? nf0.format(v) + "%" : ""), spanGaps: true, rotuloAbaixo: true, borderDash: [6, 4] },
+        { label: "Com visita", data: curva.map((r) => pctv(r.com)), borderColor: COR.laranja, backgroundColor: COR.laranja, borderWidth: 3, pointRadius: 4, tension: 0.25, fmt: (v) => (v ? nf0.format(v) + "%" : ""), spanGaps: true },
+        { label: "Sem visita", data: curva.map((r) => pctv(r.sem)), borderColor: "#7d8ea6", backgroundColor: "#7d8ea6", borderWidth: 3, pointRadius: 4, tension: 0.25, fmt: (v) => (v ? nf0.format(v) + "%" : ""), spanGaps: true, rotuloAbaixo: true, borderDash: [6, 4] },
       ],
     }, op2);
+    const op4 = opcoes({ pct: true, eixoY: { max: 100, grace: "10%" } });
+    op4.plugins.tooltip.callbacks.label = (c) => ` ${c.dataset.label}: ${nf1.format(c.parsed.y)}%` + (c.datasetIndex === 0 ? ` (${fmtN(porFaixa[c.dataIndex].n)} visitados com 15 dias)` : "");
+    op4.plugins.efeitoTopo = { valores: porFaixa.map((f) => pp(f.com, f.sem)) };
+    grafico("g-pos-4", "bar", {
+      labels: porFaixa.map((f) => f.nome),
+      datasets: [
+        barra("Com visita", porFaixa.map((f) => pctv(f.com)), COR.laranja, { fmt: (v) => nf0.format(v) + "%" }),
+        barra("Sem visita", porFaixa.map((f) => pctv(f.sem)), "#A7B5CB", { fmt: (v) => nf0.format(v) + "%", corTexto: "#1f2d3d" }),
+      ],
+    }, op4);
+    const op5 = opcoes({ eixoY: { beginAtZero: true, max: 100 } });
+    op5.plugins.tooltip.callbacks.label = (c) => ` ${c.dataset.label}: ${nf1.format(c.parsed.y)}%` + (c.datasetIndex === 0 ? ` (${fmtN(porMes[c.dataIndex].n)} visitados)` : "");
+    grafico("g-pos-5", "line", {
+      labels: porMes.map((x) => mesCurto(x.m)),
+      datasets: [
+        { label: "Com visita", data: porMes.map((x) => pctv(x.com)), borderColor: COR.laranja, backgroundColor: COR.laranja, borderWidth: 3, pointRadius: 4, tension: 0.25, fmt: (v) => nf0.format(v) + "%", spanGaps: true },
+        { label: "Sem visita", data: porMes.map((x) => pctv(x.sem)), borderColor: "#7d8ea6", backgroundColor: "#7d8ea6", borderWidth: 3, pointRadius: 4, tension: 0.25, fmt: (v) => nf0.format(v) + "%", spanGaps: true, rotuloAbaixo: true, borderDash: [6, 4] },
+      ],
+    }, op5);
   };
   return { html, grafico: desenha };
 }
@@ -1332,7 +1419,7 @@ function abaDados() {
       `<b>Situação</b> = <code>SIT_LIG</code> do cadastro mais recente da matrícula, se ele for do mês do corte ou depois; com cadastro mais antigo, é calculada (ATIVA se religou, senão CORTADA).`,
       `Padrão da página (como a tabela dinâmica “clientes sem a 1ª visita”): <b>tira todos que tiveram pós-corte</b>, <b>tira todos que tiveram religação</b> (OS Finalizada${f.ativas ? "; com Ativas = religadas, também as ativas sem OS" : ""}) e <b>fica só com a situação CORTADA</b> no cadastro. Os filtros Pós-corte, Religação e Situação (Sem / Com / Todos) mudam esse recorte; linhas = mês do corte, colunas = o campo de “Colunas por” (Régua separa −7, 7 a 15 e +15 dias cortado).`,
       `“1ª visita: Sem sucesso” mostra só quem teve a 1ª vistoria ${esc(S.pos_corte_sem_sucesso)} (o filtro Pós-corte fica em Com).`,
-      `<b>A visita pós-corte faz o cliente religar?</b> Pega os clientes que receberam a 1ª visita pós-corte e ainda estavam cortados no dia dela, e conta quantos religaram (OS Finalizada) em até 7, 15 e 30 dias depois da visita. Para comparar, usa os clientes <b>sem visita</b> com o mesmo tempo de corte (visita no 10º dia de corte × quem estava cortado havia 10 dias e não teve visita). A diferença “a cada 100 clientes” é o efeito da visita. A curva acumulada faz a mesma conta semana a semana, só com quem já teve aquele tempo para religar. “Visita sem necessidade” = religou antes da visita.`]))
+      `<b>A visita pós-corte faz o cliente religar?</b> Pega os clientes que receberam a 1ª visita pós-corte e ainda estavam cortados no dia dela, e conta quantos religaram (OS Finalizada) em até 7, 15 e 30 dias depois da visita. Para comparar, usa os clientes <b>sem visita</b> com o mesmo tempo de corte (visita no 10º dia de corte × quem estava cortado havia 10 dias e não teve visita). A diferença “a cada 100 clientes” é o efeito da visita. A curva acumulada faz a mesma conta semana a semana, só com quem já teve aquele tempo para religar. “Visita sem necessidade” = religou antes da visita. “Quando visitar?” separa os visitados pelo tempo de corte no dia da visita (0–3, 4–7, 8–15, 16–30, +30 dias) e compara cada faixa com os sem visita do mesmo tempo; a evolução faz a conta de 15 dias por mês da visita; o detalhamento repete as contas por tempo até a visita, tipo, cidade, Sup, mês ou resultado da visita.`]))
     + bloco("Como conferir", `<p>Tabela dinâmica com <i>Linha: mês do corte</i> nas linhas e a coluna <i>Coluna: …</i> nas colunas, contando <i>Matrícula</i>. O analítico sai com os filtros da aba (pós-corte, religação, situação, meses, 1ª visita) — eles aparecem nas colunas do arquivo.</p>`)
     + `<div class="linha-botoes">${btnAnalitico("posTabela", "pos", "Pos-corte", "Analítico do pós-corte (CSV)")}</div>`);
 
