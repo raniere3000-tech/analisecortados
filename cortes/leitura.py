@@ -349,36 +349,54 @@ def le_catalogo(caminho):
 
 def le_conferencia(caminho):
     """Planilha de conferência (base antiga do Excel): entre as abas com NUM_LIGACAO e DATA_CONCLUSAO, a que tem mais
-    colunas da conferência (religação, pós-corte, régua…) e, empatando, mais linhas
-    (o cabeçalho pode estar abaixo de um título, como nas abas de detalhe de tabela dinâmica)."""
+    colunas da conferência (religação, pós-corte, régua…) e, empatando, mais linhas. Para ser rápido mesmo em pastas
+    de trabalho grandes, escolhe a aba só pelo cabeçalho e pelo tamanho gravado no arquivo, e lê só ela e só as colunas usadas."""
     col = REGRAS["conferencia"]["colunas"]
     acha = lambda nomes, campo: next((n for a in _apelidos(col[campo]) for n in nomes if chave(n) == chave(a)), None)  # noqa: E731
+    nota = lambda nomes: sum(1 for c in col if acha(nomes, c))  # noqa: E731
     if caminho.lower().endswith(".csv"):
         linha, nomes = _cabecalho(caminho)
-        abas = [(None, linha, nomes)]
+        df = _le_csv(caminho, skiprows=linha, header=0)
+        aba = ""
     else:
-        xl = pd.ExcelFile(_fonte(caminho), engine=_motor(caminho))
-        abas = []
-        for aba in xl.sheet_names:
-            topo = xl.parse(aba, header=None, nrows=15, dtype=str)
-            for i in range(len(topo)):
-                nomes = [str(v).strip() for v in topo.iloc[i].tolist() if isinstance(v, str)]
-                if acha(nomes, "matricula") and acha(nomes, "data"):
-                    abas.append((aba, i, nomes))
-                    break
-    if not abas:
-        raise ValueError("planilha de conferência sem as colunas NUM_LIGACAO e DATA_CONCLUSAO")
-    melhor = None
-    for aba, linha, nomes in abas:
-        if aba is None:
-            df = _le_csv(caminho, skiprows=linha, header=0)
+        candidatas = []                                   # (nota, linhas, aba, linha do cabeçalho)
+        if _motor(caminho) == "openpyxl":
+            import openpyxl
+            wb = openpyxl.load_workbook(_fonte(caminho), read_only=True, data_only=True)
+            try:
+                for ws in wb.worksheets:
+                    for i, valores in enumerate(ws.iter_rows(max_row=15, values_only=True)):
+                        nomes = [str(v).strip() for v in valores if isinstance(v, str)]
+                        if acha(nomes, "matricula") and acha(nomes, "data"):
+                            candidatas.append((nota(nomes), ws.max_row or 0, ws.title, i))
+                            break
+            finally:
+                wb.close()
         else:
-            df = xl.parse(aba, header=linha)
-        df = df.dropna(how="all")
-        nota = (sum(1 for c in col if acha([str(x) for x in df.columns], c)), len(df))   # mais colunas da conferência, depois mais linhas
-        if melhor is None or nota > melhor[2]:
-            melhor = (aba, df, nota)
-    aba, df, _ = melhor
+            xl = pd.ExcelFile(_fonte(caminho), engine=_motor(caminho))
+            for aba in xl.sheet_names:
+                topo = xl.parse(aba, header=None, nrows=15, dtype=str)
+                for i in range(len(topo)):
+                    nomes = [str(v).strip() for v in topo.iloc[i].tolist() if isinstance(v, str)]
+                    if acha(nomes, "matricula") and acha(nomes, "data"):
+                        candidatas.append((nota(nomes), 0, aba, i))
+                        break
+        if not candidatas:
+            raise ValueError("planilha de conferência sem as colunas NUM_LIGACAO e DATA_CONCLUSAO")
+        alvo = {chave(a) for c in col for a in _apelidos(col[c])}
+        melhor = None
+        # a maior aba primeiro; se ela vier quase vazia (fórmulas sem o valor gravado), tenta as próximas (no máximo 3 leituras)
+        for n, declaradas, aba_c, linha in sorted(candidatas, key=lambda c: (c[0], c[1]), reverse=True)[:3]:
+            lida = pd.read_excel(_fonte(caminho), sheet_name=aba_c, header=linha, engine=_motor(caminho),
+                                 usecols=lambda nome: chave(nome) in alvo).dropna(how="all")
+            m = acha([str(x) for x in lida.columns], "matricula")
+            cheias = int(lida[m].notna().sum()) if m else 0
+            if melhor is None or (n, cheias) > (melhor[0], melhor[1]):
+                melhor = (n, cheias, aba_c, lida)
+            if not declaradas or cheias >= 0.5 * max(declaradas - linha - 1, 1):
+                break
+        _, _, aba, df = melhor
+    df = df.dropna(how="all")
     nomes = [str(c) for c in df.columns]
     saida = pd.DataFrame(index=df.index)
     for campo in col:

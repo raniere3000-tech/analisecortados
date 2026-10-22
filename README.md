@@ -113,3 +113,11 @@ Os testes usam dados sintéticos (`tests/dados_sinteticos.py`) e rodam no GitHub
 - Para cada diferença o painel diz **por quê**: OS com status que não conta (ex.: Pendente, Cancelada), serviço fora do catálogo,
   OS depois do próximo corte da matrícula, OS já usada por outro corte, religação/vistoria que só o painel achou (com a OS e o arquivo),
   régua calculada em outro dia, situação do cadastro, matrícula fora dos arquivos lidos.
+
+## Desempenho
+
+- A conferência compara sem pandas dentro do laço: datas viram números uma vez por coluna e as OS de cada matrícula viram listas
+  (5 mil linhas: de 97 s para menos de 1 s; 50 mil linhas: cerca de 7 s no computador, um pouco mais no navegador).
+- O arquivo de conferência escolhe a aba pelo cabeçalho e pelo tamanho gravado, e lê só essa aba e só as colunas usadas.
+- No navegador, pandas e xlrd vêm do próprio Pyodide e o openpyxl é instalado direto do PyPI (sem o aviso “No known package”);
+  o xlsxwriter não é mais instalado (a planilha calculada é gravada com o openpyxl).

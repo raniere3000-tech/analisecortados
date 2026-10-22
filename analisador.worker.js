@@ -26,15 +26,14 @@ async function preparaPython() {
   pyodide.setStderr({ batched: (linha) => avisa("log", { linha }) });
 
   avisa("etapa", { texto: "Instalando pandas e leitores de Excel…" });
-  await pyodide.loadPackage(["pandas", "micropip"]);
-  // leitores/gravadores de Excel: primeiro do próprio Pyodide; o que faltar, tenta no PyPI (falha não para a análise)
-  const EXTRAS = ["openpyxl", "xlrd", "xlsxwriter"];
-  try { await pyodide.loadPackage(EXTRAS); } catch (e) { avisa("log", { linha: "Aviso: " + e.message }); }
+  // pandas, micropip e xlrd (.xls) vêm do próprio Pyodide, numa só chamada
+  await pyodide.loadPackage(["pandas", "micropip", "xlrd"]);
+  // openpyxl (.xlsx) não está no Pyodide: vem do PyPI direto (sem a tentativa que falhava e gerava o aviso).
+  // xlsxwriter não é instalado: a planilha calculada (Excel) é gravada com o openpyxl.
   const micropip = pyodide.pyimport("micropip");
-  for (const pacote of EXTRAS) {
-    if (pyodide.runPython(`import importlib.util; importlib.util.find_spec("${pacote}") is not None`)) continue;
-    try { await micropip.install(pacote); }
-    catch (e) { avisa("log", { linha: `Aviso: não foi possível instalar ${pacote} (${String(e.message || e).split("\n").pop()}).` }); }
+  if (!pyodide.runPython(`import importlib.util; importlib.util.find_spec("openpyxl") is not None`)) {
+    try { await micropip.install("openpyxl"); }
+    catch (e) { avisa("log", { linha: `Aviso: não foi possível instalar openpyxl (${String(e.message || e).split("\n").pop()}).` }); }
   }
 
   avisa("etapa", { texto: "Carregando o programa de análise…" });
