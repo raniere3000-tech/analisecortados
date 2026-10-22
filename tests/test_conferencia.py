@@ -44,3 +44,14 @@ def test_conferencia_compara_e_explica(tmp_path):
     assert "09/04/2026" in m("3000", "Religação diferente")
     assert "Cancelada" in m("4000", "Corte não encontrado no painel")
     assert conf["comparadas"] == 4
+
+
+def test_analitico_comparativo_lado_a_lado(tmp_path):
+    conf = Analise(str(_pasta(tmp_path))).executar("2026-05-10")["conferencia"]
+    cp = pd.DataFrame(conf["comparativo"]).set_index("matricula")
+    assert len(cp) == 5                                            # 4 linhas da planilha + 1 corte só no painel
+    assert cp.loc["1000", "resultado"] == "Bate em tudo"
+    assert cp.loc["2000", "resultado"] == "Diferente" and cp.loc["2000", "rel_x"] == "08/04/2026" and cp.loc["2000", "rel_p"] == "Sem Religação"
+    assert "Pendente" in cp.loc["2000", "motivos"] and cp.loc["2000", "diferencas"] == "Data Religação"
+    assert cp.loc["3000", "rel_p"] == "09/04/2026" and cp.loc["4000", "resultado"] == "Corte não encontrado no painel"
+    assert cp.loc["5000", "resultado"] == "Corte só no painel"

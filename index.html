@@ -134,6 +134,7 @@ details.acc > summary:hover { background:#f6f9fc; border-radius:10px; }
 .acc-corpo ul.avisos li { margin:4px 0; }
 .linha-botoes { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0 4px; }
 .btn-baixar { font-weight:600; }
+.btn-comp { background:#16a5b8 !important; border-color:#16a5b8 !important; color:#fff !important; }
 .acc-log summary { cursor:pointer; font-size:12px; color:#176b9c; margin-top:8px; }
 .acc-log pre { max-height:260px; overflow:auto; background:#f6f9fc; padding:8px; border-radius:6px; font-size:11px; white-space:pre-wrap; }
 .dados-topo { padding-bottom:16px; }
@@ -273,7 +274,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 <header class="top">
   <div class="top-linha">
     <div>
-      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v26</span></div>
+      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v27</span></div>
       <h1 id="titulo">Análise de Corte e Religação</h1>
     </div>
     <div class="ferramentas">
@@ -346,7 +347,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 
 <script>
 "use strict";
-const VERSAO_SITE = "v26-20261022";
+const VERSAO_SITE = "v27-20261022";
 
 // ===================== utilidades =====================
 const $ = (id) => document.getElementById(id);
@@ -1169,7 +1170,7 @@ function abaDados() {
   const listaPassos = (l) => `<ol class="passos">${l.map((x) => `<li>${x}</li>`).join("")}</ol>`;
   const bloco = (titulo, html) => `<h3>${titulo}</h3>${html}`;
 
-  let html = `<div class="card dados-topo"><div class="card-topo"><h2>Dados e validação dos cálculos</h2></div>
+  let html = `<div class="card dados-topo"><div class="card-topo"><h2>Dados e validação dos cálculos</h2>${DADOS.conferencia ? `<div class="acoes">${btnComparativo()}</div>` : ""}</div>
     <p class="nota-secao">Clique num tópico para abrir. De 1 a 4, cada página do painel: o que mostra, quais bases e colunas entram, o cálculo passo a passo e o <b>⬇</b> para baixar o analítico (uma linha por corte ou OS, com as colunas que dizem onde cada uma foi contada). Filtros atuais: <b>${esc(filtrosTxt)}</b>.</p>`;
 
   html += topico("avisos", `Avisos (${avisos.length})`, avisos.length ? `<ul class="avisos">${avisos.map((a) => `<li>${a}</li>`).join("")}</ul>` : "<p>Nenhum aviso: todos os arquivos foram lidos e classificados.</p>");
@@ -1192,7 +1193,7 @@ function abaDados() {
   html += topico("downloads", "Bases para download", `<p>Arquivos completos para conferir fora do painel.</p><div class="linha-botoes">
       <button type="button" class="btn-just btn-baixar" id="btnExcel">⬇ Base calculada (Excel)</button>
       <button type="button" class="btn-just btn-baixar" id="btnCsvCortes">⬇ Cortes filtrados (CSV)</button>
-      <button type="button" class="btn-just btn-baixar" id="btnCsvEventos">⬇ Eventos do saldo filtrados (CSV)</button></div>
+      <button type="button" class="btn-just btn-baixar" id="btnCsvEventos">⬇ Eventos do saldo filtrados (CSV)</button>${DADOS.conferencia ? btnComparativo() : ""}</div>
     <p class="nota-secao">A base calculada (Excel) tem todos os cortes com todas as colunas, os eventos do saldo, os arquivos lidos e os parâmetros (sem filtros). Os CSV respeitam os filtros atuais. Se algum arquivo ficar com erro de “leitura guardada”, use <button type="button" class="btn-just" id="btnLimparCache">Limpar leituras guardadas</button>.</p>`);
 
   // 1. Saldo
@@ -1249,6 +1250,23 @@ function abaDados() {
   MEM.dados = {};
   return html;
 }
+// analítico comparativo: uma linha por corte da planilha (e os só do painel), cada campo planilha × painel
+const CAB_COMP = [["resultado", "Resultado"], ["matricula", "Matrícula"], ["data", "Data do corte"], ["diferencas", "Campos diferentes"], ["motivos", "Motivos"],
+  ["rel_x", "Data Religação (planilha)"], ["rel_p", "Data Religação (painel)"], ["mesrel_x", "Mês Religação (planilha)"], ["mesrel_p", "Mês Religação (painel)"],
+  ["pos_x", "Data Pós Corte (planilha)"], ["pos_p", "Data Pós Corte (painel)"], ["regua_x", "Régua (planilha)"], ["regua_p", "Régua (painel)"],
+  ["sit_x", "Situação (planilha)"], ["sit_p", "Situação (painel)"], ["dias_x", "Dias (planilha)"], ["dias_p", "Dias (painel)"],
+  ["perm_x", "Permanência (planilha)"], ["perm_p", "Permanência (painel)"], ["tipo_corte", "Tipo de corte"], ["cidade", "Cidade"],
+  ["sit_fonte", "Origem da situação (painel)"], ["os_corte", "OS de corte (painel)"], ["arquivo", "Arquivo (painel)"]];
+function baixaComparativo() {
+  const cf = DADOS && DADOS.conferencia;
+  if (!cf) { toast("Coloque na pasta a planilha com “conferencia” no nome e clique em ↻ Atualizar.", true); return; }
+  if (!cf.comparativo) { toast("Clique em ↻ Atualizar para gerar o comparativo com esta versão do painel.", true); return; }
+  const l = linhasDe(cf.comparativo);
+  baixaCsv(CAB_COMP.map(([, t]) => t), l.map((x) => CAB_COMP.map(([k]) => (k === "data" ? dataRot(x[k]) : x[k]))), "Analitico comparativo - conferencia");
+  toast(`Analítico comparativo baixado: ${fmtN(l.length)} linha(s).`);
+}
+const btnComparativo = () => `<button type="button" class="btn-just btn-baixar btn-comp" data-acao="comparativo" title="Uma linha por corte: cada campo da planilha ao lado do calculado pelo painel, o resultado e o motivo de cada diferença">⬇ Analítico comparativo (CSV)</button>`;
+
 // conferência com a planilha antiga (arquivo com "conferencia" no nome)
 const EXPLICA_CONF = {
   "Bate em tudo": "Mesma matrícula e data do corte, e religação, pós-corte, régua e situação iguais.",
@@ -1279,7 +1297,8 @@ function topicoConferencia() {
     <div class="tabela-wrap"><table><thead><tr><th>Resultado</th><th>Linhas</th><th>% da planilha</th><th>O que significa</th></tr></thead><tbody>${linhasRes}</tbody></table></div>
     ${top.length ? `<h3>Motivos mais comuns</h3><div class="tabela-wrap"><table><thead><tr><th>Diferença</th><th>Motivo</th><th>Linhas</th></tr></thead><tbody>${linhasTop}</tbody></table></div>` : ""}
     ${cf.cortadas ? `<p class="nota-secao">São muitas diferenças: a lista mostra as primeiras 60.000 (o resumo conta todas).</p>` : ""}
-    <div class="linha-botoes"><button type="button" class="btn-just btn-baixar" data-det="${todas}">Ver todas as diferenças (${fmtN(l.length)})</button><button type="button" class="btn-just btn-baixar" id="btnCsvConf">⬇ Conferência (CSV)</button></div>`);
+    <div class="linha-botoes">${btnComparativo()}<button type="button" class="btn-just btn-baixar" id="btnCsvConf" title="Só as diferenças, uma linha por campo diferente">⬇ Só as diferenças (CSV)</button><button type="button" class="btn-just btn-baixar" data-det="${todas}">Ver as diferenças na tela (${fmtN(l.length)})</button></div>
+    <p class="nota-secao">O <b>analítico comparativo</b> tem uma linha por corte da planilha (e os que só o painel tem): Resultado (Bate em tudo, Diferente, Corte não encontrado, Corte só no painel), os campos diferentes, os motivos e cada campo lado a lado — <i>planilha</i> × <i>painel</i>.</p>`);
 }
 const botaoTxt = (id, nome, rot) => `<button type="button" class="btn-just btn-baixar" data-csv="${id}" data-nome="${esc(nome)}">${esc(rot)}</button>`;
 function ligaDados() {
@@ -1397,6 +1416,7 @@ document.addEventListener("click", (e) => {
   const go = e.target.closest("th[data-gord]");
   if (go) { const k = go.dataset.gord; GAV.ordem = GAV.ordem && GAV.ordem.k === k ? { k, dir: -GAV.ordem.dir } : { k, dir: 1 }; gavDesenha(); return; }
   if (e.target.closest("[data-acao=gmais]")) { GAV.n += 200; gavDesenha(); return; }
+  if (e.target.closest("[data-acao=comparativo]")) { baixaComparativo(); return; }
   if (e.target.closest("[data-acao=padraoPos]")) { Object.assign(CTL, { posPos: "sem", relPos: "sem", sitPos: "CORTADA", visitaPos: "todas" }); guardaCtl(); desenha(); return; }
   const c = e.target.closest("[data-ctl]");
   if (c) { CTL[c.dataset.ctl] = c.dataset.val; guardaCtl(); desenha(); return; }

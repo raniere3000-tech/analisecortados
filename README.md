@@ -105,7 +105,8 @@ Os testes usam dados sintéticos (`tests/dados_sinteticos.py`) e rodam no GitHub
   o cabeçalho pode estar abaixo de um título). Com várias abas, vale a que tem mais dessas colunas e, empatando, mais linhas.
 - Cada linha é comparada com o painel por **matrícula + data do corte**. Na aba Dados → “Conferência com a planilha” aparece o resumo
   (bate em tudo, corte não encontrado, corte só no painel, religação/mês da religação/pós-corte/régua/situação diferentes), os motivos
-  mais comuns, a lista de diferenças (clique na matrícula para o histórico) e o ⬇ da conferência em CSV.
+  mais comuns, a lista de diferenças (clique na matrícula para o histórico) e os downloads: **⬇ Analítico comparativo (CSV)** — uma linha
+  por corte com cada campo lado a lado (planilha × painel), o resultado e os motivos; também no topo da aba Dados — e ⬇ Só as diferenças.
 - Para cada diferença o painel diz **por quê**: OS com status que não conta (ex.: Pendente, Cancelada), serviço fora do catálogo,
   OS depois do próximo corte da matrícula, OS já usada por outro corte, religação/vistoria que só o painel achou (com a OS e o arquivo),
   régua calculada em outro dia, situação do cadastro, matrícula fora dos arquivos lidos.

@@ -12,7 +12,10 @@ from .config import REGRAS
 from .leitura import normaliza
 
 CAT, ST, TXT, RG = REGRAS["categorias"], REGRAS["status"], REGRAS["textos"], REGRAS["regua"]
-LIMITE = 60000                                   # linhas de diferença mandadas ao site (o resumo conta todas)
+LIMITE = 60000                                   # linhas mandadas ao site (o resumo conta todas)
+# analítico comparativo: uma linha por corte, cada campo lado a lado (planilha × painel)
+CAMPOS_COMP = ["resultado", "matricula", "data", "diferencas", "motivos", "rel_x", "rel_p", "mesrel_x", "mesrel_p", "pos_x", "pos_p",
+               "regua_x", "regua_p", "sit_x", "sit_p", "dias_x", "dias_p", "perm_x", "perm_p", "tipo_corte", "cidade", "sit_fonte", "os_corte", "arquivo"]
 
 
 def _d(v):
@@ -22,9 +25,29 @@ def _d(v):
 def _txt(v):
     if v is None or (isinstance(v, float) and pd.isna(v)) or v is pd.NaT:
         return ""
-    if isinstance(v, pd.Timestamp):
+    if hasattr(v, "strftime"):                       # datetime do Excel ou Timestamp
         return v.strftime("%d/%m/%Y")
-    return str(v).strip()
+    t = str(v).strip()
+    return "" if t.lower() in ("nan", "nat", "none") else t
+
+
+def _mes_br(v):
+    """Mês para o comparativo: '2026-04' ou data do 1º dia -> '04/2026'; textos ficam como estão."""
+    t = _txt(v)
+    if len(t) == 7 and t[4] == "-":
+        return f"{t[5:]}/{t[:4]}"
+    if len(t) == 10 and t[2] == "/" and t.startswith("01/"):
+        return t[3:]
+    return t
+
+
+def _num(v):
+    if v is None or (isinstance(v, float) and pd.isna(v)):
+        return ""
+    try:
+        return str(int(float(v)))
+    except (TypeError, ValueError):
+        return _txt(v)
 
 
 def _data_ou_texto(serie):
@@ -113,18 +136,41 @@ def compara(conf, cortes, ativ, hoje):
             return f"a OS de {_d(dia)} já está ligada a outro corte da matrícula (cada OS vale para um corte só)"
         return f"a OS de {_d(dia)} está nos arquivos, mas não foi a 1ª depois do corte"
 
-    linhas, cont = [], {}
+    linhas, cont, comp, atual = [], {}, [], {"difs": [], "motivos": []}
 
     def add(tipo, mat, dia, campo, v_excel, v_painel, motivo, c=None):
         cont[tipo] = cont.get(tipo, 0) + 1
+        atual["difs"].append(campo if campo != "corte" else tipo)
+        atual["motivos"].append(f"{campo if campo != 'corte' else tipo}: {motivo}")
         if len(linhas) < LIMITE:
             linhas.append({"tipo": tipo, "matricula": mat, "data": dia.strftime("%Y-%m-%d"), "campo": campo,
                            "excel": _txt(v_excel), "painel": _txt(v_painel), "motivo": motivo,
                            "cidade": (c or {}).get("cidade"), "tipo_corte": (c or {}).get("tipo")})
 
     sem_rel, sem_pos = TXT["sem_religacao"], TXT["sem_pos"]
+
+    def linha_comp(resultado, mat, dia, r=None, c=None):
+        x = (lambda k: getattr(r, k, None)) if r is not None else (lambda k: None)
+        c = c or {}
+        p_rel, p_pos = c.get("data_religacao"), c.get("data_pos")
+        if len(comp) < LIMITE:
+            comp.append({
+                "resultado": resultado, "matricula": mat, "data": dia.strftime("%Y-%m-%d"),
+                "diferencas": ", ".join(atual["difs"]), "motivos": " | ".join(atual["motivos"]),
+                "rel_x": _txt(x("data_religacao")), "rel_p": (_d(p_rel) or sem_rel) if c else "",
+                "mesrel_x": _mes_br(x("mes_religacao")), "mesrel_p": _mes_br(c.get("mes_religacao")) if c else "",
+                "pos_x": _txt(x("data_pos")), "pos_p": (_d(p_pos) or sem_pos) if c else "",
+                "regua_x": _txt(x("regua")), "regua_p": _txt(c.get("regua")),
+                "sit_x": _txt(x("situacao")), "sit_p": _txt(c.get("situacao")),
+                "dias_x": _num(x("dias")), "dias_p": (_num(c.get("dias")) or sem_rel) if c else "",
+                "perm_x": _txt(x("permanencia")), "perm_p": _txt(c.get("permanencia")),
+                "tipo_corte": _txt(c.get("tipo")) or _txt(x("descricao")), "cidade": _txt(c.get("cidade")),
+                "sit_fonte": _txt(c.get("situacao_fonte")), "os_corte": _txt(c.get("id")), "arquivo": _txt(c.get("arquivo")),
+            })
+
     for r in df.itertuples(index=False):
         mat, dia = r.matricula, r.data
+        atual["difs"], atual["motivos"] = [], []
         c = painel.get((mat, dia))
         if c is None:
             g = por_mat.get(mat)
@@ -145,6 +191,7 @@ def compara(conf, cortes, ativ, hoje):
                 else:
                     motivo = "não há OS de corte Finalizada desta matrícula nos arquivos lidos"
             add("Corte não encontrado no painel", mat, dia, "corte", _d(dia), "", motivo)
+            linha_comp("Corte não encontrado no painel", mat, dia, r)
             continue
 
         dif = False
@@ -220,6 +267,7 @@ def compara(conf, cortes, ativ, hoje):
             add("Situação diferente", mat, dia, "Situação", getattr(r, "situacao", ""), c.get("situacao"), motivo, c)
         if not dif:
             cont["Bate em tudo"] = cont.get("Bate em tudo", 0) + 1
+        linha_comp("Diferente" if dif else "Bate em tudo", mat, dia, r, c)
 
     # cortes do painel que a planilha não tem (no mesmo período da planilha)
     ini, fim = df["data"].min(), df["data"].max()
@@ -227,8 +275,10 @@ def compara(conf, cortes, ativ, hoje):
     so_painel = cortes[(cortes["data"] >= ini) & (cortes["data"] <= fim)]
     so_painel = so_painel[[k not in chaves for k in zip(so_painel["matricula"], so_painel["data"])]]
     for c in so_painel.to_dict("records"):
+        atual["difs"], atual["motivos"] = [], []
         add("Corte só no painel", c["matricula"], c["data"], "corte", "", _d(c["data"]),
             f"OS de corte Finalizada{arquivo_os(c.get('id'))} que não está na planilha (a Base dela pode ter sido extraída antes ou com outro filtro)", c)
+        linha_comp("Corte só no painel", c["matricula"], c["data"], None, c)
 
     ordem = ["Bate em tudo", "Corte não encontrado no painel", "Corte só no painel", "Religação diferente", "Mês da religação diferente",
              "Pós-corte diferente", "Régua diferente (dias até hoje)", "Régua diferente", "Situação diferente"]
@@ -238,4 +288,5 @@ def compara(conf, cortes, ativ, hoje):
         "periodo": f"{_d(ini)} a {_d(fim)}", "comparadas": int(len(df)), "resumo": resumo,
         "linhas": {k: [l[k] for l in linhas] for k in ("tipo", "matricula", "data", "campo", "excel", "painel", "motivo", "cidade", "tipo_corte")},
         "cortadas": len(linhas) < sum(cont.values()) - cont.get("Bate em tudo", 0),
+        "comparativo": {k: [l[k] for l in comp] for k in CAMPOS_COMP},
     }
