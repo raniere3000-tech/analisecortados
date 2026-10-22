@@ -4,7 +4,7 @@ from datetime import date
 
 import pandas as pd
 
-from . import base, cache_arquivos, leitura, saida
+from . import base, cache_arquivos, conferencia, leitura, saida
 from .config import REGRAS
 
 CAT = REGRAS["categorias"]
@@ -36,6 +36,7 @@ class Analise:
         self.pasta = pasta
         self.progresso = progresso or (lambda pct, texto: None)
         self.cortes = self.eventos = None
+        self.conferencia = None
         self.arquivos, self.info = [], {}
 
     def executar(self, hoje=None):
@@ -59,6 +60,9 @@ class Analise:
         self.cortes = base.monta_cortes(ativ, cad, hoje)
         self.progresso(90, "Calculando o saldo de economias…")
         self.eventos = base.monta_saldo(ativ, cad)
+        if lido.get("conferencia") is not None:                 # planilha antiga: compara linha a linha (matrícula + data do corte)
+            self.progresso(95, "Conferindo com a planilha de conferência…")
+        self.conferencia = conferencia.compara(lido.get("conferencia"), self.cortes, ativ, hoje)
         for df in (self.cortes, self.eventos):
             df["sup"] = base.sup(df["cidade"])
         sem_sup = pd.concat([self.cortes.loc[self.cortes["sup"].eq(REGRAS["supervisao"]["sem_sup"]), "cidade"],
@@ -103,6 +107,7 @@ class Analise:
             "regras": {k: REGRAS[k] for k in ("regua", "permanencia", "textos", "categorias", "status", "tipos")},
             "hoje": hoje.strftime("%Y-%m-%d"),
             "cache_invalido": cache_arquivos.invalidos(),
+            "conferencia": self.conferencia,
         }
 
     def excel(self):

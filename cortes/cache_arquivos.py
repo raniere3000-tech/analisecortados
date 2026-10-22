@@ -17,8 +17,8 @@ import pickle
 from .config import REGRAS
 
 # mude BASE quando a leitura dos arquivos mudar; a parte de regras.json que define a leitura entra sozinha na versão
-BASE = "4"
-_LEITURA = {k: REGRAS.get(k) for k in ("arquivos", "colunas_atividades", "religacao_lisc")}
+BASE = "5"
+_LEITURA = {k: REGRAS.get(k) for k in ("arquivos", "colunas_atividades", "religacao_lisc", "conferencia")}
 VERSAO = BASE + "-" + hashlib.sha1(json.dumps(_LEITURA, sort_keys=True, ensure_ascii=False).encode()).hexdigest()[:8]
 CACHE_DIR = os.environ.get("CORTES_CACHE", "/cache")
 

@@ -220,6 +220,8 @@ td.clic:hover { text-decoration:underline; }
 #gaveta th[data-gord]::after { content:attr(data-seta); margin-left:4px; font-size:9px; }
 #gaveta tbody tr:hover td { background:#fff4e8 !important; }
 #gaveta .g-rodape { font-size:11.5px; color:#6b7d93; padding:10px 0 4px; display:flex; align-items:center; gap:10px; }
+#gaveta.larga { width:min(1080px,97vw); }
+#gaveta.larga td:last-child { white-space:normal; min-width:320px; line-height:1.35; }
 #gaveta .vazio-g { text-align:center; color:#8a99aa; padding:16px; }
 
 /* esqueleto de carregamento */
@@ -271,7 +273,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 <header class="top">
   <div class="top-linha">
     <div>
-      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v25</span></div>
+      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v26</span></div>
       <h1 id="titulo">Análise de Corte e Religação</h1>
     </div>
     <div class="ferramentas">
@@ -344,7 +346,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 
 <script>
 "use strict";
-const VERSAO_SITE = "v25-20261015";
+const VERSAO_SITE = "v26-20261022";
 
 // ===================== utilidades =====================
 const $ = (id) => document.getElementById(id);
@@ -1136,6 +1138,8 @@ function abaDados() {
     if (k === "Cortes sem cadastro" && v) avisos.push(`<b>${fmtN(v)}</b> corte(s) sem a matrícula no cadastro: situação “${esc(T.sem_cadastro)}” e 1 economia.`);
   }
   if (!analiseNoWorker) avisos.push("O painel está mostrando a última leitura guardada; a pasta está sendo lida de novo.");
+  const cf = DADOS.conferencia;
+  if (cf) { const ok = (cf.resumo.find((r) => r.tipo === "Bate em tudo") || {}).qtd || 0; if (ok < cf.comparadas) avisos.push(`Conferência com <b>${esc(cf.arquivo)}</b>: ${fmtN(cf.comparadas - ok)} de ${fmtN(cf.comparadas)} linha(s) da planilha têm alguma diferença com o painel — veja “Conferência com a planilha”.`); }
 
   // conferência rápida com os filtros atuais
   const ev = SALDO.filter((s) => (!f.de || s.mes >= f.de) && (!f.ate || s.mes <= f.ate) && bateLocal(s, f) && (!f.recurso || s.recurso === f.recurso));
@@ -1170,6 +1174,7 @@ function abaDados() {
 
   html += topico("avisos", `Avisos (${avisos.length})`, avisos.length ? `<ul class="avisos">${avisos.map((a) => `<li>${a}</li>`).join("")}</ul>` : "<p>Nenhum aviso: todos os arquivos foram lidos e classificados.</p>");
   html += topico("conferencia", "Conferência rápida — filtros atuais", `<p>Os números principais de cada página com os filtros de agora, e como chegar neles pelo analítico.</p>${tabConf}`);
+  html += topicoConferencia();
   html += topico("bases", "Bases carregadas", lido + `<p>Atividades, religação LISC/autoreligação, cadastro e catálogo são reconhecidos sozinhos (pelo nome “Atividades-” ou pelas colunas); os demais aparecem como “não usado”, com o motivo.</p>`
     + tabela("arquivos", ["Arquivo", "Tipo", "Linhas", "Observação"], DADOS.arquivos.map((a) => ({ celulas: [a.arquivo, a.tipo === "erro" ? { v: "erro", txt: "erro", selo: "atencao" } : txt({ religacao_lisc: "religação LISC" }[a.tipo] || a.tipo), a.linhas, txt(a.obs)] })), { longa: true })
     + `<div class="linha-botoes">${botaoTxt("arquivos", "Arquivos da pasta", "⬇ Lista de arquivos (CSV)")}</div>`
@@ -1244,6 +1249,38 @@ function abaDados() {
   MEM.dados = {};
   return html;
 }
+// conferência com a planilha antiga (arquivo com "conferencia" no nome)
+const EXPLICA_CONF = {
+  "Bate em tudo": "Mesma matrícula e data do corte, e religação, pós-corte, régua e situação iguais.",
+  "Corte não encontrado no painel": "A linha da planilha não virou corte no painel: OS não Finalizada, serviço fora do catálogo, data diferente ou arquivo de atividades faltando na pasta.",
+  "Corte só no painel": "Corte Finalizado nos arquivos lidos, no período da planilha, que a planilha não tem.",
+  "Religação diferente": "A data da religação ligada ao corte é diferente. O painel só usa religação Finalizada, depois do corte e até o próximo corte da matrícula, e cada religação vale para um corte só; a planilha usa a 1ª religação depois do corte, sem esses limites.",
+  "Mês da religação diferente": "Sem religação nos dois, mas Ativa × Sem Religação diferem: o painel só marca Ativa no último corte da matrícula.",
+  "Pós-corte diferente": "A 1ª vistoria pós-corte é diferente (mesmas regras da religação; aceita Finalizada ou Encerrada com Ocorrência).",
+  "Régua diferente (dias até hoje)": "Religação e pós iguais, mas a faixa de dias cortado mudou: a régua conta até hoje e a planilha foi calculada em outro dia.",
+  "Régua diferente": "Mesmas datas, classificação diferente.",
+  "Situação diferente": "ATIVA/CORTADA diferente: o painel usa o cadastro mais recente da pasta (ou calcula, se o cadastro é anterior ao corte).",
+};
+function topicoConferencia() {
+  const cf = DADOS.conferencia;
+  if (!cf) return topico("conf", "Conferência com a planilha", `<p>Coloque na pasta a sua planilha de conferência com <b>“conferencia”</b> no nome (ex.: <code>conferencia.xlsx</code>), com as colunas
+    <code>NUM_LIGACAO</code>, <code>DATA_CONCLUSAO</code>, <code>Data Religação</code>, <code>Mês Religação</code>, <code>Data Pós Corte</code>, <code>Regua de Cobrança</code>, <code>Situação</code> (as que tiver).
+    Ao atualizar, cada linha é comparada com o painel (matrícula + data do corte) e aqui aparece o que não bate e <b>por quê</b>.</p>`);
+  const l = linhasDe(cf.linhas), tot = cf.comparadas || 1;
+  const detTipo = (t) => regDet(`Conferência — ${t}`, () => l.filter((x) => x.tipo === t), "conferencia");
+  const linhasRes = cf.resumo.map((r) => `<tr><td class="txt"><b>${esc(r.tipo)}</b></td><td class="num${r.tipo === "Bate em tudo" ? "" : " clic"}"${r.tipo === "Bate em tudo" ? "" : ` data-det="${detTipo(r.tipo)}" tabindex="0" title="Ver as linhas"`}>${fmtN(r.qtd)}</td><td class="num">${r.tipo === "Corte só no painel" ? "" : fmtP(r.qtd / tot)}</td><td class="txt">${esc(EXPLICA_CONF[r.tipo] || "")}</td></tr>`).join("");
+  // motivos mais comuns (sem datas e números de OS, para agrupar)
+  const cont = {}; l.forEach((x) => { const k = x.tipo + " — " + String(x.motivo).replace(/\d{2}\/\d{2}\/\d{4}/g, "…").replace(/\(OS [^)]*\)/g, "").replace(/“[^”]*”/g, (m) => m); cont[k] = (cont[k] || 0) + 1; });
+  const top = Object.entries(cont).sort((a, b) => b[1] - a[1]).slice(0, 12);
+  const linhasTop = top.map(([k, n]) => { const [t, ...m] = k.split(" — "); return `<tr><td class="txt">${esc(t)}</td><td class="txt">${esc(m.join(" — "))}</td><td class="num">${fmtN(n)}</td></tr>`; }).join("");
+  const todas = regDet(`Conferência — todas as diferenças`, () => l, "conferencia");
+  return topico("conf", `Conferência com a planilha (${esc(cf.arquivo)})`,
+    `<p>Planilha <b>${esc(cf.arquivo)}</b>${cf.aba ? `, aba <b>${esc(cf.aba)}</b>` : ""}: ${fmtN(cf.comparadas)} corte(s) comparados (matrícula + data do corte), de ${esc(cf.periodo)}${cf.duplicadas ? `; ${fmtN(cf.duplicadas)} linha(s) repetidas contadas uma vez` : ""}. Os filtros do cabeçalho não se aplicam aqui. Clique num número para ver as linhas; na lista, a matrícula abre o histórico do cliente.</p>
+    <div class="tabela-wrap"><table><thead><tr><th>Resultado</th><th>Linhas</th><th>% da planilha</th><th>O que significa</th></tr></thead><tbody>${linhasRes}</tbody></table></div>
+    ${top.length ? `<h3>Motivos mais comuns</h3><div class="tabela-wrap"><table><thead><tr><th>Diferença</th><th>Motivo</th><th>Linhas</th></tr></thead><tbody>${linhasTop}</tbody></table></div>` : ""}
+    ${cf.cortadas ? `<p class="nota-secao">São muitas diferenças: a lista mostra as primeiras 60.000 (o resumo conta todas).</p>` : ""}
+    <div class="linha-botoes"><button type="button" class="btn-just btn-baixar" data-det="${todas}">Ver todas as diferenças (${fmtN(l.length)})</button><button type="button" class="btn-just btn-baixar" id="btnCsvConf">⬇ Conferência (CSV)</button></div>`);
+}
 const botaoTxt = (id, nome, rot) => `<button type="button" class="btn-just btn-baixar" data-csv="${id}" data-nome="${esc(nome)}">${esc(rot)}</button>`;
 function ligaDados() {
   const b = $("btnExcel"); if (!b) return;
@@ -1252,6 +1289,11 @@ function ligaDados() {
     b.disabled = true; mostraProgresso("Gerando a planilha…"); worker.postMessage({ fase: "excel" });
   };
   $("btnLimparCache").onclick = () => { if (!confirm("Apagar as leituras guardadas neste navegador? A próxima análise vai ler todos os arquivos de novo.")) return; if (!worker) novoWorker(); worker.postMessage({ fase: "limparCache" }); };
+  const bc = $("btnCsvConf");
+  if (bc) bc.onclick = () => {
+    const l = linhasDe(DADOS.conferencia.linhas);
+    baixaCsv(["Diferença", "Matrícula", "Data do corte", "Campo", "Planilha", "Painel", "Motivo", "Cidade", "Tipo de corte"], l.map((x) => [x.tipo, x.matricula, dataRot(x.data), x.campo, x.excel, x.painel, x.motivo, x.cidade, x.tipo_corte]), "Conferencia com a planilha");
+  };
   $("btnCsvCortes").onclick = () => { const a = analiticoCortes(CTX.cortes); baixaCsv(a.cabecalho, a.linhas, "Cortes filtrados - analitico"); };
   $("btnCsvEventos").onclick = () => {
     const f = CTX.f, l = EVENTOS.filter((e) => (!f.de || e.mes >= f.de) && (!f.ate || e.mes <= f.ate) && bateLocal(e, f) && (!f.recurso || e.recurso === f.recurso));
@@ -1266,6 +1308,7 @@ function ligaDados() {
 // ===================== painel lateral: clientes por trás do número e histórico =====================
 const PILHA = [];
 const COLS_CORTES = [["matricula", "Matrícula"], ["cliente", "Cliente"], ["cidade", "Cidade"], ["tipo", "Tipo"], ["data", "Corte"], ["data_religacao", "Religação"], ["dias", "Dias"], ["data_pos", "Pós-corte"], ["regua", "Régua"], ["situacao", "Situação"], ["economias", "Economias"]];
+const COLS_CONF = [["matricula", "Matrícula"], ["data", "Corte"], ["tipo", "Diferença"], ["campo", "Campo"], ["excel", "Planilha"], ["painel", "Painel"], ["motivo", "Motivo"]];
 const COLS_EVENTOS = [["matricula", "Matrícula"], ["data", "Data"], ["categoria", "Categoria"], ["tipo", "Tipo"], ["economias", "Economias"], ["cidade", "Cidade"], ["recurso", "Recurso"]];
 // painel lateral dinâmico: entra deslizando, fundo escurecido (clique fora fecha), busca, chips por tipo, ordenação e "mostrar mais"
 const GAV = { cols: null, linhas: [], busca: "", chip: null, ordem: null, n: 200 };
@@ -1279,15 +1322,18 @@ function abreGaveta(titulo, nota, cols, linhas, extra = "") {
   const chips = Object.entries(cont).sort((a, b) => b[1] - a[1]);
   GAV.campoChip = campoChip;
   const eco = soma(linhas.map((l) => l.economias || 0));
-  g.hidden = false; $("gFundo").hidden = false;
+  g.hidden = false; $("gFundo").hidden = false; g.classList.toggle("larga", cols === COLS_CONF);
   if (novo) { g.classList.remove("saindo"); g.classList.add("entrando"); $("gFundo").classList.add("visivel"); setTimeout(() => g.classList.remove("entrando"), 260); }
   g.innerHTML = `<div class="g-topo"><h2>${esc(titulo)}</h2>${PILHA.length > 1 ? `<button type="button" class="btn-just" data-acao="voltar">← Voltar</button>` : ""}<button type="button" class="btn-just btn-down" id="gCsv" title="Baixar o analítico (CSV) das linhas da busca/filtro atual" aria-label="Baixar em CSV">⬇</button><button type="button" class="btn-just" data-acao="fechar" aria-label="Fechar" title="Fechar (Esc ou clique fora)">✕</button></div>
-    <div class="g-corpo"><div class="g-resumo"><span class="g-kpi"><b>${fmtN(linhas.length)}</b> ${cols === COLS_EVENTOS ? "evento(s)" : "corte(s)"}</span><span class="g-kpi"><b>${fmtN(eco)}</b> economia(s)</span></div>
+    <div class="g-corpo"><div class="g-resumo"><span class="g-kpi"><b>${fmtN(linhas.length)}</b> ${cols === COLS_CONF ? "diferença(s)" : (cols === COLS_EVENTOS ? "evento(s)" : "corte(s)")}</span>${cols === COLS_CONF ? "" : `<span class="g-kpi"><b>${fmtN(eco)}</b> economia(s)</span>`}</div>
     <p class="g-nota">${esc(nota)}</p>${extra}
     ${linhas.length > 5 ? `<div class="g-ferr"><input id="gBusca" type="search" placeholder="Buscar matrícula, cliente, cidade…" aria-label="Buscar no painel">${chips.length > 1 ? `<div class="g-chips">${chips.map(([k, n]) => `<button type="button" class="g-chip" data-gchip="${esc(k)}">${esc(k)} <span>${fmtN(n)}</span></button>`).join("")}</div>` : ""}</div>` : ""}
     <div class="tabela-wrap"><table><thead><tr>${cols.map(([k, t]) => `<th data-gord="${k}" tabindex="0" title="Ordenar">${esc(t)}</th>`).join("")}</tr></thead><tbody id="gCorpo"></tbody></table></div>
     <div class="g-rodape" id="gRodape"></div></div>`;
-  $("gCsv").onclick = () => { const a = cols === COLS_EVENTOS ? analiticoEventos(gavFiltradas()) : analiticoCortes(gavFiltradas()); baixaCsv(a.cabecalho, a.linhas, titulo); };
+  $("gCsv").onclick = () => {
+    if (cols === COLS_CONF) { const l = gavFiltradas(); baixaCsv([...cols.map(([, t]) => t), "Cidade", "Tipo de corte"], l.map((x) => [...cols.map(([k]) => (k === "data" ? dataRot(x[k]) : x[k])), x.cidade, x.tipo_corte]), titulo); return; }
+    const a = cols === COLS_EVENTOS ? analiticoEventos(gavFiltradas()) : analiticoCortes(gavFiltradas()); baixaCsv(a.cabecalho, a.linhas, titulo);
+  };
   const b = $("gBusca"); if (b) b.addEventListener("input", () => { GAV.busca = b.value; GAV.n = 200; gavDesenha(); });
   gavDesenha();
   const fechar = g.querySelector("[data-acao=fechar]"); if (fechar && novo) fechar.focus();
@@ -1296,7 +1342,7 @@ function abreGaveta(titulo, nota, cols, linhas, extra = "") {
 function gavFiltradas() {
   const t = GAV.busca.trim().toLowerCase(), termos = t.split(/[\s,;]+/).filter(Boolean);
   let l = GAV.linhas.filter((x) => (!GAV.chip || (x[GAV.campoChip] || "(vazio)") === GAV.chip)
-    && (!termos.length || termos.every((q) => [x.matricula, x.cliente, x.cidade, x.tipo, x.situacao, x.regua, x.recurso, x.categoria].join(" ").toLowerCase().includes(q))));
+    && (!termos.length || termos.every((q) => [x.matricula, x.cliente, x.cidade, x.tipo, x.situacao, x.regua, x.recurso, x.categoria, x.motivo, x.campo].join(" ").toLowerCase().includes(q))));
   if (GAV.ordem) {
     const { k, dir } = GAV.ordem;
     l = [...l].sort((a, b) => { const x = a[k], y = b[k]; if (x == null && y == null) return 0; if (x == null) return 1; if (y == null) return -1;
@@ -1317,6 +1363,7 @@ function abreDetalhe(i) {
   const d = DET[i]; if (!d) return;
   const linhas = d.obter();
   PILHA.length = 0; PILHA.push({ i });
+  if (d.tipo === "conferencia") { abreGaveta(d.titulo, "Cada linha: o que a planilha diz, o que o painel calculou e o motivo da diferença. Clique na matrícula para ver o histórico.", COLS_CONF, linhas); return; }
   if (d.tipo === "eventos") abreGaveta(d.titulo, `${fmtN(linhas.length)} evento(s) — OS Finalizadas, uma por matrícula, dia e categoria.`, COLS_EVENTOS, linhas);
   else abreGaveta(d.titulo, `${fmtN(linhas.length)} corte(s). Clique numa matrícula para ver o histórico.`, COLS_CORTES, linhas);
 }

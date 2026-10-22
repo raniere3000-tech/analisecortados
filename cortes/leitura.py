@@ -291,6 +291,8 @@ def tipo_arquivo(caminho):
     arq = REGRAS["arquivos"]
     if os.path.basename(caminho).lower().startswith(arq["prefixo_atividades"].lower()):
         return "atividades"
+    if chave(REGRAS["conferencia"]["nome_contem"]) in chave(os.path.basename(caminho)):
+        return "conferencia"
     _, nomes = _cabecalho(caminho)
     nomes = {chave(n) for n in nomes}
     if not _colunas_lisc(nomes)[1]:
@@ -345,15 +347,56 @@ def le_catalogo(caminho):
     return _le_colunas(caminho, linha, COLUNAS_CATALOGO).dropna(subset=["SERVICO"])
 
 
-LEITORES = {"atividades": le_atividades, "religacao_lisc": le_religacao_lisc, "cadastro": le_cadastro, "catalogo": le_catalogo}
-DESTINO = {"atividades": "atividades", "religacao_lisc": "atividades", "cadastro": "cadastro", "catalogo": "catalogo"}
+def le_conferencia(caminho):
+    """Planilha de conferência (base antiga do Excel): entre as abas com NUM_LIGACAO e DATA_CONCLUSAO, a que tem mais
+    colunas da conferência (religação, pós-corte, régua…) e, empatando, mais linhas
+    (o cabeçalho pode estar abaixo de um título, como nas abas de detalhe de tabela dinâmica)."""
+    col = REGRAS["conferencia"]["colunas"]
+    acha = lambda nomes, campo: next((n for a in _apelidos(col[campo]) for n in nomes if chave(n) == chave(a)), None)  # noqa: E731
+    if caminho.lower().endswith(".csv"):
+        linha, nomes = _cabecalho(caminho)
+        abas = [(None, linha, nomes)]
+    else:
+        xl = pd.ExcelFile(_fonte(caminho), engine=_motor(caminho))
+        abas = []
+        for aba in xl.sheet_names:
+            topo = xl.parse(aba, header=None, nrows=15, dtype=str)
+            for i in range(len(topo)):
+                nomes = [str(v).strip() for v in topo.iloc[i].tolist() if isinstance(v, str)]
+                if acha(nomes, "matricula") and acha(nomes, "data"):
+                    abas.append((aba, i, nomes))
+                    break
+    if not abas:
+        raise ValueError("planilha de conferência sem as colunas NUM_LIGACAO e DATA_CONCLUSAO")
+    melhor = None
+    for aba, linha, nomes in abas:
+        if aba is None:
+            df = _le_csv(caminho, skiprows=linha, header=0)
+        else:
+            df = xl.parse(aba, header=linha)
+        df = df.dropna(how="all")
+        nota = (sum(1 for c in col if acha([str(x) for x in df.columns], c)), len(df))   # mais colunas da conferência, depois mais linhas
+        if melhor is None or nota > melhor[2]:
+            melhor = (aba, df, nota)
+    aba, df, _ = melhor
+    nomes = [str(c) for c in df.columns]
+    saida = pd.DataFrame(index=df.index)
+    for campo in col:
+        achado = acha(nomes, campo)
+        saida[campo] = df[achado].astype(object) if achado else None
+    saida["aba"] = aba or ""
+    return saida.dropna(subset=["matricula"]).reset_index(drop=True)
+
+
+LEITORES = {"atividades": le_atividades, "religacao_lisc": le_religacao_lisc, "cadastro": le_cadastro, "catalogo": le_catalogo, "conferencia": le_conferencia}
+DESTINO = {"atividades": "atividades", "religacao_lisc": "atividades", "cadastro": "cadastro", "catalogo": "catalogo", "conferencia": "conferencia"}
 
 
 def le_pasta(pasta, progresso=None):
     """Lê a pasta inteira. Devolve {'atividades': df, 'cadastro': df|None, 'catalogo': df|None, 'arquivos': [...]}."""
     cache_arquivos.configura(pasta)
     arquivos = lista_arquivos(pasta)
-    partes = {"atividades": [], "cadastro": [], "catalogo": []}
+    partes = {"atividades": [], "cadastro": [], "catalogo": [], "conferencia": []}
     relatorio = []
     for i, caminho in enumerate(arquivos):
         rel = os.path.relpath(caminho, pasta).replace(os.sep, "/")
@@ -387,4 +430,4 @@ def le_pasta(pasta, progresso=None):
                           "obs": "já lido antes" if cache_arquivos.em_cache(caminho) else ""})
     junta = lambda lista: pd.concat(lista, ignore_index=True) if lista else None  # noqa: E731
     return {"atividades": junta(partes["atividades"]), "cadastro": junta(partes["cadastro"]),
-            "catalogo": junta(partes["catalogo"]), "arquivos": relatorio}
+            "catalogo": junta(partes["catalogo"]), "conferencia": junta(partes["conferencia"]), "arquivos": relatorio}

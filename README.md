@@ -97,3 +97,15 @@ Os testes usam dados sintéticos (`tests/dados_sinteticos.py`) e rodam no GitHub
 - Depois que a pasta termina de carregar, o cabeçalho fica limpo (sem a linha “Pasta… lidos às” nem “Detalhes da leitura”); essas informações ficam na aba Dados → Bases carregadas.
 - Painel lateral (ao clicar num número): entra deslizando sobre um fundo escurecido — clicar fora ou `Esc` fecha. Tem resumo (cortes e economias),
   busca, chips por tipo/categoria para filtrar, ordenação clicando no cabeçalho e “Mostrar mais”; o ⬇ baixa as linhas filtradas.
+
+## Conferência com a planilha antiga
+
+- Coloque na pasta um arquivo com **“conferencia”** no nome (ex.: `conferencia.xlsx`) com as colunas da planilha antiga:
+  `NUM_LIGACAO`, `DATA_CONCLUSAO`, `Data Religação`, `Mês Religação`, `Data Pós Corte`, `Regua de Cobrança`, `Situação` (as que tiver;
+  o cabeçalho pode estar abaixo de um título). Com várias abas, vale a que tem mais dessas colunas e, empatando, mais linhas.
+- Cada linha é comparada com o painel por **matrícula + data do corte**. Na aba Dados → “Conferência com a planilha” aparece o resumo
+  (bate em tudo, corte não encontrado, corte só no painel, religação/mês da religação/pós-corte/régua/situação diferentes), os motivos
+  mais comuns, a lista de diferenças (clique na matrícula para o histórico) e o ⬇ da conferência em CSV.
+- Para cada diferença o painel diz **por quê**: OS com status que não conta (ex.: Pendente, Cancelada), serviço fora do catálogo,
+  OS depois do próximo corte da matrícula, OS já usada por outro corte, religação/vistoria que só o painel achou (com a OS e o arquivo),
+  régua calculada em outro dia, situação do cadastro, matrícula fora dos arquivos lidos.

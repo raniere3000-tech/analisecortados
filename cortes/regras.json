@@ -212,5 +212,52 @@
       "CACHOEIRAS DE MACACU": "Interior"
     },
     "sem_sup": "Sem Sup"
+  },
+  "conferencia": {
+    "_leia": "Planilha de conferência (base antiga do Excel): arquivo com 'conferencia' no nome. Usa a aba com NUM_LIGACAO e DATA_CONCLUSAO que tiver mais linhas; cada linha é comparada com o painel (matrícula + data do corte) e as diferenças aparecem na aba Dados com o motivo.",
+    "nome_contem": "conferencia",
+    "colunas": {
+      "matricula": [
+        "NUM_LIGACAO",
+        "Matrícula"
+      ],
+      "data": [
+        "DATA_CONCLUSAO",
+        "Data do corte"
+      ],
+      "descricao": [
+        "DESCRICAO"
+      ],
+      "mes_corte": [
+        "Mês Corte"
+      ],
+      "data_religacao": [
+        "Data Religação"
+      ],
+      "mes_religacao": [
+        "Mês Religação"
+      ],
+      "data_pos": [
+        "Data Pós Corte"
+      ],
+      "mes_pos": [
+        "Mês Pós Corte"
+      ],
+      "regua": [
+        "Regua de Cobrança",
+        "Régua de Cobrança"
+      ],
+      "dias": [
+        "Dias"
+      ],
+      "permanencia": [
+        "Permanencia",
+        "Permanência"
+      ],
+      "situacao": [
+        "Situação",
+        "SIT_LIG"
+      ]
+    }
   }
 }

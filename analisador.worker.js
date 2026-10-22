@@ -6,7 +6,7 @@ const PYODIDE_URL = `https://cdn.jsdelivr.net/pyodide/v${PYODIDE_VERSAO}/full/`;
 const PASTA = "/dados";
 // Arquivos do pacote Python que o site copia para o Pyodide (caminho no site -> pasta virtual /app)
 const ARQUIVOS_PY = [
-  "cortes/__init__.py", "cortes/base.py", "cortes/cache_arquivos.py", "cortes/config.py", "cortes/leitura.py",
+  "cortes/__init__.py", "cortes/base.py", "cortes/cache_arquivos.py", "cortes/conferencia.py", "cortes/config.py", "cortes/leitura.py",
   "cortes/pipeline.py", "cortes/saida.py", "cortes/regras.json", "cortes/catalogo_servicos.json",
 ];
 const SAIDA_EXCEL = `${PASTA}/Base_Cortes.xlsx`;
