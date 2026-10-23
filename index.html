@@ -141,6 +141,14 @@ details.acc > summary:hover { background:#f6f9fc; border-radius:10px; }
 .secao-efeito { margin-top:22px; }
 td.pos-txt { color:#166534 !important; font-weight:700; }
 .efeito-ctl { margin-left:auto; display:flex; align-items:center; gap:6px; font-size:12px; font-weight:500; }
+.efeito-resumo { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:10px; margin:12px 0 4px; }
+.er-item { background:#fff; border:1px solid var(--line); border-radius:10px; padding:10px 14px; display:flex; flex-direction:column; gap:2px; border-top:3px solid #A7B5CB; }
+.er-rot { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; color:#6b7d93; }
+.er-val { font-size:18px; font-weight:700; color:var(--marinho); }
+.er-det { font-size:12px; color:#4a5a6b; line-height:1.35; }
+.er-laranja { border-top-color:#E8710A; } .er-laranja .er-val { color:#E8710A; }
+.er-ok { border-top-color:#16a34a; } .er-ok .er-val { color:#166534; }
+.er-neg { border-top-color:#9a3412; } .er-neg .er-val { color:#9a3412; }
 .efeito-frase { background:#fff; border:1px solid var(--line); border-left:4px solid #E8710A; border-radius:10px; padding:12px 16px; font-size:15px; line-height:1.5; color:var(--ink); margin:0 0 12px; }
 .efeito-frase .laranja, .laranja { color:#E8710A; }
 .efeito-frase .ok { color:#166534; } .efeito-frase .neg { color:#9a3412; }
@@ -281,7 +289,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 <header class="top">
   <div class="top-linha">
     <div>
-      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v36</span></div>
+      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v37</span></div>
       <h1 id="titulo">Análise de Corte e Religação</h1>
     </div>
     <div class="ferramentas">
@@ -354,7 +362,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 
 <script>
 "use strict";
-const VERSAO_SITE = "v36-20261023";
+const VERSAO_SITE = "v37-20261023";
 
 // ===================== utilidades =====================
 const $ = (id) => document.getElementById(id);
@@ -917,8 +925,8 @@ function abaCruzada({ f, cortes: todos, per }) {
   const qtd = { mesmo: [], depois: [], ativa: [], sem: [] }, totMes = [];
   mesesCorte.forEach((m) => {
     const l = cortes.filter((c) => c.mes === m);
-    const a = l.filter((c) => c.mes_religacao === m).length, at = l.filter((c) => c.mes_religacao === T.ativa).length, sm = l.filter((c) => c.mes_religacao === T.sem_religacao).length;
-    qtd.mesmo.push(a); qtd.ativa.push(at); qtd.sem.push(sm); qtd.depois.push(l.length - a - at - sm); totMes.push(l.length);
+    const a = medida(l.filter((c) => c.mes_religacao === m)), at = medida(l.filter((c) => c.mes_religacao === T.ativa)), sm = medida(l.filter((c) => c.mes_religacao === T.sem_religacao));
+    const tt = medida(l); qtd.mesmo.push(a); qtd.ativa.push(at); qtd.sem.push(sm); qtd.depois.push(tt - a - at - sm); totMes.push(tt);
   });
   const emPct = (arr) => arr.map((n, i) => (totMes[i] ? +(n / totMes[i] * 100).toFixed(1) : 0));
   const rotMes = mesesCorte.map((m, i) => `${mesCurto(m)}${emAberto(m) ? "*" : ""}  ·  ${fmtN(totMes[i])}`);
@@ -927,12 +935,12 @@ function abaCruzada({ f, cortes: todos, per }) {
   // velocidade: mapa de calor (safra) — % acumulado de religados com OS até cada mês depois do corte
   const safras = mesesCorte.slice(-12), maxK = Math.max(0, ...safras.map((m) => fim - idxMes(m)));
   const calor = safras.map((m) => {
-    const l = cortes.filter((c) => c.mes === m), t = l.length, lim = fim - idxMes(m);
+    const l = cortes.filter((c) => c.mes === m), t = medida(l), lim = fim - idxMes(m);
     const rel = l.filter((c) => c.data_religacao);
     return { m, t, cel: Array.from({ length: maxK + 1 }, (_, j) => {
       if (j > lim) return null;
       const ate = rel.filter((c) => idxMes(c.data_religacao.slice(0, 7)) - idxMes(m) <= j);
-      return { p: t ? ate.length / t : 0, n: ate.length, lista: ate };
+      return { p: t ? medida(ate) / t : 0, n: medida(ate), lista: ate };
     }) };
   });
   const valores = calor.flatMap((r) => r.cel.filter(Boolean).map((c) => c.p));
@@ -941,11 +949,11 @@ function abaCruzada({ f, cortes: todos, per }) {
     const x = hi > lo ? (p - lo) / (hi - lo) : 1, a = [234, 242, 248], b = [23, 79, 112];
     return { bg: `rgb(${a.map((v, k) => Math.round(v + (b[k] - v) * x)).join(",")})`, escuro: x > 0.55 };
   };
-  const tabCalor = `<div class="tabela-wrap"><table class="calor"><thead><tr><th>Mês do corte</th><th>Cortes</th>${Array.from({ length: maxK + 1 }, (_, j) => `<th>${j === 0 ? "Mesmo mês" : "+" + j}</th>`).join("")}</tr></thead><tbody>${calor.map((r) =>
+  const tabCalor = `<div class="tabela-wrap"><table class="calor"><thead><tr><th>Mês do corte</th><th>${porEco ? "Economias" : "Matrículas"}</th>${Array.from({ length: maxK + 1 }, (_, j) => `<th>${j === 0 ? "Mesmo mês" : "+" + j}</th>`).join("")}</tr></thead><tbody>${calor.map((r) =>
     `<tr><td class="txt">${mesCurto(r.m)}${emAberto(r.m) ? "*" : ""}</td><td class="num">${fmtN(r.t)}</td>${r.cel.map((c, j) => {
       if (!c) return `<td class="fut" title="Ainda não chegou">·</td>`;
       const t = tom(c.p), det = c.n ? regDet(`${mesRot(r.m)} — religados até ${j === 0 ? "o mesmo mês" : "+" + j + " mês(es)"}`, () => c.lista) : null;
-      return `<td class="num${c.n ? " clic" : ""}${t.escuro ? " esc" : ""}" style="background:${t.bg}"${det != null ? ` data-det="${det}" tabindex="0"` : ""} title="${esc(mesRot(r.m))}: ${fmtN(c.n)} de ${fmtN(r.t)} religados até ${j === 0 ? "o mesmo mês" : "+" + j + " mês(es)"}">${fmtP(c.p)}</td>`;
+      return `<td class="num${c.n ? " clic" : ""}${t.escuro ? " esc" : ""}" style="background:${t.bg}"${det != null ? ` data-det="${det}" tabindex="0"` : ""} title="${esc(mesRot(r.m))}: ${fmtN(c.n)} de ${fmtN(r.t)} ${porEco ? "economias" : "matrículas"} religadas até ${j === 0 ? "o mesmo mês" : "+" + j + " mês(es)"}">${fmtP(c.p)}</td>`;
     }).join("")}</tr>`).join("")}</tbody></table></div>`;
   const nAtiva = cortes.filter((c) => c.mes_religacao === T.ativa).length, totRel = cortes.filter((c) => c.data_religacao).length + (f.ativas ? nAtiva : 0), nSem = cortes.filter((c) => c.mes_religacao === T.sem_religacao).length;
   const diasRel = cortes.filter((c) => c.data_religacao).map((c) => c.dias);
@@ -980,18 +988,20 @@ function abaCruzada({ f, cortes: todos, per }) {
   const nota = `Cada corte (matrícula + data, OS Finalizada) na linha do mês em que foi feito e na coluna do mês da 1ª religação depois dele (antes do próximo corte da mesma matrícula). <b>Ativa</b>: não há OS de religação, mas o cadastro mostra a ligação ATIVA (só no último corte da matrícula). <b>Sem Religação</b>: sem OS de religação e não ATIVA no cadastro. O fundo azul mostra onde se concentram as religações. <b>Clique num número</b> para ver os clientes.
     <br><b>Período</b>: ${perAmbos ? "o mês inicial e final valem para o mês do corte <b>e</b> para o mês da religação — religação fora do período tira o corte da conta (como filtrar as duas colunas na tabela dinâmica)" : "o período vale só para o mês do corte; as religações podem cair em meses depois do mês final"}.
     <br><b>Medida</b>: <i>Matrículas</i> conta os cortes (igual à “Contagem de Matrícula” da tabela dinâmica); <i>Economias</i> soma o <code>TOTAL_ECO</code> do cadastro de cada corte. A tabela de baixo mostra os mesmos números em % da linha. Linhas da base sem data do corte não entram — na tabela dinâmica do Excel elas aparecem como <i>(vazio)</i>.`;
-  const ctlGraf = seletor("posCruzada", "Pós-corte", [["todos", "Todos"], ["com", "Com"], ["sem", "Sem"]], CTL.posCruzada);
+  const ctlGraf = seletor("posCruzada", "Pós-corte", [["todos", "Todos"], ["com", "Com"], ["sem", "Sem"]], CTL.posCruzada) + seletor("modoCruzada", "Medida", [["qtd", "Matrículas"], ["eco", "Economias"]], porEco ? "eco" : "qtd");
   const ctlPer = seletor("perCruzada", "Período vale para", [["ambos", "Corte e religação"], ["corte", "Só corte"]], perAmbos ? "ambos" : "corte");
   const avisoPer = perAmbos && foraPer.length ? `<p class="aviso-filtro">${fmtN(foraPer.length)} corte(s) do período religaram depois de ${esc(mesRot(f.ate))} e ficaram de fora (o período vale também para o mês da religação). <button type="button" class="link-atalho" data-det="${regDet(`Religaram depois de ${mesRot(f.ate)}`, () => foraPer)}">ver os clientes</button></p>` : "";
   const ctlTab = ctlPer + seletor("modoCruzada", "Medida", [["qtd", "Matrículas"], ["eco", "Economias"]], porEco ? "eco" : "qtd");
   const altura = Math.max(220, 34 * mesesCorte.length + 70);
   const rodapeAberto = temAberto ? "* mês em aberto (o atual e o anterior): ainda teve pouco tempo para religar — cor mais clara." : "";
-  const cardCalor = `<div class="card"><div class="card-topo"><h2>Velocidade de religação${ajuda("Cada linha é um mês de corte (safra). Cada coluna mostra o % dos cortes daquele mês que já tinha religado (com OS) até aquele mês depois do corte. Quanto mais escuro, mais religou. As células com · ainda não chegaram. Clique numa célula para ver os clientes.")}</h2></div>
-    <p class="nota-secao">% acumulado de religados (com OS) até cada mês depois do corte. Mais escuro = mais religou.</p>${tabCalor}${rodapeAberto ? `<p class="dica">${rodapeAberto}</p>` : ""}</div>`;
-  return topo + `<div class="grid g11">${cartaoGraf("g-cruzada-1", "Destino dos cortes de cada mês" + (per ? " — " + per : ""), "% dos cortes do mês. <b>Sem religação</b> sempre na ponta direita; ao lado do mês, a quantidade de cortes.", ctlGraf, "Cada barra soma 100% dos cortes do mês: religou no mesmo mês, religou nos meses seguintes, ativa sem OS e sem religação. Clique numa barra para filtrar o mês.", rodapeAberto).replace('class="graf"', `class="graf" style="height:${altura}px"`)}
-    ${cardCalor}</div>`
+  const ctlMed = seletor("modoCruzada", "Medida", [["qtd", "Matrículas"], ["eco", "Economias"]], porEco ? "eco" : "qtd");
+  const cardCalor = `<div class="card"><div class="card-topo"><h2>Velocidade de religação${ajuda("Cada linha é um mês de corte (safra). Cada coluna mostra o % dos cortes daquele mês que já tinha religado (com OS) até aquele mês depois do corte. Quanto mais escuro, mais religou. As células com · ainda não chegaram. Clique numa célula para ver os clientes.")}</h2><div class="acoes">${ctlMed}</div></div>
+    <p class="nota-secao">% acumulado de ${porEco ? "economias religadas" : "matrículas religadas"} (com OS) até cada mês depois do corte. Mais escuro = mais religou.</p>${tabCalor}${rodapeAberto ? `<p class="dica">${rodapeAberto}</p>` : ""}</div>`;
+  return topo
     + cartao(`Mês do corte × mês da religação — ${porEco ? "economias" : "matrículas"}` + (per ? " — " + per : ""), nota + avisoPer, tabela("cruzada", ["Mês do corte", ...colunas.map(rotCol), "Total Geral", "% religado"], linhas), "cruzada", ctlTab)
-    + cartao(`Mês do corte × mês da religação — % ${porEco ? "das economias" : "das matrículas"}` + (per ? " — " + per : ""), `Cada célula é o % da linha (o mês do corte): ${porEco ? "economias" : "matrículas"} da célula ÷ total do mês. A medida (Matrículas ou Economias) é a mesma da tabela de cima — trocar numa troca na outra.`, tabela("cruzadaPct", ["Mês do corte", ...colunas.map(rotCol), "Total Geral", "% religado"], linhasPct, { pct: true }), "cruzadaPct", ctlTab);
+    + cartao(`Mês do corte × mês da religação — % ${porEco ? "das economias" : "das matrículas"}` + (per ? " — " + per : ""), `Cada célula é o % da linha (o mês do corte): ${porEco ? "economias" : "matrículas"} da célula ÷ total do mês. A medida (Matrículas ou Economias) é a mesma da tabela de cima — trocar numa troca na outra.`, tabela("cruzadaPct", ["Mês do corte", ...colunas.map(rotCol), "Total Geral", "% religado"], linhasPct, { pct: true }), "cruzadaPct", ctlTab)
+    + `<div class="grid g11">${cartaoGraf("g-cruzada-1", "Destino dos cortes de cada mês" + (per ? " — " + per : ""), `% ${porEco ? "das economias" : "das matrículas"} do mês. <b>Sem religação</b> sempre na ponta direita; ao lado do mês, o total de ${porEco ? "economias" : "matrículas"}.`, ctlGraf, "Cada barra soma 100% dos cortes do mês: religou no mesmo mês, religou nos meses seguintes, ativa sem OS e sem religação. Clique numa barra para filtrar o mês.", rodapeAberto).replace('class="graf"', `class="graf" style="height:${altura}px"`)}
+    ${cardCalor}</div>`;
 }
 
 // ===================== aba Pós-corte =====================
@@ -1099,10 +1109,10 @@ function abaPos({ f, cortes: todos, per }) {
   const btnLista = `<button type="button" class="btn-just" data-det="${verLista}" title="Abre a lista com todos os clientes do filtro (do maior tempo cortado ao menor)">Ver clientes (${fmtN(cortes.length)})</button>`;
   const ef = efeitoPos(todos);
   const g0 = MEM.pos.graficos; MEM.pos.graficos = () => { g0(); ef.grafico(); };
-  return topo + filtros
-    + cartaoGraf("g-pos-1", titulo + ", por mês do corte" + (perTit ? " — " + perTit : ""), `Barras por ${titDim}.`, "", "Clique numa barra para filtrar o mês.")
+  return filtros + topo
     + cartao(titulo + " — mês do corte × " + titDim + (perTit ? " — " + perTit : ""), nota,
       cortes.length ? tabela("posTabela", ["Mês do corte", ...colunas.map(rotCol), "Total Geral"], linhas) : `<p class="nota-secao">Nenhum cliente com esses filtros.</p>`, "posTabela", btnLista)
+    + cartaoGraf("g-pos-1", titulo + ", por mês do corte" + (perTit ? " — " + perTit : ""), `Barras por ${titDim}.`, "", "Clique numa barra para filtrar o mês.")
     + ef.html;
 }
 
@@ -1157,12 +1167,16 @@ function efeitoPos(todos) {
   const porMes = meses.map((m) => ({ m, ...prazo(15, visit.filter((x) => x.mesV === m)) }));
   const melhor = porFaixa.filter((f) => f.n >= 20 && pp(f.com, f.sem) != null).sort((a, b) => pp(b.com, b.sem) - pp(a.com, a.sem))[0];
 
+  const sinal = dif == null ? "" : dif >= 0.5 ? "ok" : dif <= -0.5 ? "neg" : "";
+  const quadro = (rot, val, det, cls = "") => `<div class="er-item ${cls}"><span class="er-rot">${rot}</span><span class="er-val">${val}</span><span class="er-det">${det}</span></div>`;
   const frase = dif == null ? `<p class="efeito-frase">Ainda não há clientes visitados com 15 dias depois da visita para comparar.</p>`
-    : `<p class="efeito-frase">De cada <b>100 clientes visitados</b>, <b class="laranja">${cada100(r15.com)}</b> religam em até 15 dias.
-       Sem visita, no mesmo tempo de corte, <b>${cada100(r15.sem)}</b>.
-       ${dif >= 0.5 ? `A visita <b class="ok">traz ${nf0.format(dif)} religações a mais</b> a cada 100 clientes.` : dif <= -0.5 ? `Os visitados <b class="neg">religam ${nf0.format(-dif)} a menos</b> a cada 100 — a visita não está fazendo diferença (ou está indo para os casos mais difíceis).` : "Praticamente <b>não há diferença</b> entre visitar e não visitar."}
-       ${melhor ? `<br>O maior efeito aparece quando a visita é feita com <b>${esc(melhor.nome)}</b> de corte (${fmtPP(pp(melhor.com, melhor.sem))}).` : ""}
-       ${antesL.length ? `<br><b class="neg">${fmtN(antesL.length)}</b> visita(s) aconteceram depois que o cliente já tinha religado.` : ""}</p>`;
+    : `<div class="efeito-resumo">
+        ${quadro("Com visita", `${cada100(r15.com)} de cada 100`, "religam em até 15 dias depois da visita", "er-laranja")}
+        ${quadro("Sem visita", `${cada100(r15.sem)} de cada 100`, "religam em 15 dias, contando do mesmo tempo de corte")}
+        ${quadro("Resultado da visita", dif >= 0.5 ? `+${nf0.format(dif)} religações` : dif <= -0.5 ? `−${nf0.format(-dif)} religações` : "sem diferença", dif >= 0.5 ? "a mais a cada 100 clientes visitados" : dif <= -0.5 ? "a menos a cada 100 — a visita não está ajudando (ou vai para os casos mais difíceis)" : "visitar ou não dá o mesmo resultado", "er-" + (sinal || "neutro"))}
+        ${melhor ? quadro("Melhor momento para visitar", `${esc(melhor.nome)} de corte`, `onde a visita mais aumenta a religação (${fmtPP(pp(melhor.com, melhor.sem))})`) : ""}
+        ${antesL.length ? quadro("Atenção", `${fmtN(antesL.length)} visita(s)`, "feitas depois que o cliente já tinha religado", "er-neg") : ""}
+      </div>`;
   const kpi = kpis([
     { rot: "Clientes visitados", val: fmtN(visit.length), det: "ainda cortados no dia da visita", ajuda: "1ª vistoria pós-corte (Finalizada ou Encerrada com Ocorrência) de um cliente que ainda estava cortado." },
     { rot: "Religaram depois da visita", val: fmtN(visit.filter((x) => x.r != null).length), det: visit.length ? fmtP(visit.filter((x) => x.r != null).length / visit.length) + " dos visitados" : "-" },
@@ -1204,7 +1218,7 @@ function efeitoPos(todos) {
 
   const ctl = seletor("efeitoPos", "Visitas", [["todas", "Todas"], ["sucesso", "Finalizadas"], ["falha", "Sem sucesso"]], modo);
   const html = `<div class="secao-efeito"><h3 class="titulo-secao">A visita pós-corte faz o cliente religar?${ajuda("Comparamos clientes que receberam a 1ª visita pós-corte com clientes que não receberam, contando a partir do mesmo tempo de corte (ex.: visita no 10º dia de corte é comparada com quem estava cortado há 10 dias e não teve visita). Só religação com OS Finalizada; usa os filtros do cabeçalho.")}<span class="efeito-ctl">${ctl}</span></h3>
-    ${frase}${kpi}
+    ${kpi}${frase}
     <div class="grid g11">${cartaoGraf("g-pos-2", "Religaram depois da visita", "Em até 7, 15 e 30 dias. <b class=\"laranja\">Laranja</b>: com visita · <b>cinza</b>: sem visita (mesmo tempo de corte).", "", "Quanto maior a barra laranja em relação à cinza, mais a visita ajuda.")}
     ${cartaoGraf("g-pos-3", "Religação acumulada a partir da visita", "% que já religou a cada semana depois da visita. A distância entre as linhas é o efeito da visita.", "", "Começa em 0% no dia da visita. Cada ponto só usa clientes que já tiveram aquele tempo para religar.")}</div>
     <div class="grid g11">${cartaoGraf("g-pos-4", "Quando visitar? Efeito por tempo de corte na visita", "% que religa em até 15 dias, pelo tempo de corte no dia da visita. O número acima de cada par é o efeito da visita.", "", "Mostra em que momento a visita mais faz diferença: logo depois do corte ou mais tarde.", `Visitados em cada faixa: ${porFaixa.map((f) => `${f.nome} ${fmtN(f.total)}`).join(" · ")}.`)}

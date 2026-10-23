@@ -132,3 +132,6 @@ Os testes usam dados sintéticos (`tests/dados_sinteticos.py`) e rodam no GitHub
 - O arquivo de conferência escolhe a aba pelo cabeçalho e pelo tamanho gravado, e lê só essa aba e só as colunas usadas.
 - No navegador, pandas e xlrd vêm do próprio Pyodide e o openpyxl é instalado direto do PyPI (sem o aviso “No known package”);
   o xlsxwriter não é mais instalado (a planilha calculada é gravada com o openpyxl).
+- Ordem das abas: Corte × Religação começa pelas tabelas (quantidade e %) e depois os gráficos — o destino e a velocidade também
+  seguem a Medida (Matrículas ou Economias), que é uma só para as tabelas e os gráficos. Pós-corte: filtros → indicadores → tabela →
+  gráfico → análise da visita (indicadores em cima e o resumo em quadros: com visita, sem visita, resultado, melhor momento, atenção).
