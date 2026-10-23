@@ -135,3 +135,7 @@ Os testes usam dados sintéticos (`tests/dados_sinteticos.py`) e rodam no GitHub
 - Ordem das abas: Corte × Religação começa pelas tabelas (quantidade e %) e depois os gráficos — o destino e a velocidade também
   seguem a Medida (Matrículas ou Economias), que é uma só para as tabelas e os gráficos. Pós-corte: filtros → indicadores → tabela →
   gráfico → análise da visita (indicadores em cima e o resumo em quadros: com visita, sem visita, resultado, melhor momento, atenção).
+- **Evolução — comparar duas datas** (aba Pós-corte, logo abaixo da tabela): dois quadros “Meses | Total Geral” como estavam na
+  Data A e na Data B (calendários), com a coluna Dif. Cada quadro é reconstruído pelas datas das OS (já cortado, sem pós-corte e sem
+  religação até a data, conforme os filtros da aba; quem religou depois conta como CORTADA naquela data). Embaixo: quantos saíram
+  (religaram, tiveram a 1ª visita, outros) e quantos entraram (cortes novos), com clique para ver os clientes. A Data B em hoje bate com a tabela da aba.

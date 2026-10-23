@@ -141,6 +141,10 @@ details.acc > summary:hover { background:#f6f9fc; border-radius:10px; }
 .secao-efeito { margin-top:22px; }
 td.pos-txt { color:#166534 !important; font-weight:700; }
 .efeito-ctl { margin-left:auto; display:flex; align-items:center; gap:6px; font-size:12px; font-weight:500; }
+.evo-cab { display:flex; align-items:center; gap:10px; margin:4px 0 8px; font-weight:700; color:var(--marinho); font-size:13px; }
+.evo-data { border:1px solid var(--line); border-radius:7px; padding:5px 8px; font:13px var(--fonte); color:var(--marinho); }
+.evo-mov { margin-top:10px; font-size:12.5px; }
+.clic-txt { cursor:pointer; text-decoration:underline; text-underline-offset:2px; color:var(--marinho); }
 .efeito-resumo { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:10px; margin:12px 0 4px; }
 .er-item { background:#fff; border:1px solid var(--line); border-radius:10px; padding:10px 14px; display:flex; flex-direction:column; gap:2px; border-top:3px solid #A7B5CB; }
 .er-rot { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; color:#6b7d93; }
@@ -289,7 +293,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 <header class="top">
   <div class="top-linha">
     <div>
-      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v37</span></div>
+      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v38</span></div>
       <h1 id="titulo">Análise de Corte e Religação</h1>
     </div>
     <div class="ferramentas">
@@ -362,7 +366,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 
 <script>
 "use strict";
-const VERSAO_SITE = "v37-20261023";
+const VERSAO_SITE = "v38-20261023";
 
 // ===================== utilidades =====================
 const $ = (id) => document.getElementById(id);
@@ -417,6 +421,7 @@ function celula(c, i, opcoes) {
   if (typeof c === "number") return `<td class="num${c === 0 ? " vazio" : ""}">${opcoes.pct && i > 0 ? fmtP(c) : fmtN(c)}</td>`;
   return `<td class="${i === 0 ? "" : "txt"}">${esc(c)}</td>`;
 }
+const celHtml = (c) => celula(c, 1, {});
 // célula numérica que abre a lista de clientes por trás do número
 const nCel = (v, titulo, obter, tipo = "cortes", extra = {}) => ({ v, txt: v === 0 ? "-" : fmtN(v), classe: "num" + (v === 0 ? " vazio" : " clic"), det: v === 0 ? null : regDet(titulo, obter, tipo), ...extra });
 const pCel = (v) => ({ v, txt: fmtP(v), classe: "num" });
@@ -745,6 +750,10 @@ function setFiltro(ids, valor, rotulo) {
   setTimeout(() => { desenha(); toast(`Filtro aplicado: ${rotulo}. Clique em Limpar para voltar.`); }, 0);   // fora do evento do gráfico (que será refeito)
 }
 ["fDe", "fAte", "fSup", "fCidade", "fTipo"].forEach((id) => $(id).addEventListener("change", (e) => { e.target.dataset.escolhido = "1"; if (id === "fSup") preencheCidades(); CTL.verTodos = false; desenha(); }));
+document.addEventListener("change", (e) => {                 // calendários da evolução (Data A × Data B)
+  const ev = e.target.closest && e.target.closest("[data-evo]");
+  if (ev && ev.value) { CTL[ev.dataset.evo] = ev.value; desenha(); }
+});
 $("fAtivas").addEventListener("change", (e) => {
   guarda("cortes_ativas", e.target.checked); CTL.verTodos = false; desenha();
   toast(e.target.checked ? "Ativas = religadas: ligações ATIVAS no cadastro, sem OS de religação, contam como religadas." : "Ativas = religadas desligado.");
@@ -1107,11 +1116,54 @@ function abaPos({ f, cortes: todos, per }) {
   const titDim = { regua: "régua de cobrança", tipo: "tipo de corte", cidade: "cidade", recurso: "recurso" }[dim];
   const nota = `Linhas: mês do corte. Colunas: ${titDim}${corta ? " (as 8 maiores; o resto em Outros)" : ""}. Conta cada corte (matrícula + data) uma vez. <b>Clique num número</b> para ver os clientes; o ⬇ baixa o analítico.`;
   const btnLista = `<button type="button" class="btn-just" data-det="${verLista}" title="Abre a lista com todos os clientes do filtro (do maior tempo cortado ao menor)">Ver clientes (${fmtN(cortes.length)})</button>`;
+  // ---- evolução: a mesma tabela "como estava" em duas datas (Data A × Data B), com a diferença ----
+  const hojeIso = (DADOS.hoje || "").slice(0, 10);
+  const menosDias = (iso, n) => new Date(Date.parse(iso + "T00:00:00Z") - n * 864e5).toISOString().slice(0, 10);
+  const dataA = CTL.evoA || menosDias(hojeIso, 7), dataB = CTL.evoB || hojeIso;
+  const d10 = (v) => (v || "").slice(0, 10);
+  // na data X: já cortado, pós-corte e religação só se aconteceram até X; quem religou depois de X ainda estava CORTADA em X
+  const naData = (X) => todos.filter((c) => {
+    const d = d10(c.data); if (!d || d > X) return false;
+    const posX = !!c.data_pos && d10(c.data_pos) <= X;
+    const relX = (!!c.data_religacao && d10(c.data_religacao) <= X) || (f.ativas && !!c.ativa_os);
+    if (!bate3(posSel, posX) || !bate3(relSel, relX)) return false;
+    const sitX = c.data_religacao && d10(c.data_religacao) > X ? "CORTADA" : c.situacao;
+    if (sit && sitX !== sit) return false;
+    if (falha && !(posX && c.status_pos === sucesso)) return false;
+    return todosMeses || mesesMarc.includes(c.mes);
+  });
+  const ate = (X) => (X >= hojeIso ? "9999-12-31" : X);        // hoje (ou depois) = tudo o que foi lido: bate com a tabela acima
+  const lA = naData(ate(dataA)), lB = naData(ate(dataB));
+  const mesesEvo = unicos([...lA, ...lB].map((c) => c.mes));
+  const doMes = (l, m) => l.filter((c) => c.mes === m);
+  const tabA = `<div class="tabela-wrap"><table><thead><tr><th>Meses</th><th>Total Geral</th></tr></thead><tbody>${mesesEvo.map((m) => { const l = doMes(lA, m); return `<tr><td class="txt">${mesRot(m)}</td>${celHtml(nCel(l.length, `Em ${dataRot(dataA)} — ${mesRot(m)}`, () => l))}</tr>`; }).join("")}
+    <tr class="linha-total"><td class="txt">Total Geral</td>${celHtml(nCel(lA.length, `Em ${dataRot(dataA)} — todos`, () => lA))}</tr></tbody></table></div>`;
+  const difCel = (v) => `<td class="num ${v < 0 ? "pos-txt" : v > 0 ? "neg-txt" : ""}">${v === 0 ? "0" : (v > 0 ? "+" : "−") + fmtN(Math.abs(v))}</td>`;
+  const tabB = `<div class="tabela-wrap"><table><thead><tr><th>Meses</th><th>Total Geral</th><th>Dif</th></tr></thead><tbody>${mesesEvo.map((m) => { const b = doMes(lB, m), a = doMes(lA, m); return `<tr><td class="txt">${mesRot(m)}</td>${celHtml(nCel(b.length, `Em ${dataRot(dataB)} — ${mesRot(m)}`, () => b))}${difCel(b.length - a.length)}</tr>`; }).join("")}
+    <tr class="linha-total"><td class="txt">Total Geral</td>${celHtml(nCel(lB.length, `Em ${dataRot(dataB)} — todos`, () => lB))}${difCel(lB.length - lA.length)}</tr></tbody></table></div>`;
+  // quem saiu e quem entrou entre as duas datas, e por quê
+  const chaveC = (c) => c.matricula + "|" + d10(c.data);
+  const emB = new Set(lB.map(chaveC)), emA = new Set(lA.map(chaveC));
+  const sairam = lA.filter((c) => !emB.has(chaveC(c))), entraram = lB.filter((c) => !emA.has(chaveC(c)));
+  const entre = (v) => !!v && d10(v) > ate(dataA) && d10(v) <= ate(dataB);
+  const porRel = sairam.filter((c) => entre(c.data_religacao)), porPos = sairam.filter((c) => !entre(c.data_religacao) && entre(c.data_pos));
+  const outros = sairam.filter((c) => !entre(c.data_religacao) && !entre(c.data_pos));
+  const novos = entraram.filter((c) => d10(c.data) > ate(dataA));
+  const lnk = (n, t, l) => (n ? `<b class="clic-txt" data-det="${regDet(t, () => l)}" tabindex="0">${fmtN(n)}</b>` : "0");
+  const movimento = `<p class="nota-secao evo-mov">De ${dataRot(dataA)} para ${dataRot(dataB)}: <b>saíram ${fmtN(sairam.length)}</b> — ${lnk(porRel.length, "Saíram: religaram", porRel)} religaram, ${lnk(porPos.length, "Saíram: tiveram pós-corte", porPos)} tiveram a 1ª visita pós-corte${outros.length ? `, ${lnk(outros.length, "Saíram: outros motivos", outros)} por outros motivos (situação no cadastro ou filtros)` : ""};
+    <b>entraram ${fmtN(entraram.length)}</b>${novos.length ? ` — ${lnk(novos.length, "Entraram: cortes novos", novos)} cortes novos depois de ${dataRot(dataA)}` : ""}${entraram.length - novos.length ? `, ${lnk(entraram.length - novos.length, "Entraram: passaram a se encaixar no filtro", entraram.filter((c) => d10(c.data) <= dataA))} passaram a se encaixar no filtro` : ""}.</p>`;
+  const campoData = (id, v) => `<input type="date" class="evo-data" data-evo="${id}" value="${v}" max="${hojeIso}" aria-label="Data">`;
+  const cardEvo = `<div class="card"><div class="card-topo"><h2>Evolução — comparar duas datas${ajuda("Reconstrói a tabela como ela estava em cada data, pelas datas das OS: já cortado na data, sem pós-corte e sem religação até a data (conforme os filtros da aba). Quem religou depois da data conta como CORTADA naquela data. OS lançada no sistema com atraso entra no dia da data dela, então os quadros antigos podem diferir um pouco do que você salvou no dia.")}</h2></div>
+    <p class="nota-secao">Os mesmos filtros da aba (${esc(titulo.toLowerCase())}), contados como estavam em cada data. Escolha as datas nos calendários.</p>
+    <div class="grid g11 evo-grid"><div><div class="evo-cab"><span>Data A</span>${campoData("evoA", dataA)}</div>${tabA}</div>
+    <div><div class="evo-cab"><span>Data B</span>${campoData("evoB", dataB)}</div>${tabB}</div></div>${movimento}</div>`;
+
   const ef = efeitoPos(todos);
   const g0 = MEM.pos.graficos; MEM.pos.graficos = () => { g0(); ef.grafico(); };
   return filtros + topo
     + cartao(titulo + " — mês do corte × " + titDim + (perTit ? " — " + perTit : ""), nota,
       cortes.length ? tabela("posTabela", ["Mês do corte", ...colunas.map(rotCol), "Total Geral"], linhas) : `<p class="nota-secao">Nenhum cliente com esses filtros.</p>`, "posTabela", btnLista)
+    + cardEvo
     + cartaoGraf("g-pos-1", titulo + ", por mês do corte" + (perTit ? " — " + perTit : ""), `Barras por ${titDim}.`, "", "Clique numa barra para filtrar o mês.")
     + ef.html;
 }
@@ -1449,6 +1501,7 @@ function abaDados() {
       `<b>Régua de cobrança</b>: religou → <b>${esc(rg.religado_apos_pos)}</b> (religação no dia do pós-corte ou depois) ou <b>${esc(rg.religado)}</b>; não religou e teve pós-corte → <b>${esc(rg.com_pos)}</b>; não religou e sem pós-corte → dias cortado = hoje (${dataRot(DADOS.hoje)}) − data do corte: ${rg.faixas.map((x) => `<b>${esc(x.nome)}</b>${x.ate != null ? ` (até ${x.ate} dias)` : " (acima)"}`).join(", ")}.`,
       `<b>Situação</b> = <code>SIT_LIG</code> do cadastro mais recente da matrícula, se ele for do mês do corte ou depois; com cadastro mais antigo, é calculada (ATIVA se religou, senão CORTADA).`,
       `Padrão da página (como a tabela dinâmica “clientes sem a 1ª visita”): <b>tira todos que tiveram pós-corte</b>, <b>tira todos que tiveram religação</b> (OS Finalizada${f.ativas ? "; com Ativas = religadas, também as ativas sem OS" : ""}) e <b>fica só com a situação CORTADA</b> no cadastro. Os filtros Pós-corte, Religação e Situação (Sem / Com / Todos) mudam esse recorte; linhas = mês do corte, colunas = o campo de “Colunas por” (Régua separa −7, 7 a 15 e +15 dias cortado).`,
+      `<b>Evolução — comparar duas datas</b>: para cada data escolhida, refaz a conta como ela estava naquele dia — o corte já tinha acontecido, e o pós-corte e a religação só contam se a data deles é até o dia escolhido; quem religou depois do dia conta como CORTADA naquele dia. A Dif é Data B − Data A; embaixo, quem saiu (religou, teve a 1ª visita, outros) e quem entrou (cortes novos). Hoje = tudo o que foi lido, igual à tabela da aba.`,
       `“1ª visita: Sem sucesso” mostra só quem teve a 1ª vistoria ${esc(S.pos_corte_sem_sucesso)} (o filtro Pós-corte fica em Com).`,
       `<b>A visita pós-corte faz o cliente religar?</b> Pega os clientes que receberam a 1ª visita pós-corte e ainda estavam cortados no dia dela, e conta quantos religaram (OS Finalizada) em até 7, 15 e 30 dias depois da visita. Para comparar, usa os clientes <b>sem visita</b> com o mesmo tempo de corte (visita no 10º dia de corte × quem estava cortado havia 10 dias e não teve visita). A diferença “a cada 100 clientes” é o efeito da visita. A curva acumulada faz a mesma conta semana a semana, só com quem já teve aquele tempo para religar. “Visita sem necessidade” = religou antes da visita. “Quando visitar?” separa os visitados pelo tempo de corte no dia da visita (0–3, 4–7, 8–15, 16–30, +30 dias) e compara cada faixa com os sem visita do mesmo tempo; a evolução faz a conta de 15 dias por mês da visita; o detalhamento repete as contas por tempo até a visita, tipo, cidade, Sup, mês ou resultado da visita.`]))
     + bloco("Como conferir", `<p>Tabela dinâmica com <i>Linha: mês do corte</i> nas linhas e a coluna <i>Coluna: …</i> nas colunas, contando <i>Matrícula</i>. O analítico sai com os filtros da aba (pós-corte, religação, situação, meses, 1ª visita) — eles aparecem nas colunas do arquivo.</p>`)
