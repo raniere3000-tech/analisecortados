@@ -40,6 +40,8 @@ A mesma atividade (mesmo *ID da Atividade*) em mais de um arquivo conta uma vez.
   cada mês depois do corte; clique numa célula para ver os clientes) e duas tabelas mês do corte × mês da religação — uma em
   quantidade e outra em % da linha. A **Medida** (Matrículas = contagem de cortes, igual à “Contagem de Matrícula” da tabela
   dinâmica; ou Economias = soma do TOTAL_ECO) é uma só: trocar numa tabela troca na outra.
+  **Período vale para**: “Corte e religação” (padrão) — o mês inicial/final filtra o mês do corte e também o mês da religação, como
+  filtrar as duas colunas na tabela dinâmica (religação depois do mês final tira o corte da conta, com aviso e lista); “Só corte” — como antes.
   Linhas da base sem data do corte não entram (no Excel aparecem como “(vazio)”).
 - **Pós-corte**: como a tabela dinâmica “clientes sem a 1ª visita” — filtros na aba: **Pós-corte** (Sem/Com/Todos), **Religação**
   (Sem/Com/Todos), **Situação no cadastro**, 1ª visita sem sucesso, meses do corte (vários) e colunas por régua, tipo, cidade ou recurso.
