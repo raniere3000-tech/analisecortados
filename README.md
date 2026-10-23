@@ -139,3 +139,6 @@ Os testes usam dados sintéticos (`tests/dados_sinteticos.py`) e rodam no GitHub
   Data A e na Data B (calendários), com a coluna Dif. Cada quadro é reconstruído pelas datas das OS (já cortado, sem pós-corte e sem
   religação até a data, conforme os filtros da aba; quem religou depois conta como CORTADA naquela data). Embaixo: quantos saíram
   (religaram, tiveram a 1ª visita, outros) e quantos entraram (cortes novos), com clique para ver os clientes. A Data B em hoje bate com a tabela da aba.
+- **Religações do mês** (aba Dados → Bases para download): escolha o mês e baixe em CSV todas as OS de religação Finalizadas do mês
+  (atividades e planilhas LISC/autoreligação; respeita Sup e cidade), com o corte que cada uma religou no painel (data e mês do corte,
+  tipo, dias até religar, se teve pós-corte antes, situação) ou o aviso “sem corte ligado”.

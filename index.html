@@ -141,6 +141,9 @@ details.acc > summary:hover { background:#f6f9fc; border-radius:10px; }
 .secao-efeito { margin-top:22px; }
 td.pos-txt { color:#166534 !important; font-weight:700; }
 .efeito-ctl { margin-left:auto; display:flex; align-items:center; gap:6px; font-size:12px; font-weight:500; }
+.baixa-mes { align-items:center; }
+.rot-mes { display:flex; align-items:center; gap:8px; font-size:12.5px; font-weight:600; color:var(--marinho); }
+.rot-mes select { border:1px solid var(--line); border-radius:7px; padding:5px 8px; font:13px var(--fonte); }
 .evo-cab { display:flex; align-items:center; gap:10px; margin:4px 0 8px; font-weight:700; color:var(--marinho); font-size:13px; }
 .evo-data { border:1px solid var(--line); border-radius:7px; padding:5px 8px; font:13px var(--fonte); color:var(--marinho); }
 .evo-mov { margin-top:10px; font-size:12.5px; }
@@ -293,7 +296,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 <header class="top">
   <div class="top-linha">
     <div>
-      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v38</span></div>
+      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v39</span></div>
       <h1 id="titulo">Análise de Corte e Religação</h1>
     </div>
     <div class="ferramentas">
@@ -366,7 +369,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 
 <script>
 "use strict";
-const VERSAO_SITE = "v38-20261023";
+const VERSAO_SITE = "v39-20261023";
 
 // ===================== utilidades =====================
 const $ = (id) => document.getElementById(id);
@@ -460,8 +463,8 @@ const COLS_ANALITICO_EVENTO = [
   ["Serviço", (e) => e.servico], ["ID da OS", (e) => e.id], ["Sup", (e) => e.sup], ["Cidade", (e) => e.cidade], ["Recurso", (e) => e.recurso],
   ["Economias", (e) => e.economias], ["Sem cadastro (conta 1 economia)", (e) => (e.sem_cadastro == null ? "" : simNao(e.sem_cadastro))], ["Arquivo de origem", (e) => e.arquivo],
 ];
-function analiticoEventos(lista, frente = []) {
-  const cols = [...frente, ...COLS_ANALITICO_EVENTO];
+function analiticoEventos(lista, frente = [], fim = []) {
+  const cols = [...frente, ...COLS_ANALITICO_EVENTO, ...fim];
   return { cabecalho: cols.map(([t]) => t), linhas: lista.map((e) => cols.map(([, fn]) => { const v = fn(e); return v === undefined ? null : v; })) };
 }
 function baixaCsv(cabecalho, linhas, nome) {
@@ -1465,6 +1468,9 @@ function abaDados() {
       <button type="button" class="btn-just btn-baixar" id="btnExcel">⬇ Base calculada (Excel)</button>
       <button type="button" class="btn-just btn-baixar" id="btnCsvCortes">⬇ Cortes filtrados (CSV)</button>
       <button type="button" class="btn-just btn-baixar" id="btnCsvEventos">⬇ Eventos do saldo filtrados (CSV)</button>${DADOS.conferencia ? btnComparativo() : ""}</div>
+    <div class="linha-botoes baixa-mes"><label class="rot-mes">Religações do mês
+      <select id="selMesRel" aria-label="Mês das religações">${(() => { const ms = unicos(EVENTOS.filter((e) => e.categoria === R.categorias.religacao).map((e) => e.mes)).reverse(); return ms.map((m) => `<option value="${m}">${mesRot(m)}</option>`).join(""); })()}</select></label>
+      <button type="button" class="btn-just btn-baixar" id="btnCsvRelMes" title="Todas as OS de religação Finalizadas do mês (atividades e planilhas LISC/autoreligação), com o corte que cada uma religou">⬇ Religações do mês (CSV)</button></div>
     <p class="nota-secao">A base calculada (Excel) tem todos os cortes com todas as colunas, os eventos do saldo, os arquivos lidos e os parâmetros (sem filtros). Os CSV respeitam os filtros atuais. Se algum arquivo ficar com erro de “leitura guardada”, use <button type="button" class="btn-just" id="btnLimparCache">Limpar leituras guardadas</button>.</p>`);
 
   // 1. Saldo
@@ -1594,6 +1600,25 @@ function ligaDados() {
     baixaCsv(["Diferença", "Matrícula", "Data do corte", "Campo", "Planilha", "Painel", "Motivo", "Cidade", "Tipo de corte"], l.map((x) => [x.tipo, x.matricula, dataRot(x.data), x.campo, x.excel, x.painel, x.motivo, x.cidade, x.tipo_corte]), "Conferencia com a planilha");
   };
   $("btnCsvCortes").onclick = () => { const a = analiticoCortes(CTX.cortes); baixaCsv(a.cabecalho, a.linhas, "Cortes filtrados - analitico"); };
+  $("btnCsvRelMes").onclick = () => {
+    const m = $("selMesRel").value, f = CTX.f;
+    if (!m) { toast("Não há religações nos arquivos lidos.", true); return; }
+    // o corte que cada religação fechou no painel (mesma matrícula e data da religação)
+    const porRel = {}; CORTES.forEach((c) => { if (c.data_religacao) porRel[c.matricula + "|" + c.data_religacao.slice(0, 10)] = c; });
+    const l = EVENTOS.filter((e) => e.categoria === R.categorias.religacao && e.mes === m && bateLocal(e, f)).sort((a, b) => (a.data + a.matricula).localeCompare(b.data + b.matricula));
+    const corteDe = (e) => porRel[e.matricula + "|" + (e.data || "").slice(0, 10)];
+    const a = analiticoEventos(l, [], [
+      ["Corte que religou (painel)", (e) => { const c = corteDe(e); return c ? dataRot(c.data) : "sem corte ligado"; }],
+      ["Mês do corte", (e) => { const c = corteDe(e); return c ? mesRot(c.mes) : ""; }],
+      ["Tipo de corte", (e) => { const c = corteDe(e); return c ? c.tipo : ""; }],
+      ["Dias do corte à religação", (e) => { const c = corteDe(e); return c ? c.dias : null; }],
+      ["Teve pós-corte antes?", (e) => { const c = corteDe(e); return c ? simNao(c.data_pos && c.data_pos <= c.data_religacao) : ""; }],
+      ["Situação no cadastro", (e) => { const c = corteDe(e); return c ? c.situacao : ""; }],
+      ["Por que sem corte ligado", (e) => (corteDe(e) ? "" : "não há corte Finalizado da matrícula antes desta religação (ou a religação ficou com outra OS do mesmo dia / outro corte)")],
+    ]);
+    baixaCsv(a.cabecalho, a.linhas, `Religacoes ${mesRot(m)}`);
+    toast(`${fmtN(l.length)} religação(ões) de ${mesRot(m)} baixadas.`);
+  };
   $("btnCsvEventos").onclick = () => {
     const f = CTX.f, l = EVENTOS.filter((e) => (!f.de || e.mes >= f.de) && (!f.ate || e.mes <= f.ate) && bateLocal(e, f) && (!f.recurso || e.recurso === f.recurso));
     const a = analiticoEventos(l); baixaCsv(a.cabecalho, a.linhas, "Eventos do saldo filtrados - analitico");
