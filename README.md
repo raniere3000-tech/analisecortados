@@ -112,7 +112,7 @@ Os testes usam dados sintéticos (`tests/dados_sinteticos.py`) e rodam no GitHub
 - Cada linha é comparada com o painel por **matrícula + data do corte**. Na aba Dados → “Conferência com a planilha” aparece o resumo
   (bate em tudo, corte não encontrado, corte só no painel, religação/mês da religação/pós-corte/régua/situação diferentes), os motivos
   mais comuns, a lista de diferenças (clique na matrícula para o histórico) e os downloads: **⬇ Analítico comparativo (CSV)** — uma linha
-  por corte com cada campo lado a lado (planilha × painel), o resultado e os motivos; também no topo da aba Dados — e ⬇ Só as diferenças.
+  por corte com cada campo lado a lado (planilha × painel) — inclusive o mês do corte —, o resultado e os motivos; também no topo da aba Dados — e ⬇ Só as diferenças.
 - O comparativo traz no fim um **diagnóstico** por corte: se conta no painel e no Pós-corte padrão (e por quê), dias cortado até hoje,
   corte anterior e próximo da matrícula, todas as OS da matrícula no dia do corte, as religações e vistorias pós-corte encontradas nos
   arquivos desde o corte (com status e arquivo), o cadastro (SIT_LIG, referência, economias) e em quais arquivos a matrícula aparece.

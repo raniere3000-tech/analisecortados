@@ -21,7 +21,7 @@ from .leitura import normaliza
 CAT, ST, TXT, RG = REGRAS["categorias"], REGRAS["status"], REGRAS["textos"], REGRAS["regua"]
 LIMITE = 60000                                   # linhas mandadas ao site (o resumo conta todas)
 # analítico comparativo: uma linha por corte, cada campo lado a lado (planilha × painel)
-CAMPOS_COMP = ["resultado", "matricula", "data", "diferencas", "motivos", "rel_x", "rel_p", "mesrel_x", "mesrel_p", "pos_x", "pos_p",
+CAMPOS_COMP = ["resultado", "matricula", "data", "mescorte_x", "mescorte_p", "diferencas", "motivos", "rel_x", "rel_p", "mesrel_x", "mesrel_p", "pos_x", "pos_p",
                "regua_x", "regua_p", "sit_x", "sit_p", "dias_x", "dias_p", "perm_x", "perm_p", "tipo_corte", "cidade", "sit_fonte", "os_corte", "arquivo",
                # diagnóstico: o que há nos arquivos para entender por que conta ou não conta
                "na_atividade", "os_no_dia", "corte_anterior", "proximo_corte", "religacoes_arq", "vistorias_arq",
@@ -137,7 +137,7 @@ def compara(conf, cortes, ativ, hoje, cad=None):
     total = len(df)
     df = df.drop_duplicates(subset=["matricula", "data"]).reset_index(drop=True)
     duplicadas = total - len(df)
-    for col in ("data_religacao", "mes_religacao", "data_pos", "regua", "situacao", "dias", "permanencia", "descricao"):
+    for col in ("data_religacao", "mes_religacao", "data_pos", "regua", "situacao", "dias", "permanencia", "descricao", "mes_corte"):
         if col not in df.columns:
             df[col] = None
 
@@ -156,13 +156,15 @@ def compara(conf, cortes, ativ, hoje, cad=None):
     x_dias_raw = [_num(v) for v in df["dias"].tolist()]
     x_perm_raw = [_txt(v) for v in df["permanencia"].tolist()]
     x_desc = [_txt(v) for v in df["descricao"].tolist()]
+    x_mescorte = [_mes_br(v) for v in df["mes_corte"].tolist()]       # "Mês Corte" da planilha (MM/AAAA)
     mats = set(x_mat)
 
     # --- painel: cortes como dicionários, com as datas em dias ---
     pc = cortes.copy()
     for col, novo in (("data", "_d"), ("data_religacao", "_rel"), ("data_pos", "_pos"), ("prox_corte", "_prox")):
         pc[novo] = _dias(pc[col]) if col in pc.columns else None
-    usar = [c for c in ("matricula", "_d", "_rel", "_pos", "_prox", "id", "id_religacao", "id_pos", "status_pos", "regua", "situacao",
+    pc["_mescorte"] = [_fd(d)[3:] for d in pc["_d"]]                     # mês do corte no painel (MM/AAAA)
+    usar = [c for c in ("matricula", "_d", "_mescorte", "_rel", "_pos", "_prox", "id", "id_religacao", "id_pos", "status_pos", "regua", "situacao",
                         "situacao_fonte", "mes_religacao", "dias", "permanencia", "tipo", "cidade", "arquivo", "dias_cortado") if c in pc.columns]
     registros = pc[usar].astype(object).where(pc[usar].notna(), None).to_dict("records")
     painel = {(c["matricula"], c["_d"]): c for c in registros}
@@ -280,6 +282,7 @@ def compara(conf, cortes, ativ, hoje, cad=None):
         tem = bool(c)
         comp.append({
             "resultado": resultado, "matricula": mat, "data": (_EPOCA + _dt.timedelta(days=dia)).isoformat(),
+            "mescorte_x": x_mescorte[i] if i is not None else "", "mescorte_p": (c.get("_mescorte") or "") if tem else "",
             "diferencas": ", ".join(atual["difs"]), "motivos": " | ".join(atual["motivos"]),
             "rel_x": x_rel_raw[i] if i is not None else "", "rel_p": (_fd(c.get("_rel")) or sem_rel) if tem else "",
             "mesrel_x": x_mes_raw[i] if i is not None else "", "mesrel_p": _mes_br(c.get("mes_religacao")) if tem else "",
@@ -321,6 +324,12 @@ def compara(conf, cortes, ativ, hoje, cad=None):
             continue
 
         dif = False
+        # mês do corte
+        xmc, pmc = x_mescorte[i], c.get("_mescorte") or ""
+        if xmc and pmc and xmc != pmc:
+            dif = True
+            add("Mês do corte diferente", mat, dia, "Mês Corte", xmc, pmc,
+                f"o “Mês Corte” da planilha ({xmc}) não é o mês da DATA_CONCLUSAO ({_fd(dia)}); o painel usa sempre o mês da data do corte", c)
         # religação
         xr, pr = x_rel[i], c.get("_rel")
         if xr != pr:
@@ -394,7 +403,7 @@ def compara(conf, cortes, ativ, hoje, cad=None):
                 f"OS de corte Finalizada{arquivo_os(c.get('id'))} que não está na planilha (a Base dela pode ter sido extraída antes ou com outro filtro)", c)
             linha_comp("Corte só no painel", c["matricula"], c["_d"], None, c)
 
-    ordem = ["Bate em tudo", "Corte não encontrado no painel", "Corte só no painel", "Religação diferente", "Mês da religação diferente",
+    ordem = ["Bate em tudo", "Corte não encontrado no painel", "Corte só no painel", "Mês do corte diferente", "Religação diferente", "Mês da religação diferente",
              "Pós-corte diferente", "Régua diferente (dias até hoje)", "Régua diferente", "Situação diferente"]
     resumo = [{"tipo": t, "qtd": int(cont[t])} for t in ordem if cont.get(t)]
     return {

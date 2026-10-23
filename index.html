@@ -281,7 +281,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 <header class="top">
   <div class="top-linha">
     <div>
-      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v32</span></div>
+      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v33</span></div>
       <h1 id="titulo">Análise de Corte e Religação</h1>
     </div>
     <div class="ferramentas">
@@ -354,7 +354,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 
 <script>
 "use strict";
-const VERSAO_SITE = "v32-20261022";
+const VERSAO_SITE = "v33-20261023";
 
 // ===================== utilidades =====================
 const $ = (id) => document.getElementById(id);
@@ -1440,7 +1440,7 @@ function abaDados() {
   return html;
 }
 // analítico comparativo: uma linha por corte da planilha (e os só do painel), cada campo planilha × painel
-const CAB_COMP = [["resultado", "Resultado"], ["matricula", "Matrícula"], ["data", "Data do corte"], ["diferencas", "Campos diferentes"], ["motivos", "Motivos"],
+const CAB_COMP = [["resultado", "Resultado"], ["matricula", "Matrícula"], ["data", "Data do corte"], ["mescorte_x", "Mês do corte (planilha)"], ["mescorte_p", "Mês do corte (painel)"], ["diferencas", "Campos diferentes"], ["motivos", "Motivos"],
   ["rel_x", "Data Religação (planilha)"], ["rel_p", "Data Religação (painel)"], ["mesrel_x", "Mês Religação (planilha)"], ["mesrel_p", "Mês Religação (painel)"],
   ["pos_x", "Data Pós Corte (planilha)"], ["pos_p", "Data Pós Corte (painel)"], ["regua_x", "Régua (planilha)"], ["regua_p", "Régua (painel)"],
   ["sit_x", "Situação (planilha)"], ["sit_p", "Situação (painel)"], ["dias_x", "Dias (planilha)"], ["dias_p", "Dias (painel)"],
@@ -1467,6 +1467,7 @@ const EXPLICA_CONF = {
   "Bate em tudo": "Mesma matrícula e data do corte, e religação, pós-corte, régua e situação iguais.",
   "Corte não encontrado no painel": "A linha da planilha não virou corte no painel: OS não Finalizada, serviço fora do catálogo, data diferente ou arquivo de atividades faltando na pasta.",
   "Corte só no painel": "Corte Finalizado nos arquivos lidos, no período da planilha, que a planilha não tem.",
+  "Mês do corte diferente": "O “Mês Corte” da planilha não é o mês da DATA_CONCLUSAO (a fórmula dela usou outra data); o painel usa sempre o mês da data do corte.",
   "Religação diferente": "A data da religação ligada ao corte é diferente. O painel só usa religação Finalizada, depois do corte e até o próximo corte da matrícula, e cada religação vale para um corte só; a planilha usa a 1ª religação depois do corte, sem esses limites.",
   "Mês da religação diferente": "Sem religação nos dois, mas Ativa × Sem Religação diferem: o painel só marca Ativa no último corte da matrícula.",
   "Pós-corte diferente": "A 1ª vistoria pós-corte é diferente (mesmas regras da religação; aceita Finalizada ou Encerrada com Ocorrência).",

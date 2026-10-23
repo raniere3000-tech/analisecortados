@@ -63,3 +63,9 @@ def test_comparativo_traz_diagnostico(tmp_path):
     assert cp.loc["4000", "conta_saldo"].startswith("Não") and "Cancelada" in cp.loc["4000", "os_no_dia"]
     assert cp.loc["1000", "conta_pos"] == "Sim" or "situação" in cp.loc["1000", "por_que_pos"]
     assert cp.loc["3000", "conta_pos"] == "Não" and "religou em 09/04/2026" in cp.loc["3000", "por_que_pos"]
+
+
+def test_comparativo_traz_mes_do_corte(tmp_path):
+    cp = pd.DataFrame(Analise(str(_pasta(tmp_path))).executar("2026-05-10")["conferencia"]["comparativo"]).set_index("matricula")
+    assert cp.loc["1000", "mescorte_x"] == "04/2026" and cp.loc["1000", "mescorte_p"] == "04/2026"
+    assert cp.loc["4000", "mescorte_p"] == "" and cp.loc["5000", "mescorte_x"] == "" and cp.loc["5000", "mescorte_p"] == "04/2026"
