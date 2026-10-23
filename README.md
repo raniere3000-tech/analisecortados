@@ -37,7 +37,9 @@ A mesma atividade (mesmo *ID da Atividade*) em mais de um arquivo conta uma vez.
   economias (`TOTAL_ECO`) ou em ligações, com o saldo do mês e o acumulado.
 - **Corte × Religação**: destino dos cortes de cada mês em barras de 100% deitadas (Sem religação sempre na ponta direita, quantidade
   de cortes ao lado do mês, meses em aberto mais claros), mapa de calor da velocidade de religação (% acumulado religado até
-  cada mês depois do corte; clique numa célula para ver os clientes) e a tabela mês do corte × mês da religação, em quantidade ou %.
+  cada mês depois do corte; clique numa célula para ver os clientes) e a tabela mês do corte × mês da religação — Mostrar:
+  Matrículas (contagem de cortes, igual à “Contagem de Matrícula” da tabela dinâmica), Economias (soma do TOTAL_ECO), % matrículas ou % economias.
+  Linhas da base sem data do corte não entram (no Excel aparecem como “(vazio)”).
 - **Pós-corte**: como a tabela dinâmica “clientes sem a 1ª visita” — filtros na aba: **Pós-corte** (Sem/Com/Todos), **Religação**
   (Sem/Com/Todos), **Situação no cadastro**, 1ª visita sem sucesso, meses do corte (vários) e colunas por régua, tipo, cidade ou recurso.
   Padrão: sem pós-corte, sem religação e CORTADA (“Voltar ao padrão” restaura). Um gráfico e uma tabela mês do corte × colunas;
