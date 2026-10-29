@@ -60,6 +60,8 @@ A mesma atividade (mesmo *ID da Atividade*) em mais de um arquivo conta uma vez.
   e o ⬇ do analítico. Os tópicos abertos ficam guardados no navegador.
 
 Filtros no topo (linha abaixo do título): mês inicial/final (mês do corte), Sup, cidade, tipo de corte e Ativas = religadas.
+Cidade e tipo de corte aceitam vários itens: a lista abre com busca, caixas de seleção, `Todos` e `Limpar`; fecha ao clicar fora ou com Esc.
+O link compartilhável guarda os itens escolhidos separados por `|`.
 
 ## Recursos do painel
 

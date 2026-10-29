@@ -31,6 +31,20 @@ body { margin:0; background:var(--bg); color:var(--ink); font-family:"Segoe UI",
 .fsel select { width:150px; text-overflow:ellipsis; border:1px solid rgba(255,255,255,.28); border-radius:7px; background:rgba(255,255,255,.08); color:#fff; padding:5px 8px; font:inherit; font-size:12.5px; font-weight:500; text-transform:none; letter-spacing:0; cursor:pointer; }
 .fsel select:hover, .fsel select:focus { border-color:rgba(159,225,231,.8); background:rgba(255,255,255,.14); outline:none; }
 .fsel select option { color:#111; }
+.msel { position:relative; }
+.msel-btn { width:190px; text-align:left; border:1px solid rgba(255,255,255,.28); border-radius:7px; background:rgba(255,255,255,.08) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23fff'/%3E%3C/svg%3E") no-repeat right 9px center; color:#fff; padding:5px 26px 5px 8px; font:500 12.5px var(--fonte); text-transform:none; letter-spacing:0; cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.fsel[data-f=tipo] .msel-btn { width:150px; }
+.msel-btn:hover, .msel-btn.ativo { border-color:rgba(159,225,231,.8); background-color:rgba(255,255,255,.14); }
+.msel-btn.ativo { font-weight:700; }
+.msel-pop { position:absolute; top:calc(100% + 4px); left:0; z-index:50; width:260px; background:#fff; border:1px solid var(--line); border-radius:10px; box-shadow:0 10px 28px rgba(17,42,66,.25); padding:8px; text-transform:none; letter-spacing:0; }
+.msel-busca { width:100%; box-sizing:border-box; border:1px solid var(--line); border-radius:7px; padding:6px 8px; font:12.5px var(--fonte); }
+.msel-acoes { display:flex; gap:12px; margin:6px 2px; }
+.msel-acoes button { border:0; background:none; color:#176b9c; font:600 11.5px var(--fonte); cursor:pointer; padding:0; text-decoration:underline; }
+.msel-lista { max-height:280px; overflow:auto; }
+.msel-item { display:flex; align-items:center; gap:8px; padding:5px 4px; border-radius:5px; font:500 12.5px var(--fonte); color:var(--ink); cursor:pointer; }
+.msel-item:hover { background:#eef4f9; }
+.msel-item input { accent-color:#16a5b8; width:14px; height:14px; margin:0; }
+.msel-vazio { font-size:12px; color:#8a99aa; margin:6px; }
 .fsel[data-f=de] select, .fsel[data-f=ate] select { width:138px; }
 .fsel[data-f=sup] select { width:112px; }
 .fsel[data-f=cidade] select { width:190px; }
@@ -296,7 +310,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 <header class="top">
   <div class="top-linha">
     <div>
-      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v39</span></div>
+      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v40</span></div>
       <h1 id="titulo">Análise de Corte e Religação</h1>
     </div>
     <div class="ferramentas">
@@ -312,8 +326,8 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
     <label class="fsel" data-f="ate"><span>Mês final</span><select id="fAte" aria-label="Mês final"></select></label>
     <span class="f-sep" aria-hidden="true"></span>
     <label class="fsel" data-f="sup"><span>Sup</span><select id="fSup" aria-label="Sup"></select></label>
-    <label class="fsel" data-f="cidade"><span>Cidade</span><select id="fCidade" aria-label="Cidade"></select></label>
-    <label class="fsel" data-f="tipo"><span>Tipo de corte</span><select id="fTipo" aria-label="Tipo de corte"></select></label>
+    <div class="fsel" data-f="cidade"><span>Cidade</span><div class="msel" id="fCidade" data-rotulo="cidades"><button type="button" class="msel-btn" aria-haspopup="listbox" aria-label="Cidade">Todas</button><div class="msel-pop" hidden></div></div></div>
+    <div class="fsel" data-f="tipo"><span>Tipo de corte</span><div class="msel" id="fTipo" data-rotulo="tipos"><button type="button" class="msel-btn" aria-haspopup="listbox" aria-label="Tipo de corte">Todos</button><div class="msel-pop" hidden></div></div></div>
     <span class="f-sep" aria-hidden="true"></span>
     <label class="fsel f-check" data-f="ativas" title="Liga: a ligação cortada que está ATIVA no cadastro conta como religada, mesmo sem OS de religação"><input type="checkbox" id="fAtivas" aria-label="Ativas contam como religadas"><span>Ativas = religadas</span></label>
     <button type="button" class="f-limpar" id="btnLimpar" title="Volta todos os filtros ao padrão">Limpar filtros</button>
@@ -369,7 +383,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 
 <script>
 "use strict";
-const VERSAO_SITE = "v39-20261023";
+const VERSAO_SITE = "v40-20261029";
 
 // ===================== utilidades =====================
 const $ = (id) => document.getElementById(id);
@@ -699,9 +713,13 @@ function carregaDados(d) {
   PREENCHE = preenche;
   preenche($("fSup"), unicos([...CORTES.map((c) => c.sup), ...SALDO.map((s) => s.sup)]));
   preencheCidades();
-  preenche($("fTipo"), unicos(CORTES.map((c) => c.tipo)));
+  msPreenche("fTipo", unicos(CORTES.map((c) => c.tipo)));
   if (HASH_PENDENTE) {                                       // estado vindo do endereço (link compartilhado)
-    for (const [k, id] of [["de", "fDe"], ["ate", "fAte"], ["sup", "fSup"], ["cidade", "fCidade"], ["tipo", "fTipo"]]) {
+    for (const [k, id] of [["cidade", "fCidade"], ["tipo", "fTipo"]]) {      // vários itens, separados por |
+      const v = HASH_PENDENTE[k];
+      if (v) { MS[id].sel = v.split("|").filter((x) => MS[id].opcoes.includes(x)); msRotulo(id); }
+    }
+    for (const [k, id] of [["de", "fDe"], ["ate", "fAte"], ["sup", "fSup"]]) {
       const v = HASH_PENDENTE[k], sel = $(id);
       if (v != null && [...sel.options].some((o) => o.value === v)) { sel.value = v; sel.dataset.escolhido = "1"; }
       if (id === "fSup") preencheCidades();
@@ -717,16 +735,58 @@ function carregaDados(d) {
   desenha();
 }
 
+// ===================== filtros de vários itens no cabeçalho (cidade e tipo de corte) =====================
+const MS = { fCidade: { opcoes: [], sel: [], todos: "Todas" }, fTipo: { opcoes: [], sel: [], todos: "Todos" } };
+function msPreenche(id, opcoes) { MS[id].opcoes = opcoes; MS[id].sel = MS[id].sel.filter((v) => opcoes.includes(v)); msRotulo(id); }
+function msRotulo(id) {
+  const m = MS[id], b = $(id).querySelector(".msel-btn");
+  b.textContent = !m.sel.length ? m.todos : m.sel.length === 1 ? m.sel[0] : `${m.sel.length} ${$(id).dataset.rotulo}`;
+  b.title = m.sel.length ? m.sel.join(", ") : m.todos;
+  b.classList.toggle("ativo", m.sel.length > 0);
+}
+function msDesenhaLista(id) {
+  const m = MS[id], pop = $(id).querySelector(".msel-pop"), busca = (pop.dataset.busca || "").toLowerCase();
+  const itens = m.opcoes.filter((v) => !busca || String(v).toLowerCase().includes(busca));
+  pop.querySelector(".msel-lista").innerHTML = itens.map((v) => `<label class="msel-item"><input type="checkbox" data-ms="${id}" value="${esc(v)}"${m.sel.includes(v) ? " checked" : ""}><span>${esc(v)}</span></label>`).join("") || `<p class="msel-vazio">Nada encontrado.</p>`;
+}
+function msAbre(id) {
+  Object.keys(MS).forEach((k) => { if (k !== id) $(k).querySelector(".msel-pop").hidden = true; });
+  const pop = $(id).querySelector(".msel-pop");
+  if (!pop.hidden) { pop.hidden = true; return; }
+  pop.dataset.busca = "";
+  pop.innerHTML = `<input type="search" class="msel-busca" placeholder="Buscar…" aria-label="Buscar"><div class="msel-acoes"><button type="button" data-msacao="todos">Todos</button><button type="button" data-msacao="limpar">Limpar</button></div><div class="msel-lista"></div>`;
+  pop.hidden = false; msDesenhaLista(id);
+  const b = pop.querySelector(".msel-busca"); b.focus();
+  b.addEventListener("input", () => { pop.dataset.busca = b.value; msDesenhaLista(id); });
+}
+function msAplica(id) { msRotulo(id); if (id === "fCidade") $(id).dataset.escolhido = "1"; CTL.verTodos = false; desenha(); }
+document.addEventListener("click", (e) => {
+  const btn = e.target.closest(".msel-btn");
+  if (btn) { msAbre(btn.closest(".msel").id); return; }
+  const ac = e.target.closest("[data-msacao]");
+  if (ac) { const id = ac.closest(".msel").id; MS[id].sel = ac.dataset.msacao === "todos" ? [] : []; if (ac.dataset.msacao === "todos") MS[id].sel = []; msDesenhaLista(id); msAplica(id); return; }
+  if (!e.target.closest(".msel")) Object.keys(MS).forEach((k) => { $(k).querySelector(".msel-pop").hidden = true; });   // clique fora fecha
+});
+document.addEventListener("change", (e) => {
+  const cb = e.target.closest && e.target.closest("[data-ms]");
+  if (!cb) return;
+  const m = MS[cb.dataset.ms], v = m.opcoes.find((o) => String(o) === cb.value);
+  m.sel = cb.checked ? [...new Set([...m.sel, v])] : m.sel.filter((x) => x !== v);
+  m.sel.sort((a, b) => m.opcoes.indexOf(a) - m.opcoes.indexOf(b));
+  msAplica(cb.dataset.ms);
+});
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") Object.keys(MS).forEach((k) => { $(k).querySelector(".msel-pop").hidden = true; }); });
+
 // Sup e cidade: a lista de cidades mostra só as da Sup escolhida
 let PREENCHE = null;
 function preencheCidades() {
   const sup = $("fSup").value, daSup = (x) => !sup || x.sup === sup;
-  PREENCHE($("fCidade"), unicos([...CORTES.filter(daSup).map((c) => c.cidade), ...SALDO.filter(daSup).map((s) => s.cidade)]));
+  msPreenche("fCidade", unicos([...CORTES.filter(daSup).map((c) => c.cidade), ...SALDO.filter(daSup).map((s) => s.cidade)]));
 }
-const bateLocal = (x, f) => (!f.sup || x.sup === f.sup) && (!f.cidade || x.cidade === f.cidade);
+const bateLocal = (x, f) => (!f.sup || x.sup === f.sup) && (!f.cidade.length || f.cidade.includes(x.cidade));
 function filtro() {
   if ($("fDe").value && $("fAte").value && $("fDe").value > $("fAte").value) { const d = $("fDe").value; $("fDe").value = $("fAte").value; $("fAte").value = d; }   // período invertido
-  return { de: $("fDe").value, ate: $("fAte").value, sup: $("fSup").value, cidade: $("fCidade").value, recurso: "", tipo: $("fTipo").value, ativas: $("fAtivas").checked };
+  return { de: $("fDe").value, ate: $("fAte").value, sup: $("fSup").value, cidade: [...MS.fCidade.sel], recurso: "", tipo: [...MS.fTipo.sel], ativas: $("fAtivas").checked };
 }
 // "Ativas = religadas": o corte sem OS de religação cuja ligação está ATIVA no cadastro passa a valer como religado (sem data)
 let VISAO = { on: null, lista: null };
@@ -739,7 +799,7 @@ function cortesBase() {
 }
 function periodo(f) { if (!f.de || !f.ate) return ""; return f.de === f.ate ? mesRot(f.de) : `${mesRot(f.de)} a ${mesRot(f.ate)}`; }
 function cortesFiltrados(f) {
-  return cortesBase().filter((c) => (!f.de || c.mes >= f.de) && (!f.ate || c.mes <= f.ate) && bateLocal(c, f) && (!f.recurso || c.recurso === f.recurso) && (!f.tipo || c.tipo === f.tipo));
+  return cortesBase().filter((c) => (!f.de || c.mes >= f.de) && (!f.ate || c.mes <= f.ate) && bateLocal(c, f) && (!f.recurso || c.recurso === f.recurso) && (!f.tipo.length || f.tipo.includes(c.tipo)));
 }
 function mesesEntre(de, ate) {
   const out = []; if (!de || !ate) return out;
@@ -749,10 +809,13 @@ function mesesEntre(de, ate) {
 }
 // aplica um filtro a partir de um clique no gráfico
 function setFiltro(ids, valor, rotulo) {
-  for (const id of [].concat(ids)) { const sel = $(id); if (![...sel.options].some((o) => o.value === valor)) return; sel.value = valor; sel.dataset.escolhido = "1"; }
+  for (const id of [].concat(ids)) {
+    if (MS[id]) { if (!MS[id].opcoes.includes(valor)) return; MS[id].sel = [valor]; msRotulo(id); continue; }
+    const sel = $(id); if (![...sel.options].some((o) => o.value === valor)) return; sel.value = valor; sel.dataset.escolhido = "1";
+  }
   setTimeout(() => { desenha(); toast(`Filtro aplicado: ${rotulo}. Clique em Limpar para voltar.`); }, 0);   // fora do evento do gráfico (que será refeito)
 }
-["fDe", "fAte", "fSup", "fCidade", "fTipo"].forEach((id) => $(id).addEventListener("change", (e) => { e.target.dataset.escolhido = "1"; if (id === "fSup") preencheCidades(); CTL.verTodos = false; desenha(); }));
+["fDe", "fAte", "fSup"].forEach((id) => $(id).addEventListener("change", (e) => { e.target.dataset.escolhido = "1"; if (id === "fSup") preencheCidades(); CTL.verTodos = false; desenha(); }));
 document.addEventListener("change", (e) => {                 // calendários da evolução (Data A × Data B)
   const ev = e.target.closest && e.target.closest("[data-evo]");
   if (ev && ev.value) { CTL[ev.dataset.evo] = ev.value; desenha(); }
@@ -762,7 +825,7 @@ $("fAtivas").addEventListener("change", (e) => {
   toast(e.target.checked ? "Ativas = religadas: ligações ATIVAS no cadastro, sem OS de religação, contam como religadas." : "Ativas = religadas desligado.");
 });
 $("btnLimpar").addEventListener("click", () => {
-  ["fSup", "fCidade", "fTipo"].forEach((id) => { $(id).value = ""; });
+  $("fSup").value = ""; Object.keys(MS).forEach((k) => { MS[k].sel = []; msRotulo(k); });
   preencheCidades();
   ["fDe", "fAte"].forEach((id) => { delete $(id).dataset.escolhido; });
   const op = $("fDe").options; $("fDe").value = op.length ? op[0].value : ""; $("fAte").value = op.length ? op[op.length - 1].value : "";
@@ -790,7 +853,7 @@ function desenha() {
   DET.length = 0; fechaGaveta();                              // os números mudaram: a lista aberta ao lado ficaria velha
   ABAS.forEach((a) => { sujo[a] = true; });
   $("titulo").textContent = "Análise de Corte e Religação" + (CTX.per ? " — " + CTX.per : "");
-  $("soImpressao").textContent = "Análise de Corte e Religação" + (CTX.per ? " — " + CTX.per : "") + (f.sup ? " · Sup " + f.sup : "") + (f.cidade ? " · " + f.cidade : "") + (f.recurso ? " · " + f.recurso : "") + (f.tipo ? " · " + f.tipo : "") + (f.ativas ? " · Ativas = religadas" : "");
+  $("soImpressao").textContent = "Análise de Corte e Religação" + (CTX.per ? " — " + CTX.per : "") + (f.sup ? " · Sup " + f.sup : "") + (f.cidade.length ? " · " + f.cidade.join(", ") : "") + (f.recurso ? " · " + f.recurso : "") + (f.tipo.length ? " · " + f.tipo.join(", ") : "") + (f.ativas ? " · Ativas = religadas" : "");
   ativaAba(abaAtual);
 }
 const RENDER = { saldo: abaSaldo, cruzada: abaCruzada, pos: abaPos, perm: abaPermanencia, dados: abaDados };
@@ -1399,7 +1462,7 @@ function topico(id, titulo, corpo) {
 const btnAnalitico = (id, aba, nome, rot) => `<button type="button" class="btn-just btn-baixar" data-csv="${id}" data-aba="${aba}" data-nome="${esc(nome)}" title="Baixa em CSV as linhas usadas, com os filtros atuais">⬇ ${esc(rot)}</button>`;
 function abaDados() {
   const f = CTX.f, T = R.textos, rg = R.regua, P = R.permanencia, S = R.status, C = R.categorias, cortes = CTX.cortes;
-  const filtrosTxt = [CTX.per, f.sup && "Sup " + f.sup, f.cidade, f.recurso, f.tipo, f.ativas && "Ativas = religadas"].filter(Boolean).join(" · ") || "sem filtros";
+  const filtrosTxt = [CTX.per, f.sup && "Sup " + f.sup, f.cidade.join(", "), f.recurso, f.tipo.join(", "), f.ativas && "Ativas = religadas"].filter(Boolean).join(" · ") || "sem filtros";
 
   // avisos
   const avisos = [];
@@ -1821,7 +1884,7 @@ function atualizaHash() {
   if (!DADOS) return;
   const f = filtro(), p = new URLSearchParams();
   p.set("aba", abaAtual);
-  for (const [k, v] of Object.entries(f)) if (k === "ativas") p.set(k, v ? "1" : "0"); else if (v) p.set(k, v);   // ativas vai sempre: quem abre o link vê o mesmo
+  for (const [k, v] of Object.entries(f)) if (k === "ativas") p.set(k, v ? "1" : "0"); else if (Array.isArray(v)) { if (v.length) p.set(k, v.join("|")); } else if (v) p.set(k, v);   // ativas vai sempre: quem abre o link vê o mesmo
   try { history.replaceState(null, "", "#" + p.toString()); } catch (e) { /* sem histórico */ }
 }
 
