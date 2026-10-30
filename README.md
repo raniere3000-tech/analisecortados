@@ -65,6 +65,12 @@ O link compartilhável guarda os itens escolhidos separados por `|`.
 
 ## Recursos do painel
 
+- **Explicações no `?`**: os textos de como ler e como foi calculado ficam no `?` ao lado do título de cada cartão, gráfico e KPI. Aparecem ao passar o mouse, no foco do teclado ou ao tocar no celular.
+- **Reporte semanal** (topo da aba Dados): as três tabelas do reporte semanal com os filtros atuais.
+  - Corte × Religação em quantidade e em %, com a medida e o período da aba.
+  - Evolução do pós-corte com Data A × Data B, com os filtros e as datas da aba Pós-corte. As datas também mudam ali.
+  - **📋 Copiar imagem** (ou **Copiar as três**) copia a tabela como figura para colar com Ctrl+V. Se o navegador não deixar copiar, a imagem é baixada em PNG. Usa o html2canvas, carregado do jsDelivr no primeiro uso.
+
 - **Ícone da aba** (`favicon.svg`): sem fundo, gota azul e setas grossas laranja (corte) e ciano (religação); `apple-touch-icon.png` é o atalho no celular.
 
 - **Gráficos** (Chart.js) em cada aba, com as tabelas logo abaixo como apoio: saldo mensal e por tipo, destino dos cortes e velocidade de religação, cortados sem a 1ª visita por mês e por cidade, régua de cobrança, permanência por tipo e eficácia do pós-corte. Clicar numa barra filtra o mês, a cidade ou o tipo.

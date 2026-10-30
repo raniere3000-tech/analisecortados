@@ -91,7 +91,10 @@ main { font-family:var(--fonte); }
 .card.alerta h2, .card.alerta p { color:var(--laranja-texto); }
 .card.alerta p { margin:4px 0 0; white-space:pre-wrap; font-size:12.5px; }
 .rot-ctl { font-size:11px; color:var(--azul-claro); }
-.info { display:inline-block; margin-left:4px; font-size:11px; color:var(--azul-claro); cursor:help; font-weight:400; }
+.info { display:inline-flex; align-items:center; justify-content:center; width:15px; height:15px; margin-left:6px; border-radius:50%; border:1px solid var(--azul-claro); color:var(--azul-claro); font:700 10px/1 var(--fonte); cursor:help; vertical-align:2px; text-transform:none; letter-spacing:0; flex:none; }
+.info:hover, .info:focus-visible, .info.aberto { background:var(--cyan); border-color:var(--cyan); color:#fff; outline:none; }
+#balao { position:fixed; z-index:9999; max-width:400px; background:var(--marinho); color:#fff; font-size:12px; font-weight:400; line-height:1.5; padding:10px 13px; border-radius:8px; box-shadow:0 10px 28px rgba(16,40,64,.28); pointer-events:none; text-transform:none; letter-spacing:0; }
+#balao b { color:#9fe3ec; } #balao code { background:rgba(255,255,255,.14); color:#fff; padding:0 3px; border-radius:3px; } #balao i { color:#d6e4f0; }
 .grid { display:grid; gap:0 12px; max-width:1800px; margin:0 auto; }
 .grid.g21 { grid-template-columns:minmax(0,2fr) minmax(0,1fr); }
 .grid.g12 { grid-template-columns:minmax(0,1fr) minmax(0,2fr); }
@@ -154,6 +157,11 @@ details.acc > summary:hover { background:#f6f9fc; border-radius:10px; }
 .acc-log summary { cursor:pointer; font-size:12px; color:#176b9c; margin-top:8px; }
 .acc-log pre { max-height:260px; overflow:auto; background:#f6f9fc; padding:8px; border-radius:6px; font-size:11px; white-space:pre-wrap; }
 .dados-topo { padding-bottom:16px; }
+.filtros-atuais { font-size:11.5px; color:var(--azul-claro); }
+.reporte { border-top:3px solid var(--cyan); }
+.rep-todos { background:#fff; }
+.rep-todos .rep-bloco { margin:0; padding:12px 0 6px; border:0; border-top:1px solid var(--line); border-radius:0; box-shadow:none; max-width:none; }
+.btn-copiar.destaque { background:var(--marinho); color:#fff; border-color:var(--marinho); }
 .secao-efeito { margin-top:22px; }
 td.pos-txt { color:#166534 !important; font-weight:700; }
 .efeito-ctl { margin-left:auto; display:flex; align-items:center; gap:6px; font-size:12px; font-weight:500; }
@@ -312,7 +320,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 <header class="top">
   <div class="top-linha">
     <div>
-      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v44</span></div>
+      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v45</span></div>
       <h1 id="titulo">Análise de Corte e Religação</h1>
     </div>
     <div class="ferramentas">
@@ -385,7 +393,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 
 <script>
 "use strict";
-const VERSAO_SITE = "v44-20261030";
+const VERSAO_SITE = "v45-20261030";
 
 // ===================== utilidades =====================
 const $ = (id) => document.getElementById(id);
@@ -404,7 +412,8 @@ const mediana = (arr) => { if (!arr.length) return null; const s = [...arr].sort
 const unicos = (arr) => [...new Set(arr.filter((v) => v != null && v !== ""))].sort();
 const txt = (v) => ({ v: v ?? "", classe: "txt" });
 const idxMes = (m) => +m.slice(0, 4) * 12 + +m.slice(5, 7);
-const ajuda = (t) => `<span class="info" tabindex="0" title="${esc(t)}" aria-label="${esc(t)}">ⓘ</span>`;
+const ajuda = (t) => `<span class="info" tabindex="0" role="button" data-ajuda="${esc(t)}" aria-label="Como ler e como foi calculado">?</span>`;
+const textoAjuda = (...t) => t.filter(Boolean).join("<br><br>");
 
 function aviso(texto) { const a = $("aviso"); a.hidden = !texto; a.innerHTML = texto ? `<div class="card-topo"><h2>⚠ Atenção</h2></div><p>${esc(texto)}</p>` : ""; }
 function toast(texto, erro) {
@@ -497,12 +506,12 @@ function baixa(blob, nome) {
   toast("Baixado: " + nome);
 }
 function cartao(titulo, nota, conteudo, idCsv, controles = "", dica = "") {
-  return `<div class="card"><div class="card-topo"><h2>${esc(titulo)}${dica ? ajuda(dica) : ""}</h2><div class="acoes">${controles}${idCsv ? botaoCsv(idCsv, titulo) : ""}</div></div>
-    ${nota ? `<p class="nota-secao">${nota}</p>` : ""}${conteudo}</div>`;
+  const a = textoAjuda(nota, dica);
+  return `<div class="card"><div class="card-topo"><h2>${esc(titulo)}${a ? ajuda(a) : ""}</h2><div class="acoes">${controles}${idCsv ? botaoCsv(idCsv, titulo) : ""}</div></div>${conteudo}</div>`;
 }
 function cartaoGraf(id, titulo, nota, controles = "", dica = "", rodape = "") {
-  return `<div class="card"><div class="card-topo"><h2>${esc(titulo)}${dica ? ajuda(dica) : ""}</h2><div class="acoes">${controles}</div></div>
-    ${nota ? `<p class="nota-secao">${nota}</p>` : ""}<div class="graf"><canvas id="${id}" role="img" aria-label="${esc(titulo)}"></canvas></div>${rodape ? `<p class="dica">${rodape}</p>` : ""}</div>`;
+  const a = textoAjuda(nota, dica, rodape);
+  return `<div class="card"><div class="card-topo"><h2>${esc(titulo)}${a ? ajuda(a) : ""}</h2><div class="acoes">${controles}</div></div><div class="graf"><canvas id="${id}" role="img" aria-label="${esc(titulo)}"></canvas></div></div>`;
 }
 function seletor(id, rotulo, opcoes, valor) {
   return `${rotulo ? `<span class="rot-ctl">${esc(rotulo)}</span>` : ""}<span class="sub" role="group" aria-label="${esc(rotulo)}">${opcoes.map(([v, t]) =>
@@ -1072,11 +1081,10 @@ function abaCruzada({ f, cortes: todos, per }) {
   const altura = Math.max(220, 34 * mesesCorte.length + 70);
   const rodapeAberto = temAberto ? "* mês em aberto (o atual e o anterior): ainda teve pouco tempo para religar — cor mais clara." : "";
   const ctlMed = seletor("modoCruzada", "Medida", [["qtd", "Matrículas"], ["eco", "Economias"]], porEco ? "eco" : "qtd");
-  const cardCalor = `<div class="card"><div class="card-topo"><h2>Velocidade de religação${ajuda("Cada linha é um mês de corte (safra). Cada coluna mostra o % dos cortes daquele mês que já tinha religado (com OS) até aquele mês depois do corte. Quanto mais escuro, mais religou. As células com · ainda não chegaram. Clique numa célula para ver os clientes.")}</h2><div class="acoes">${ctlMed}</div></div>
-    <p class="nota-secao">% acumulado de ${porEco ? "economias religadas" : "matrículas religadas"} (com OS) até cada mês depois do corte. Mais escuro = mais religou.</p>${tabCalor}${rodapeAberto ? `<p class="dica">${rodapeAberto}</p>` : ""}</div>`;
+  const cardCalor = `<div class="card"><div class="card-topo"><h2>Velocidade de religação${ajuda(textoAjuda(`% acumulado de ${porEco ? "economias religadas" : "matrículas religadas"} (com OS) até cada mês depois do corte.`, "Cada linha é um mês de corte (safra). Cada coluna mostra o % dos cortes daquele mês que já tinha religado até aquele mês depois do corte. Quanto mais escuro, mais religou. As células com · ainda não chegaram. Clique numa célula para ver os clientes.", rodapeAberto))}</h2><div class="acoes">${ctlMed}</div></div>${tabCalor}</div>`;
   return topo
-    + cartao(`Mês do corte × mês da religação — ${porEco ? "economias" : "matrículas"}` + (per ? " — " + per : ""), nota + avisoPer, tabela("cruzada", ["Mês do corte", ...colunas.map(rotCol), "Total Geral", "% religado"], linhas), "cruzada", ctlTab)
-    + cartao(`Mês do corte × mês da religação — % ${porEco ? "das economias" : "das matrículas"}` + (per ? " — " + per : ""), `Cada célula é o % da linha (o mês do corte): ${porEco ? "economias" : "matrículas"} da célula ÷ total do mês. Na linha Total Geral, os meses de religação são o total religado no mês (100%); Sem religação e % religado são sobre todos os cortes. A medida (Matrículas ou Economias) é a mesma da tabela de cima — trocar numa troca na outra.`, tabela("cruzadaPct", ["Mês do corte", ...colunas.map(rotCol), "Total Geral", "% religado"], linhasPct, { pct: true }), "cruzadaPct", ctlTab)
+    + cartao(`Mês do corte × mês da religação — ${porEco ? "economias" : "matrículas"}` + (per ? " — " + per : ""), nota, avisoPer + tabela("cruzada", ["Mês do corte", ...colunas.map(rotCol), "Total Geral", "% religado"], linhas), "cruzada", ctlTab).replace('class="card"', 'class="card" data-rep="cruzada"')
+    + cartao(`Mês do corte × mês da religação — % ${porEco ? "das economias" : "das matrículas"}` + (per ? " — " + per : ""), `Cada célula é o % da linha (o mês do corte): ${porEco ? "economias" : "matrículas"} da célula ÷ total do mês. Na linha Total Geral, os meses de religação são o total religado no mês (100%); Sem religação e % religado são sobre todos os cortes. A medida (Matrículas ou Economias) é a mesma da tabela de cima — trocar numa troca na outra.`, tabela("cruzadaPct", ["Mês do corte", ...colunas.map(rotCol), "Total Geral", "% religado"], linhasPct, { pct: true }), "cruzadaPct", ctlTab).replace('class="card"', 'class="card" data-rep="cruzadaPct"')
     + `<div class="grid g11">${cartaoGraf("g-cruzada-1", "Destino dos cortes de cada mês" + (per ? " — " + per : ""), `% ${porEco ? "das economias" : "das matrículas"} do mês. <b>Sem religação</b> sempre na ponta direita; ao lado do mês, o total de ${porEco ? "economias" : "matrículas"}.`, ctlGraf, "Cada barra soma 100% dos cortes do mês: religou no mesmo mês, religou nos meses seguintes, ativa sem OS e sem religação. Clique numa barra para filtrar o mês.", rodapeAberto).replace('class="graf"', `class="graf" style="height:${altura}px"`)}
     ${cardCalor}</div>`;
 }
@@ -1221,8 +1229,7 @@ function abaPos({ f, cortes: todos, per }) {
   const movimento = `<p class="nota-secao evo-mov">De ${dataRot(dataA)} para ${dataRot(dataB)}: <b>saíram ${fmtN(sairam.length)}</b> — ${lnk(porRel.length, "Saíram: religaram", porRel)} religaram, ${lnk(porPos.length, "Saíram: tiveram pós-corte", porPos)} tiveram a 1ª visita pós-corte${outros.length ? `, ${lnk(outros.length, "Saíram: outros motivos", outros)} por outros motivos (situação no cadastro ou filtros)` : ""};
     <b>entraram ${fmtN(entraram.length)}</b>${novos.length ? ` — ${lnk(novos.length, "Entraram: cortes novos", novos)} cortes novos depois de ${dataRot(dataA)}` : ""}${entraram.length - novos.length ? `, ${lnk(entraram.length - novos.length, "Entraram: passaram a se encaixar no filtro", entraram.filter((c) => d10(c.data) <= dataA))} passaram a se encaixar no filtro` : ""}.</p>`;
   const campoData = (id, v) => `<input type="date" class="evo-data" data-evo="${id}" value="${v}" max="${hojeIso}" aria-label="Data">`;
-  const cardEvo = `<div class="card"><div class="card-topo"><h2>Evolução — comparar duas datas${ajuda("Reconstrói a tabela como ela estava em cada data, pelas datas das OS: já cortado na data, sem pós-corte e sem religação até a data (conforme os filtros da aba). Quem religou depois da data conta como CORTADA naquela data. OS lançada no sistema com atraso entra no dia da data dela, então os quadros antigos podem diferir um pouco do que você salvou no dia.")}</h2></div>
-    <p class="nota-secao">Os mesmos filtros da aba (${esc(titulo.toLowerCase())}), contados como estavam em cada data. Escolha as datas nos calendários.</p>
+  const cardEvo = `<div class="card" data-rep="evo" data-titulo="${esc(titulo)}"><div class="card-topo"><h2>Evolução — comparar duas datas${ajuda(`Os mesmos filtros da aba (${esc(titulo.toLowerCase())}), contados como estavam em cada data. Escolha as datas nos calendários.<br><br>` + "Reconstrói a tabela como ela estava em cada data, pelas datas das OS: já cortado na data, sem pós-corte e sem religação até a data (conforme os filtros da aba). Quem religou depois da data conta como CORTADA naquela data. OS lançada no sistema com atraso entra no dia da data dela, então os quadros antigos podem diferir um pouco do que você salvou no dia.")}</h2></div>
     <div class="grid g11 evo-grid"><div><div class="evo-cab"><span>Data A</span>${campoData("evoA", dataA)}</div>${tabA}</div>
     <div><div class="evo-cab"><span>Data B</span>${campoData("evoB", dataB)}</div>${tabB}</div></div>${movimento}</div>`;
 
@@ -1509,8 +1516,7 @@ function abaDados() {
   const listaPassos = (l) => `<ol class="passos">${l.map((x) => `<li>${x}</li>`).join("")}</ol>`;
   const bloco = (titulo, html) => `<h3>${titulo}</h3>${html}`;
 
-  let html = `<div class="card dados-topo"><div class="card-topo"><h2>Dados e validação dos cálculos</h2>${DADOS.conferencia ? `<div class="acoes">${btnComparativo()}</div>` : ""}</div>
-    <p class="nota-secao">Clique num tópico para abrir. De 1 a 4, cada página do painel: o que mostra, quais bases e colunas entram, o cálculo passo a passo e o <b>⬇</b> para baixar o analítico (uma linha por corte ou OS, com as colunas que dizem onde cada uma foi contada). Filtros atuais: <b>${esc(filtrosTxt)}</b>.</p>`;
+  let html = reporteSemanal(CTX, filtrosTxt) + `<div class="card dados-topo"><div class="card-topo"><h2>Dados e validação dos cálculos${ajuda(`Clique num tópico para abrir. De 1 a 4, cada página do painel: o que mostra, quais bases e colunas entram, o cálculo passo a passo e o <b>⬇</b> para baixar o analítico (uma linha por corte ou OS, com as colunas que dizem onde cada uma foi contada).`)}</h2><span class="filtros-atuais">${esc(filtrosTxt)}</span>${DADOS.conferencia ? `<div class="acoes">${btnComparativo()}</div>` : ""}</div>`;
 
   html += topico("avisos", `Avisos (${avisos.length})`, avisos.length ? `<ul class="avisos">${avisos.map((a) => `<li>${a}</li>`).join("")}</ul>` : "<p>Nenhum aviso: todos os arquivos foram lidos e classificados.</p>");
   html += topico("conferencia", "Conferência rápida — filtros atuais", `<p>Os números principais de cada página com os filtros de agora, e como chegar neles pelo analítico.</p>${tabConf}`);
@@ -1651,6 +1657,64 @@ function topicoConferencia() {
     <div class="linha-botoes">${btnComparativo()}<button type="button" class="btn-just btn-baixar" id="btnCsvConf" title="Só as diferenças, uma linha por campo diferente">⬇ Só as diferenças (CSV)</button><button type="button" class="btn-just btn-baixar" data-det="${todas}">Ver as diferenças na tela (${fmtN(l.length)})</button></div>
     <p class="nota-secao">O <b>analítico comparativo</b> tem uma linha por corte da planilha (e os que só o painel tem): Resultado (Bate em tudo, Diferente, Corte não encontrado, Corte só no painel), os campos diferentes, os motivos e cada campo lado a lado — <i>planilha</i> × <i>painel</i>. No fim, o <b>diagnóstico</b>: se conta no painel e no Pós-corte padrão (e por quê), as OS da matrícula no dia do corte, as religações e vistorias encontradas nos arquivos desde o corte (com status e arquivo), o corte anterior e o próximo, e o cadastro (SIT_LIG, referência, economias).</p>`);
 }
+// ===================== reporte semanal: as 3 tabelas que vão para o reporte, prontas para copiar como imagem =====================
+function reporteSemanal(ctx, filtrosTxt) {
+  const guardado = { ...MEM }, tmp = document.createElement("div");
+  tmp.innerHTML = abaCruzada(ctx) + abaPos(ctx);              // as mesmas tabelas das abas, com os mesmos filtros e controles
+  Object.assign(MEM, guardado);
+  const blocos = [["cruzada", "rep-cruzada", "Corte × Religação"], ["cruzadaPct", "rep-pct", "Corte × Religação %"], ["evo", "rep-evo", "Evolucao pos-corte"]];
+  const corpo = blocos.map(([k, id, nome]) => {
+    const c = tmp.querySelector(`[data-rep="${k}"]`); if (!c) return "";
+    c.id = id; c.classList.add("rep-bloco"); c.removeAttribute("data-rep");
+    c.querySelectorAll("table[id]").forEach((t) => t.removeAttribute("id"));
+    c.querySelectorAll(".aviso-filtro").forEach((n) => n.remove());
+    const h2 = c.querySelector(".card-topo h2");
+    if (k === "evo" && h2) h2.firstChild.textContent = `Evolução do pós-corte — ${c.dataset.titulo || ""}`.replace(/ — $/, "");
+    const acoes = c.querySelector(".acoes") || c.querySelector(".card-topo").appendChild(document.createElement("div"));
+    acoes.className = "acoes"; acoes.innerHTML = `<button type="button" class="btn-just btn-copiar" data-copiar="${id}" data-nome="${esc(nome)}">📋 Copiar imagem</button>`;
+    return c.outerHTML;
+  }).join("");
+  return `<div class="card reporte"><div class="card-topo"><h2>Reporte semanal${ajuda("As três tabelas do reporte, com os filtros do cabeçalho: <b>Corte × Religação</b> em quantidade e em %, com a medida e o período escolhidos na aba Corte × Religação, e a <b>Evolução do pós-corte</b> com os filtros e as datas da aba Pós-corte (as datas também mudam aqui). <b>📋 Copiar imagem</b> copia a tabela como figura: cole com Ctrl+V no e-mail, WhatsApp, Teams ou PowerPoint. Se o navegador não deixar copiar, a imagem é baixada.")}</h2>
+    <span class="filtros-atuais">${esc(filtrosTxt)}</span><div class="acoes"><button type="button" class="btn-just btn-copiar destaque" data-copiar="rep-todos" data-nome="Reporte semanal">📋 Copiar as três</button></div></div>
+    <div id="rep-todos" class="rep-todos">${corpo}</div></div>`;
+}
+let h2cProm = null;
+const carregaH2c = () => h2cProm || (h2cProm = new Promise((ok, erro) => {
+  const sc = document.createElement("script"); sc.src = "https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js";
+  sc.onload = () => ok(window.html2canvas); sc.onerror = () => { h2cProm = null; erro(new Error("html2canvas")); }; document.head.appendChild(sc);
+}));
+async function copiaImagem(el, nome) {
+  const png = (async () => {
+    const h2c = await carregaH2c();
+    const largura = Math.max(el.scrollWidth, ...[...el.querySelectorAll("table")].map((t) => t.scrollWidth + 40));   // tabela larga não fica cortada
+    const cv = await h2c(el, {
+      scale: 2, backgroundColor: "#ffffff", logging: false, windowWidth: Math.max(innerWidth, largura + 80),
+      ignoreElements: (n) => n.classList && (n.classList.contains("btn-copiar") || n.classList.contains("info") || n.classList.contains("rot-ctl") || n.classList.contains("sub")),
+      onclone: (doc) => {
+        const c = doc.getElementById(el.id); if (!c) return;
+        c.style.width = largura + "px"; c.style.maxWidth = "none"; c.style.overflow = "visible";
+        c.querySelectorAll(".tabela-wrap, .card").forEach((w) => { w.style.overflow = "visible"; w.style.maxHeight = "none"; });
+        c.querySelectorAll("table").forEach((t) => { t.style.fontVariantNumeric = "normal"; });
+        c.querySelectorAll("input.evo-data").forEach((i) => { const sp = doc.createElement("b"); sp.textContent = dataRot(i.value); i.replaceWith(sp); });
+      },
+    });
+    return new Promise((ok) => cv.toBlob(ok, "image/png"));
+  })();
+  try {
+    if (!navigator.clipboard || !window.ClipboardItem) throw new Error("sem área de transferência");
+    await navigator.clipboard.write([new ClipboardItem({ "image/png": png })]);
+    toast("Imagem copiada — cole com Ctrl+V.");
+  } catch (e) {
+    try { const blob = await png; if (!blob) throw e; baixa(blob, nomeArquivo(nome) + ".png"); }
+    catch (e2) { toast("Não foi possível gerar a imagem (precisa de internet na primeira vez).", true); }
+  }
+}
+document.addEventListener("click", (e) => {
+  const b = e.target.closest && e.target.closest("[data-copiar]"); if (!b) return;
+  const el = $(b.dataset.copiar); if (!el) return;
+  b.disabled = true; const t = b.textContent; b.textContent = "Gerando…";
+  copiaImagem(el, b.dataset.nome || "Reporte").finally(() => { b.disabled = false; b.textContent = t; });
+});
 const botaoTxt = (id, nome, rot) => `<button type="button" class="btn-just btn-baixar" data-csv="${id}" data-nome="${esc(nome)}">${esc(rot)}</button>`;
 function ligaDados() {
   const b = $("btnExcel"); if (!b) return;
@@ -1693,6 +1757,31 @@ function ligaDados() {
     guarda("cortes_dados_abertos", [...ABERTOS_DADOS]);
   }));
 }
+
+// ===================== balão de ajuda (?): aparece ao passar o mouse, no foco ou no toque =====================
+let balaoDe = null;
+function balao() { let b = $("balao"); if (!b) { b = document.createElement("div"); b.id = "balao"; b.setAttribute("role", "tooltip"); b.hidden = true; document.body.appendChild(b); } return b; }
+function mostraBalao(el) {
+  const b = balao(); if (balaoDe && balaoDe !== el) balaoDe.classList.remove("aberto");
+  balaoDe = el; el.classList.add("aberto"); b.innerHTML = el.dataset.ajuda; b.hidden = false;
+  const r = el.getBoundingClientRect(), w = b.offsetWidth, h = b.offsetHeight;
+  const x = Math.max(8, Math.min(r.left + r.width / 2 - w / 2, innerWidth - w - 8));
+  const y = r.bottom + 8 + h > innerHeight - 8 && r.top - h - 8 > 0 ? r.top - h - 8 : r.bottom + 8;
+  b.style.left = x + "px"; b.style.top = y + "px";
+}
+function escondeBalao() { const b = $("balao"); if (b) b.hidden = true; if (balaoDe) balaoDe.classList.remove("aberto"); balaoDe = null; }
+const alvoAjuda = (e) => (e.target && e.target.closest ? e.target.closest(".info[data-ajuda]") : null);
+document.addEventListener("mouseover", (e) => { const i = alvoAjuda(e); if (i && i !== balaoDe) mostraBalao(i); });
+document.addEventListener("mouseout", (e) => { const i = alvoAjuda(e); if (i && !i.contains(e.relatedTarget)) escondeBalao(); });
+document.addEventListener("focusin", (e) => { const i = alvoAjuda(e); if (i) mostraBalao(i); });
+document.addEventListener("focusout", (e) => { if (alvoAjuda(e)) escondeBalao(); });
+document.addEventListener("click", (e) => {                   // toque (celular): abre; tocar fora fecha; não ordena a coluna nem abre o tópico
+  const i = alvoAjuda(e);
+  if (i) { e.preventDefault(); e.stopPropagation(); mostraBalao(i); }
+  else if (balaoDe) escondeBalao();
+}, true);
+addEventListener("scroll", escondeBalao, true);
+addEventListener("keydown", (e) => { if (e.key === "Escape" && balaoDe) escondeBalao(); });
 
 // ===================== painel lateral: clientes por trás do número e histórico =====================
 const PILHA = [];
