@@ -320,7 +320,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 <header class="top">
   <div class="top-linha">
     <div>
-      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v45</span></div>
+      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v46</span></div>
       <h1 id="titulo">Análise de Corte e Religação</h1>
     </div>
     <div class="ferramentas">
@@ -393,7 +393,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 
 <script>
 "use strict";
-const VERSAO_SITE = "v45-20261030";
+const VERSAO_SITE = "v46-20261030";
 
 // ===================== utilidades =====================
 const $ = (id) => document.getElementById(id);
@@ -1668,13 +1668,17 @@ function reporteSemanal(ctx, filtrosTxt) {
     c.id = id; c.classList.add("rep-bloco"); c.removeAttribute("data-rep");
     c.querySelectorAll("table[id]").forEach((t) => t.removeAttribute("id"));
     c.querySelectorAll(".aviso-filtro").forEach((n) => n.remove());
+    c.querySelectorAll("table").forEach((t) => {                 // o reporte sai sem a coluna Ativa
+      const i = [...t.querySelectorAll("thead th")].findIndex((th) => th.textContent.trim() === R.textos.ativa);
+      if (i >= 0) t.querySelectorAll("tr").forEach((tr) => tr.children[i] && tr.children[i].remove());
+    });
     const h2 = c.querySelector(".card-topo h2");
     if (k === "evo" && h2) h2.firstChild.textContent = `Evolução do pós-corte — ${c.dataset.titulo || ""}`.replace(/ — $/, "");
     const acoes = c.querySelector(".acoes") || c.querySelector(".card-topo").appendChild(document.createElement("div"));
     acoes.className = "acoes"; acoes.innerHTML = `<button type="button" class="btn-just btn-copiar" data-copiar="${id}" data-nome="${esc(nome)}">📋 Copiar imagem</button>`;
     return c.outerHTML;
   }).join("");
-  return `<div class="card reporte"><div class="card-topo"><h2>Reporte semanal${ajuda("As três tabelas do reporte, com os filtros do cabeçalho: <b>Corte × Religação</b> em quantidade e em %, com a medida e o período escolhidos na aba Corte × Religação, e a <b>Evolução do pós-corte</b> com os filtros e as datas da aba Pós-corte (as datas também mudam aqui). <b>📋 Copiar imagem</b> copia a tabela como figura: cole com Ctrl+V no e-mail, WhatsApp, Teams ou PowerPoint. Se o navegador não deixar copiar, a imagem é baixada.")}</h2>
+  return `<div class="card reporte"><div class="card-topo"><h2>Reporte semanal${ajuda("As três tabelas do reporte, com os filtros do cabeçalho: <b>Corte × Religação</b> em quantidade e em % (sem a coluna Ativa), com a medida e o período escolhidos na aba Corte × Religação, e a <b>Evolução do pós-corte</b> com os filtros e as datas da aba Pós-corte (as datas também mudam aqui). <b>📋 Copiar imagem</b> copia a tabela como figura: cole com Ctrl+V no e-mail, WhatsApp, Teams ou PowerPoint. Se o navegador não deixar copiar, a imagem é baixada.")}</h2>
     <span class="filtros-atuais">${esc(filtrosTxt)}</span><div class="acoes"><button type="button" class="btn-just btn-copiar destaque" data-copiar="rep-todos" data-nome="Reporte semanal">📋 Copiar as três</button></div></div>
     <div id="rep-todos" class="rep-todos">${corpo}</div></div>`;
 }

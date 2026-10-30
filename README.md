@@ -67,7 +67,7 @@ O link compartilhável guarda os itens escolhidos separados por `|`.
 
 - **Explicações no `?`**: os textos de como ler e como foi calculado ficam no `?` ao lado do título de cada cartão, gráfico e KPI. Aparecem ao passar o mouse, no foco do teclado ou ao tocar no celular.
 - **Reporte semanal** (topo da aba Dados): as três tabelas do reporte semanal com os filtros atuais.
-  - Corte × Religação em quantidade e em %, com a medida e o período da aba.
+  - Corte × Religação em quantidade e em %, sem a coluna Ativa, com a medida e o período da aba.
   - Evolução do pós-corte com Data A × Data B, com os filtros e as datas da aba Pós-corte. As datas também mudam ali.
   - **📋 Copiar imagem** (ou **Copiar as três**) copia a tabela como figura para colar com Ctrl+V. Se o navegador não deixar copiar, a imagem é baixada em PNG. Usa o html2canvas, carregado do jsDelivr no primeiro uso.
 
