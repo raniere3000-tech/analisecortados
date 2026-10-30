@@ -38,7 +38,7 @@ A mesma atividade (mesmo *ID da Atividade*) em mais de um arquivo conta uma vez.
 - **Corte × Religação**: destino dos cortes de cada mês em barras de 100% deitadas (Sem religação sempre na ponta direita, quantidade
   de cortes ao lado do mês, meses em aberto mais claros), mapa de calor da velocidade de religação (% acumulado religado até
   cada mês depois do corte; clique numa célula para ver os clientes) e duas tabelas mês do corte × mês da religação — uma em
-  quantidade e outra em % da linha. A **Medida** (Matrículas = contagem de cortes, igual à “Contagem de Matrícula” da tabela
+  quantidade e outra em % da linha (na linha Total Geral, cada mês de religação mostra 100% = religações feitas no mês; Sem religação e % religado são sobre todos os cortes). A **Medida** (Matrículas = contagem de cortes, igual à “Contagem de Matrícula” da tabela
   dinâmica; ou Economias = soma do TOTAL_ECO) é uma só: trocar numa tabela troca na outra.
   **Período vale para**: “Corte e religação” (padrão) — o mês inicial/final filtra o mês do corte e também o mês da religação, como
   filtrar as duas colunas na tabela dinâmica (religação depois do mês final tira o corte da conta, com aviso e lista); “Só corte” — como antes.

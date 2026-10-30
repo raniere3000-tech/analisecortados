@@ -312,7 +312,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 <header class="top">
   <div class="top-linha">
     <div>
-      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v43</span></div>
+      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v44</span></div>
       <h1 id="titulo">Análise de Corte e Religação</h1>
     </div>
     <div class="ferramentas">
@@ -385,7 +385,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 
 <script>
 "use strict";
-const VERSAO_SITE = "v43-20261030";
+const VERSAO_SITE = "v44-20261030";
 
 // ===================== utilidades =====================
 const $ = (id) => document.getElementById(id);
@@ -984,8 +984,8 @@ function abaCruzada({ f, cortes: todos, per }) {
   const linha = (lista, rot, classe, pct) => {
     const tot = medida(lista), doTot = (col) => lista.filter((c) => c.mes_religacao === col);
     const celulas = colunas.map((col) => {
-      const sub = doTot(col), v = medida(sub), share = tot ? v / tot : 0;
-      const bg = ehMes(col) && v ? `rgba(23,107,156,${(0.08 + share * 0.5).toFixed(2)})` : null;
+      const sub = doTot(col), v = medida(sub), share = pct && classe === "linha-total" && ehMes(col) ? (v ? 1 : 0) : tot ? v / tot : 0;   // Total Geral dos meses = religações feitas no mês (100%)
+      const bg = ehMes(col) && v && classe !== "linha-total" ? `rgba(23,107,156,${(0.08 + share * 0.5).toFixed(2)})` : null;
       const c = nCel(pct ? share : v, `${rot} → ${rotCol(col)}`, () => sub, "cortes", { bg });
       if (pct) { c.txt = v === 0 ? "-" : fmtP(share); }
       return c;
@@ -1076,7 +1076,7 @@ function abaCruzada({ f, cortes: todos, per }) {
     <p class="nota-secao">% acumulado de ${porEco ? "economias religadas" : "matrículas religadas"} (com OS) até cada mês depois do corte. Mais escuro = mais religou.</p>${tabCalor}${rodapeAberto ? `<p class="dica">${rodapeAberto}</p>` : ""}</div>`;
   return topo
     + cartao(`Mês do corte × mês da religação — ${porEco ? "economias" : "matrículas"}` + (per ? " — " + per : ""), nota + avisoPer, tabela("cruzada", ["Mês do corte", ...colunas.map(rotCol), "Total Geral", "% religado"], linhas), "cruzada", ctlTab)
-    + cartao(`Mês do corte × mês da religação — % ${porEco ? "das economias" : "das matrículas"}` + (per ? " — " + per : ""), `Cada célula é o % da linha (o mês do corte): ${porEco ? "economias" : "matrículas"} da célula ÷ total do mês. A medida (Matrículas ou Economias) é a mesma da tabela de cima — trocar numa troca na outra.`, tabela("cruzadaPct", ["Mês do corte", ...colunas.map(rotCol), "Total Geral", "% religado"], linhasPct, { pct: true }), "cruzadaPct", ctlTab)
+    + cartao(`Mês do corte × mês da religação — % ${porEco ? "das economias" : "das matrículas"}` + (per ? " — " + per : ""), `Cada célula é o % da linha (o mês do corte): ${porEco ? "economias" : "matrículas"} da célula ÷ total do mês. Na linha Total Geral, os meses de religação são o total religado no mês (100%); Sem religação e % religado são sobre todos os cortes. A medida (Matrículas ou Economias) é a mesma da tabela de cima — trocar numa troca na outra.`, tabela("cruzadaPct", ["Mês do corte", ...colunas.map(rotCol), "Total Geral", "% religado"], linhasPct, { pct: true }), "cruzadaPct", ctlTab)
     + `<div class="grid g11">${cartaoGraf("g-cruzada-1", "Destino dos cortes de cada mês" + (per ? " — " + per : ""), `% ${porEco ? "das economias" : "das matrículas"} do mês. <b>Sem religação</b> sempre na ponta direita; ao lado do mês, o total de ${porEco ? "economias" : "matrículas"}.`, ctlGraf, "Cada barra soma 100% dos cortes do mês: religou no mesmo mês, religou nos meses seguintes, ativa sem OS e sem religação. Clique numa barra para filtrar o mês.", rodapeAberto).replace('class="graf"', `class="graf" style="height:${altura}px"`)}
     ${cardCalor}</div>`;
 }
