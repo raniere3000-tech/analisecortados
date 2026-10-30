@@ -65,6 +65,8 @@ O link compartilhável guarda os itens escolhidos separados por `|`.
 
 ## Recursos do painel
 
+- **Ícone da aba** (`favicon.svg`): gota com setas laranja (corte) e ciano (religação); `apple-touch-icon.png` é o atalho no celular.
+
 - **Gráficos** (Chart.js) em cada aba, com as tabelas logo abaixo como apoio: saldo mensal e por tipo, destino dos cortes e velocidade de religação, cortados sem a 1ª visita por mês e por cidade, régua de cobrança, permanência por tipo e eficácia do pós-corte. Clicar numa barra filtra o mês, a cidade ou o tipo.
 - **Clicar num número** (de qualquer tabela) abre, num painel lateral, as matrículas por trás dele, com ⬇ para baixar em CSV; clicar numa matrícula mostra o histórico do cliente.
 - Lista de clientes com **busca** (matrículas ou texto), ordenação pelo cabeçalho e "Mostrar todos"; qualquer tabela ordena pelo cabeçalho; tabelas largas arrastam para o lado.
