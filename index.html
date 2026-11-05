@@ -159,7 +159,7 @@ details.acc > summary:hover { background:#f6f9fc; border-radius:10px; }
 .dados-topo { padding-bottom:16px; }
 .filtros-atuais { font-size:11.5px; color:var(--azul-claro); }
 .reporte { border-top:3px solid var(--cyan); }
-.rep-todos { background:#fff; }
+.rep-todos, .rep-cruzadas { background:#fff; }
 .rep-todos .rep-bloco { margin:0; padding:12px 0 6px; border:0; border-top:1px solid var(--line); border-radius:0; box-shadow:none; max-width:none; }
 .btn-copiar.destaque { background:var(--marinho); color:#fff; border-color:var(--marinho); }
 .secao-efeito { margin-top:22px; }
@@ -320,7 +320,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 <header class="top">
   <div class="top-linha">
     <div>
-      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v46</span></div>
+      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v47</span></div>
       <h1 id="titulo">Análise de Corte e Religação</h1>
     </div>
     <div class="ferramentas">
@@ -393,7 +393,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 
 <script>
 "use strict";
-const VERSAO_SITE = "v46-20261030";
+const VERSAO_SITE = "v47-20261105";
 
 // ===================== utilidades =====================
 const $ = (id) => document.getElementById(id);
@@ -1663,7 +1663,7 @@ function reporteSemanal(ctx, filtrosTxt) {
   tmp.innerHTML = abaCruzada(ctx) + abaPos(ctx);              // as mesmas tabelas das abas, com os mesmos filtros e controles
   Object.assign(MEM, guardado);
   const blocos = [["cruzada", "rep-cruzada", "Corte × Religação"], ["cruzadaPct", "rep-pct", "Corte × Religação %"], ["evo", "rep-evo", "Evolucao pos-corte"]];
-  const corpo = blocos.map(([k, id, nome]) => {
+  const html = blocos.map(([k, id, nome]) => {
     const c = tmp.querySelector(`[data-rep="${k}"]`); if (!c) return "";
     c.id = id; c.classList.add("rep-bloco"); c.removeAttribute("data-rep");
     c.querySelectorAll("table[id]").forEach((t) => t.removeAttribute("id"));
@@ -1677,9 +1677,11 @@ function reporteSemanal(ctx, filtrosTxt) {
     const acoes = c.querySelector(".acoes") || c.querySelector(".card-topo").appendChild(document.createElement("div"));
     acoes.className = "acoes"; acoes.innerHTML = `<button type="button" class="btn-just btn-copiar" data-copiar="${id}" data-nome="${esc(nome)}">📋 Copiar imagem</button>`;
     return c.outerHTML;
-  }).join("");
-  return `<div class="card reporte"><div class="card-topo"><h2>Reporte semanal${ajuda("As três tabelas do reporte, com os filtros do cabeçalho: <b>Corte × Religação</b> em quantidade e em % (sem a coluna Ativa), com a medida e o período escolhidos na aba Corte × Religação, e a <b>Evolução do pós-corte</b> com os filtros e as datas da aba Pós-corte (as datas também mudam aqui). <b>📋 Copiar imagem</b> copia a tabela como figura: cole com Ctrl+V no e-mail, WhatsApp, Teams ou PowerPoint. Se o navegador não deixar copiar, a imagem é baixada.")}</h2>
-    <span class="filtros-atuais">${esc(filtrosTxt)}</span><div class="acoes"><button type="button" class="btn-just btn-copiar destaque" data-copiar="rep-todos" data-nome="Reporte semanal">📋 Copiar as três</button></div></div>
+  });
+  // as duas de Corte × Religação (quantidade e %) juntas numa imagem só
+  const corpo = `<div id="rep-cruzadas" class="rep-cruzadas">${html[0]}${html[1]}</div>${html[2]}`;
+  return `<div class="card reporte"><div class="card-topo"><h2>Reporte semanal${ajuda("As três tabelas do reporte, com os filtros do cabeçalho: <b>Corte × Religação</b> em quantidade e em % (sem a coluna Ativa), com a medida e o período escolhidos na aba Corte × Religação, e a <b>Evolução do pós-corte</b> com os filtros e as datas da aba Pós-corte (as datas também mudam aqui). <b>📋 Copiar Corte × Religação (as duas)</b> junta a tabela de quantidade e a de % numa imagem só; <b>📋 Copiar imagem</b> copia uma tabela: cole com Ctrl+V no e-mail, WhatsApp, Teams ou PowerPoint. Se o navegador não deixar copiar, a imagem é baixada.")}</h2>
+    <span class="filtros-atuais">${esc(filtrosTxt)}</span><div class="acoes"><button type="button" class="btn-just btn-copiar destaque" data-copiar="rep-cruzadas" data-nome="Corte x Religacao">📋 Copiar Corte × Religação (as duas)</button><button type="button" class="btn-just btn-copiar" data-copiar="rep-todos" data-nome="Reporte semanal">📋 Copiar as três</button></div></div>
     <div id="rep-todos" class="rep-todos">${corpo}</div></div>`;
 }
 let h2cProm = null;
@@ -1696,7 +1698,7 @@ async function copiaImagem(el, nome) {
       ignoreElements: (n) => n.classList && (n.classList.contains("btn-copiar") || n.classList.contains("info") || n.classList.contains("rot-ctl") || n.classList.contains("sub")),
       onclone: (doc) => {
         const c = doc.getElementById(el.id); if (!c) return;
-        c.style.width = largura + "px"; c.style.maxWidth = "none"; c.style.overflow = "visible";
+        c.style.width = largura + "px"; c.style.maxWidth = "none"; c.style.overflow = "visible"; c.style.padding = "14px 16px"; c.style.boxSizing = "content-box"; const pb = c.querySelector(".rep-bloco"); if (pb) pb.style.borderTop = "0";
         c.querySelectorAll(".tabela-wrap, .card").forEach((w) => { w.style.overflow = "visible"; w.style.maxHeight = "none"; });
         c.querySelectorAll("table").forEach((t) => { t.style.fontVariantNumeric = "normal"; });
         c.querySelectorAll("input.evo-data").forEach((i) => { const sp = doc.createElement("b"); sp.textContent = dataRot(i.value); i.replaceWith(sp); });

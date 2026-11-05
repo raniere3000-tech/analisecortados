@@ -69,6 +69,7 @@ O link compartilhável guarda os itens escolhidos separados por `|`.
 - **Reporte semanal** (topo da aba Dados): as três tabelas do reporte semanal com os filtros atuais.
   - Corte × Religação em quantidade e em %, sem a coluna Ativa, com a medida e o período da aba.
   - Evolução do pós-corte com Data A × Data B, com os filtros e as datas da aba Pós-corte. As datas também mudam ali.
+  - **📋 Copiar Corte × Religação (as duas)** junta a tabela de quantidade e a de % numa imagem só.
   - **📋 Copiar imagem** (ou **Copiar as três**) copia a tabela como figura para colar com Ctrl+V. Se o navegador não deixar copiar, a imagem é baixada em PNG. Usa o html2canvas, carregado do jsDelivr no primeiro uso.
 
 - **Ícone da aba** (`favicon.svg`): sem fundo, gota azul e setas grossas laranja (corte) e ciano (religação); `apple-touch-icon.png` é o atalho no celular.
