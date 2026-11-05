@@ -48,7 +48,7 @@ body { margin:0; background:var(--bg); color:var(--ink); font-family:"Segoe UI",
 .msel-item input { accent-color:#16a5b8; width:14px; height:14px; margin:0; }
 .msel-vazio { font-size:12px; color:#8a99aa; margin:6px; }
 .fsel[data-f=de] select, .fsel[data-f=ate] select { width:138px; }
-.fsel[data-f=sup] select { width:112px; }
+.fsel[data-f=sup] select { width:150px; }
 .fsel[data-f=cidade] select { width:190px; }
 .f-sep { width:1px; align-self:stretch; background:rgba(255,255,255,.14); margin:2px 2px; }
 .fsel.f-check { flex-direction:row; align-items:center; gap:7px; cursor:pointer; padding-bottom:6px; font-size:10.5px; color:#c8d6e5; }
@@ -320,7 +320,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 <header class="top">
   <div class="top-linha">
     <div>
-      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v47</span></div>
+      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v48</span></div>
       <h1 id="titulo">Análise de Corte e Religação</h1>
     </div>
     <div class="ferramentas">
@@ -335,7 +335,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
     <label class="fsel" data-f="de"><span>Mês inicial</span><select id="fDe" aria-label="Mês inicial"></select></label>
     <label class="fsel" data-f="ate"><span>Mês final</span><select id="fAte" aria-label="Mês final"></select></label>
     <span class="f-sep" aria-hidden="true"></span>
-    <label class="fsel" data-f="sup"><span>Sup</span><select id="fSup" aria-label="Sup"></select></label>
+    <label class="fsel" data-f="sup"><span>Superintendência</span><select id="fSup" aria-label="Superintendência"></select></label>
     <div class="fsel" data-f="cidade"><span>Cidade</span><div class="msel" id="fCidade" data-rotulo="cidades"><button type="button" class="msel-btn" aria-haspopup="listbox" aria-label="Cidade">Todas</button><div class="msel-pop" hidden></div></div></div>
     <div class="fsel" data-f="tipo"><span>Tipo de corte</span><div class="msel" id="fTipo" data-rotulo="tipos"><button type="button" class="msel-btn" aria-haspopup="listbox" aria-label="Tipo de corte">Todos</button><div class="msel-pop" hidden></div></div></div>
     <span class="f-sep" aria-hidden="true"></span>
@@ -393,7 +393,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 
 <script>
 "use strict";
-const VERSAO_SITE = "v47-20261105";
+const VERSAO_SITE = "v48-20261105";
 
 // ===================== utilidades =====================
 const $ = (id) => document.getElementById(id);
@@ -723,6 +723,7 @@ function carregaDados(d) {
   if (!meses.includes($("fAte").value) || !$("fAte").dataset.escolhido) $("fAte").value = meses[meses.length - 1] || "";
   PREENCHE = preenche;
   preenche($("fSup"), unicos([...CORTES.map((c) => c.sup), ...SALDO.map((s) => s.sup)]));
+  [...$("fSup").options].forEach((o) => { if (o.value) o.textContent = rotSup(o.value); });   // Interior = antiga Lagos
   preencheCidades();
   msPreenche("fTipo", unicos(CORTES.map((c) => c.tipo)));
   if (HASH_PENDENTE) {                                       // estado vindo do endereço (link compartilhado)
@@ -789,6 +790,7 @@ document.addEventListener("change", (e) => {
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") Object.keys(MS).forEach((k) => { $(k).querySelector(".msel-pop").hidden = true; }); });
 
 // Sup e cidade: a lista de cidades mostra só as da Sup escolhida
+const rotSup = (s) => (/^interior$/i.test(s || "") ? s + " (Lagos)" : s);
 let PREENCHE = null;
 function preencheCidades() {
   const sup = $("fSup").value, daSup = (x) => !sup || x.sup === sup;
@@ -864,7 +866,7 @@ function desenha() {
   DET.length = 0; fechaGaveta();                              // os números mudaram: a lista aberta ao lado ficaria velha
   ABAS.forEach((a) => { sujo[a] = true; });
   $("titulo").textContent = "Análise de Corte e Religação" + (CTX.per ? " — " + CTX.per : "");
-  $("soImpressao").textContent = "Análise de Corte e Religação" + (CTX.per ? " — " + CTX.per : "") + (f.sup ? " · Sup " + f.sup : "") + (f.cidade.length ? " · " + f.cidade.join(", ") : "") + (f.recurso ? " · " + f.recurso : "") + (f.tipo.length ? " · " + f.tipo.join(", ") : "") + (f.ativas ? " · Ativas = religadas" : "");
+  $("soImpressao").textContent = "Análise de Corte e Religação" + (CTX.per ? " — " + CTX.per : "") + (f.sup ? " · " + rotSup(f.sup) : "") + (f.cidade.length ? " · " + f.cidade.join(", ") : "") + (f.recurso ? " · " + f.recurso : "") + (f.tipo.length ? " · " + f.tipo.join(", ") : "") + (f.ativas ? " · Ativas = religadas" : "");
   ativaAba(abaAtual);
 }
 const RENDER = { saldo: abaSaldo, cruzada: abaCruzada, pos: abaPos, perm: abaPermanencia, dados: abaDados };
@@ -1471,7 +1473,7 @@ function topico(id, titulo, corpo) {
 const btnAnalitico = (id, aba, nome, rot) => `<button type="button" class="btn-just btn-baixar" data-csv="${id}" data-aba="${aba}" data-nome="${esc(nome)}" title="Baixa em CSV as linhas usadas, com os filtros atuais">⬇ ${esc(rot)}</button>`;
 function abaDados() {
   const f = CTX.f, T = R.textos, rg = R.regua, P = R.permanencia, S = R.status, C = R.categorias, cortes = CTX.cortes;
-  const filtrosTxt = [CTX.per, f.sup && "Sup " + f.sup, f.cidade.join(", "), f.recurso, f.tipo.join(", "), f.ativas && "Ativas = religadas"].filter(Boolean).join(" · ") || "sem filtros";
+  const filtrosTxt = [CTX.per, f.sup && rotSup(f.sup), f.cidade.join(", "), f.recurso, f.tipo.join(", "), f.ativas && "Ativas = religadas"].filter(Boolean).join(" · ") || "sem filtros";
 
   // avisos
   const avisos = [];
