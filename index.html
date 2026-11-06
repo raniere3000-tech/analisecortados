@@ -320,7 +320,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 <header class="top">
   <div class="top-linha">
     <div>
-      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v48</span></div>
+      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v49</span></div>
       <h1 id="titulo">Análise de Corte e Religação</h1>
     </div>
     <div class="ferramentas">
@@ -393,7 +393,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 
 <script>
 "use strict";
-const VERSAO_SITE = "v48-20261105";
+const VERSAO_SITE = "v49-20261106";
 
 // ===================== utilidades =====================
 const $ = (id) => document.getElementById(id);
@@ -723,7 +723,7 @@ function carregaDados(d) {
   if (!meses.includes($("fAte").value) || !$("fAte").dataset.escolhido) $("fAte").value = meses[meses.length - 1] || "";
   PREENCHE = preenche;
   preenche($("fSup"), unicos([...CORTES.map((c) => c.sup), ...SALDO.map((s) => s.sup)]));
-  [...$("fSup").options].forEach((o) => { if (o.value) o.textContent = rotSup(o.value); });   // Interior = antiga Lagos
+  [...$("fSup").options].forEach((o) => { if (o.value) o.textContent = rotSup(o.value); });
   preencheCidades();
   msPreenche("fTipo", unicos(CORTES.map((c) => c.tipo)));
   if (HASH_PENDENTE) {                                       // estado vindo do endereço (link compartilhado)
@@ -790,7 +790,7 @@ document.addEventListener("change", (e) => {
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") Object.keys(MS).forEach((k) => { $(k).querySelector(".msel-pop").hidden = true; }); });
 
 // Sup e cidade: a lista de cidades mostra só as da Sup escolhida
-const rotSup = (s) => (/^interior$/i.test(s || "") ? s + " (Lagos)" : s);
+const rotSup = (s) => s;
 let PREENCHE = null;
 function preencheCidades() {
   const sup = $("fSup").value, daSup = (x) => !sup || x.sup === sup;
