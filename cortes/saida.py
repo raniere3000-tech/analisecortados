@@ -33,7 +33,7 @@ NOMES_EXCEL = {
     "data_pos": "Data Pós Corte", "mes_pos": "Mês Pós Corte", "status_pos": "Status 1ª visita pós corte",
     "obs_pos": "Observação pós corte", "data_pos_finalizada": "Data 1º pós corte Finalizado",
     "regua": "Regua de Cobrança", "dias": "Dias", "dias_cortado": "Dias cortado (até hoje)",
-    "permanencia": "Permanencia", "situacao": "Situação", "situacao_fonte": "Origem da situação", "religou_sem_os": "Religou sem OS (ativa ou cortada de novo)", "id": "ID da Atividade", "arquivo": "Arquivo",
+    "permanencia": "Permanencia", "situacao": "Situação", "situacao_fonte": "Origem da situação", "religou_sem_os": "Religou sem OS (ATIVA no cadastro)", "id": "ID da Atividade", "arquivo": "Arquivo",
 }
 
 

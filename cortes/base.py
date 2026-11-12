@@ -364,9 +364,9 @@ def monta_cortes(ativ, cad, hoje=None):
     ativa = _igual(df["situacao"], "ATIVA") & df["prox_corte"].isna().to_numpy()
     df["mes_religacao"] = np.where(religado, mes_rel, np.where(ativa, TXT["ativa"], TXT["sem_religacao"]))
     df["mes_pos"] = np.where(com_pos, mes(df["data_pos"]).dt.strftime("%Y-%m"), TXT["sem_pos"])
-    # Religou sem OS (usado pelo filtro "Ativas = religadas"): sem OS de religação, mas a ligação está ATIVA no cadastro
-    # ou a matrícula foi cortada de novo depois (para ser cortada de novo, foi religada no meio)
-    df["religou_sem_os"] = (~religado) & (_igual(df["situacao"], "ATIVA") | df["prox_corte"].notna().to_numpy())
+    # Religou sem OS (usado pelo filtro "Ativas = religadas"): só sem OS de religação E com a ligação ATIVA no cadastro
+    # (último corte da matrícula). CORTADA, INATIVA ou contrato encerrado não contam, mesmo cortada de novo depois
+    df["religou_sem_os"] = (~religado) & ativa
     return df
 
 

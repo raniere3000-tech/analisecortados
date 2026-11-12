@@ -110,8 +110,8 @@ def test_versao_do_cache_depende_das_regras_de_leitura():
     assert cache_arquivos.VERSAO.startswith(cache_arquivos.BASE + "-") and len(cache_arquivos.VERSAO.split("-")[1]) == 8
 
 
-def test_religou_sem_os_inclui_corte_seguido_de_outro_corte(tmp_path):
-    _ativ(tmp_path, [["R", "1", "100", CORTE, "05/02/26", "Finalizada", "A"],      # cortada de novo em maio: religou no meio sem OS
+def test_religou_sem_os_so_com_cadastro_ativa(tmp_path):
+    _ativ(tmp_path, [["R", "1", "100", CORTE, "05/02/26", "Finalizada", "A"],      # cortada de novo em maio: não conta (não está ATIVA)
                      ["R", "2", "100", CORTE, "05/05/26", "Finalizada", "A"],
                      ["R", "3", "200", CORTE, "05/02/26", "Finalizada", "A"],      # ATIVA no cadastro, único corte
                      ["R", "4", "300", CORTE, "05/02/26", "Finalizada", "A"]])     # CORTADA: segue sem religação
@@ -119,5 +119,5 @@ def test_religou_sem_os_inclui_corte_seguido_de_outro_corte(tmp_path):
                     ["01/06/2026", "300", "Z", "CORTADA", "RES", "1", "A"]])
     a = Analise(str(tmp_path)); d = a.executar("2026-06-10")
     c = a.cortes.sort_values(["matricula", "data"])
-    assert c["religou_sem_os"].tolist() == [True, False, True, False]
+    assert c["religou_sem_os"].tolist() == [False, False, True, False]
     assert "religou_sem_os" in d["cortes"]
