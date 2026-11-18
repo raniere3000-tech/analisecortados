@@ -320,7 +320,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 <header class="top">
   <div class="top-linha">
     <div>
-      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v54</span></div>
+      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v55</span></div>
       <h1 id="titulo">Análise de Corte e Religação</h1>
     </div>
     <div class="ferramentas">
@@ -393,7 +393,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 
 <script>
 "use strict";
-const VERSAO_SITE = "v54-20261112";
+const VERSAO_SITE = "v55-20261118";
 
 // ===================== utilidades =====================
 const $ = (id) => document.getElementById(id);
@@ -893,7 +893,7 @@ function abaSaldo({ f, per }) {
   const valor = (cat, tipo, mes) => soma(ev.filter((s) => s.categoria === cat && (!tipo || s.tipo === tipo) && s.mes === mes).map((s) => s[campo]));
   const detEv = (cat, tipo, mes, nome) => () => EVENTOS.filter((e) => e.categoria === cat && (!tipo || e.tipo === tipo) && (!mes || e.mes === mes) && bateLocal(e, f) && (!f.recurso || e.recurso === f.recurso)
     && (!mes && f.de ? e.mes >= f.de : true) && (!mes && f.ate ? e.mes <= f.ate : true));
-  const num = (v, saldo, det) => ({ v, txt: v === 0 ? "-" : fmtN(v), classe: "num" + (v < 0 ? (saldo ? " neg" : " neg-txt") : (v === 0 ? " vazio" : "")) + (det ? " clic" : ""), det: det && v !== 0 ? det : null });
+  const num = (v, saldo, det) => ({ v, txt: v === 0 ? "-" : fmtN(v), classe: "num" + (v < 0 ? (saldo ? " neg" : " neg-txt") : (v === 0 ? " vazio" : "")) + (det != null && v !== 0 ? " clic" : ""), det: det != null && v !== 0 ? det : null });   // o detalhe 0 também vale
   const linhas = [];
   const grupo = (cat, rotulo, sinal, comTipos) => {
     const vals = meses.map((m) => sinal * valor(cat, null, m));
@@ -928,8 +928,19 @@ function abaSaldo({ f, per }) {
   };
   const saldo = meses.map((_, i) => corte[i] + relig[i] + lna[i] + ativaMes[i]);
   let acc = 0; const acumulado = saldo.map((v) => (acc += v));
-  linhas.push({ classe: "linha-total", celulas: ["Saldo do mês", ...saldo.map((v) => num(v, true)), num(soma(saldo), true)] });
-  linhas.push({ classe: "linha-total", celulas: ["Saldo acumulado", ...acumulado.map((v) => num(v, true)), num(acc, true)] });
+  // detalhe do saldo: os eventos que formam o número (corte, religação, implantação e, se marcado, ativas sem OS de religação).
+  // Saldo do mês = eventos do mês; saldo acumulado = eventos do primeiro mês do período até o mês da coluna.
+  const catsSaldo = [C.corte, C.religacao, C.implantacao];
+  const detSaldo = (mesIni, mesFim) => () => {
+    const noPer = (m) => (!mesIni || m >= mesIni) && (!mesFim || m <= mesFim) && (!f.de || m >= f.de) && (!f.ate || m <= f.ate);
+    const l = EVENTOS.filter((e) => catsSaldo.includes(e.categoria) && noPer(e.mes) && bateLocal(e, f) && (!f.recurso || e.recurso === f.recurso));
+    if (f.ativas) l.push(...ativasOs.filter((c) => noPer(c.mes)).map((c) => ({ matricula: c.matricula, data: c.data, mes: c.mes, categoria: "Ativa sem OS de religação", tipo: c.tipo, servico: c.servico, id: c.id, sup: c.sup, cidade: c.cidade, recurso: c.recurso, economias: c.economias, arquivo: c.arquivo })));
+    return l.sort((a, b) => (a.mes + a.categoria + a.tipo + a.matricula).localeCompare(b.mes + b.categoria + b.tipo + b.matricula));
+  };
+  linhas.push({ classe: "linha-total", celulas: ["Saldo do mês", ...saldo.map((v, i) => num(v, true, regDet(`Saldo do mês — ${mesRot(meses[i])}`, detSaldo(meses[i], meses[i]), "eventos"))),
+    num(soma(saldo), true, regDet(`Saldo do mês — ${per}`, detSaldo(null, null), "eventos"))] });
+  linhas.push({ classe: "linha-total", celulas: ["Saldo acumulado", ...acumulado.map((v, i) => num(v, true, regDet(`Saldo acumulado até ${mesRot(meses[i])}`, detSaldo(meses[0], meses[i]), "eventos"))),
+    num(acc, true, regDet(`Saldo acumulado — ${per}`, detSaldo(null, null), "eventos"))] });
 
   const semCad = soma(ev.map((s) => s.sem_cadastro));
   const totCorte = -soma(corte), totRelig = soma(relig) + soma(ativaMes), totLna = soma(lna), totSaldo = soma(saldo);
