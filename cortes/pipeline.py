@@ -39,6 +39,42 @@ class Analise:
         self.conferencia = None
         self.arquivos, self.info = [], {}
 
+    def procura(self, mat):
+        """Todas as linhas lidas de uma matrícula (antes de tirar repetidas), com a classificação e o que o painel fez."""
+        mat = base.matricula(pd.Series([mat])).iloc[0]
+        bruto = self._bruto
+        if mat is None or bruto is None:
+            return {"matricula": mat, "linhas": [], "cortes": []}
+        sub = bruto[base.matricula(bruto["matricula"]).eq(mat).fillna(False).to_numpy(dtype=bool)].copy()
+        orig_mat, orig_data = sub["matricula"].astype(str).tolist(), sub["data"].astype(str).tolist()
+        sub["matricula"] = mat
+        sub["data"] = base.datas(sub["data"])
+        sub["status"] = sub["status"].astype("string").str.strip()
+        cls = base.classifica(sub, self._cat)
+        usados = set(self._ativ["id"].dropna().astype(str)) if "id" in self._ativ.columns else set()
+        linhas = []
+        for i, (_, r) in enumerate(cls.iterrows()):
+            data = r["data"]
+            if pd.isna(data):
+                obs = "data não reconhecida — a OS fica de fora"
+            elif r["categoria"] is None or pd.isna(r["categoria"]):
+                obs = "serviço fora do catálogo (sem categoria) — fica de fora"
+            elif pd.notna(r.get("id")) and str(r.get("id")) not in usados:
+                obs = "não entrou: mesma OS repetida em outro arquivo (vale a outra cópia) ou fora das cidades"
+            else:
+                obs = ""
+            linhas.append({"arquivo": r.get("arquivo"), "id": None if pd.isna(r.get("id")) else str(r.get("id")),
+                           "matricula_lida": orig_mat[i], "data_lida": orig_data[i],
+                           "data": None if pd.isna(data) else data.date().isoformat(), "servico": r.get("servico"),
+                           "status": None if pd.isna(r["status"]) else str(r["status"]), "categoria": r["categoria"], "obs": obs})
+        linhas.sort(key=lambda x: (x["data"] or "", x["arquivo"] or ""))
+        cs = self.cortes[self.cortes["matricula"].eq(mat)] if self.cortes is not None else self.cortes
+        f = lambda v: None if pd.isna(v) else pd.Timestamp(v).date().isoformat()  # noqa: E731
+        cortes = [{"data": f(c["data"]), "data_pos": f(c.get("data_pos")), "status_pos": None if pd.isna(c.get("status_pos")) else c.get("status_pos"),
+                   "data_religacao": f(c.get("data_religacao")), "prox_corte": f(c.get("prox_corte")), "regua": c.get("regua")}
+                  for _, c in (cs.iterrows() if cs is not None else [])]
+        return {"matricula": mat, "linhas": linhas, "cortes": cortes}
+
     def executar(self, hoje=None):
         hoje = pd.Timestamp(hoje or date.today()).normalize()
         lido = leitura.le_pasta(self.pasta, self.progresso)
@@ -55,6 +91,7 @@ class Analise:
         base.aplica_cidades(ativ, mapa_cid)
         base.aplica_cidades(cad, mapa_cid, "CIDADE")
         ativ, lisc_fora, lisc_cidades_fora = base.filtra_lisc_por_cidade(ativ)
+        self._bruto, self._cat, self._ativ = lido["atividades"], cat, ativ      # para procurar uma matrícula depois
 
         self.progresso(80, "Cruzando cortes, religações e pós-corte…")
         self.cortes = base.monta_cortes(ativ, cad, hoje)

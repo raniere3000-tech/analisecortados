@@ -208,6 +208,14 @@ async function faseExcel() {
   avisa("excel", { conteudo: bytes.buffer }, [bytes.buffer]);
 }
 
+async function faseProcura(mat) {
+  const pyodide = await iniciaPyodide();
+  const procura = pyodide.globals.get("procura");
+  const json = procura(String(mat || ""));
+  procura.destroy();
+  avisa("procura", { dados: JSON.parse(json) });
+}
+
 async function limpaCache() {
   await new Promise((ok) => { const r = indexedDB.deleteDatabase(BANCO); r.onsuccess = r.onerror = r.onblocked = () => ok(); });
   avisa("cacheLimpo", {});
@@ -222,6 +230,7 @@ self.onmessage = async (evento) => {
   try {
     if (fase === "limparCache") await limpaCache();
     else if (fase === "excel") await faseExcel();
+    else if (fase === "procura") await faseProcura(evento.data.matricula);
     else await faseAnalisar(arquivos);
   } catch (erro) {
     avisa("erro", mensagemAmigavel(erro));

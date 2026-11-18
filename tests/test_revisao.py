@@ -142,3 +142,12 @@ def test_base_do_dia_com_outro_nome_entra_como_atividades(tmp_path):
     a = Analise(str(tmp_path)); d = a.executar("2026-11-18")
     assert str(a.cortes["data_pos"].iloc[0])[:10] == "2026-11-12"
     assert {x["arquivo"]: x["tipo"] for x in d["arquivos"]}["Base dia 12.xlsx"] == "atividades"
+
+
+def test_procura_matricula_mostra_linhas_e_cortes(tmp_path):
+    _ativ(tmp_path, [["R", "1", "100607645", CORTE, "20/05/26", "Finalizada", "A"],
+                     ["R", "2", "0100607645", "110010-VISTORIA PÓS CORTE", "12/11/26", "Finalizada", "A"]])
+    a = Analise(str(tmp_path)); a.executar("2026-11-18")
+    r = a.procura("100607645")
+    assert [l["categoria"] for l in r["linhas"]] == ["CORTE", "VISTORIA PÓS CORTE"]
+    assert r["cortes"][0]["data_pos"] == "2026-11-12"

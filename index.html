@@ -158,6 +158,8 @@ details.acc > summary:hover { background:#f6f9fc; border-radius:10px; }
 .acc-log pre { max-height:260px; overflow:auto; background:#f6f9fc; padding:8px; border-radius:6px; font-size:11px; white-space:pre-wrap; }
 .dados-topo { padding-bottom:16px; }
 .filtros-atuais { font-size:11.5px; color:var(--azul-claro); }
+.procura-mat { display:inline-flex; gap:4px; align-items:center; }
+.procura-mat input { width:120px; border:1px solid var(--line); border-radius:7px; padding:5px 8px; font:12.5px var(--fonte); }
 .reporte { border-top:3px solid var(--cyan); }
 .rep-todos, .rep-cruzadas { background:#fff; }
 .rep-todos .rep-bloco { margin:0; padding:12px 0 6px; border:0; border-top:1px solid var(--line); border-radius:0; box-shadow:none; max-width:none; }
@@ -320,7 +322,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 <header class="top">
   <div class="top-linha">
     <div>
-      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v56</span></div>
+      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v57</span></div>
       <h1 id="titulo">Análise de Corte e Religação</h1>
     </div>
     <div class="ferramentas">
@@ -393,7 +395,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 
 <script>
 "use strict";
-const VERSAO_SITE = "v56-20261118";
+const VERSAO_SITE = "v57-20261118";
 
 // ===================== utilidades =====================
 const $ = (id) => document.getElementById(id);
@@ -1524,7 +1526,7 @@ function abaDados() {
   const listaPassos = (l) => `<ol class="passos">${l.map((x) => `<li>${x}</li>`).join("")}</ol>`;
   const bloco = (titulo, html) => `<h3>${titulo}</h3>${html}`;
 
-  let html = reporteSemanal(CTX, filtrosTxt) + `<div class="card dados-topo"><div class="card-topo"><h2>Dados e validação dos cálculos${ajuda(`Clique num tópico para abrir. De 1 a 4, cada página do painel: o que mostra, quais bases e colunas entram, o cálculo passo a passo e o <b>⬇</b> para baixar o analítico (uma linha por corte ou OS, com as colunas que dizem onde cada uma foi contada).`)}</h2><span class="filtros-atuais">${esc(filtrosTxt)}</span>${DADOS.conferencia ? `<div class="acoes">${btnComparativo()}</div>` : ""}</div>`;
+  let html = reporteSemanal(CTX, filtrosTxt) + `<div class="card dados-topo"><div class="card-topo"><h2>Dados e validação dos cálculos${ajuda(`Clique num tópico para abrir. De 1 a 4, cada página do painel: o que mostra, quais bases e colunas entram, o cálculo passo a passo e o <b>⬇</b> para baixar o analítico (uma linha por corte ou OS, com as colunas que dizem onde cada uma foi contada).`)}</h2><span class="filtros-atuais">${esc(filtrosTxt)}</span><div class="acoes"><span class="procura-mat"><input type="search" id="inpProcura" inputmode="numeric" placeholder="Matrícula" aria-label="Matrícula para procurar"><button type="button" class="btn-just" id="btnProcura" title="Mostra todas as OS lidas da matrícula, de qual arquivo, como foram classificadas e o que o painel fez com cada uma">🔎 Procurar matrícula</button></span>${DADOS.conferencia ? btnComparativo() : ""}</div></div>`;
 
   html += topico("avisos", `Avisos (${avisos.length})`, avisos.length ? `<ul class="avisos">${avisos.map((a) => `<li>${a}</li>`).join("")}</ul>` : "<p>Nenhum aviso: todos os arquivos foram lidos e classificados.</p>");
   html += topico("conferencia", "Conferência rápida — filtros atuais", `<p>Os números principais de cada página com os filtros de agora, e como chegar neles pelo analítico.</p>${tabConf}`);
@@ -1737,6 +1739,14 @@ function ligaDados() {
     b.disabled = true; mostraProgresso("Gerando a planilha…"); worker.postMessage({ fase: "excel" });
   };
   $("btnLimparCache").onclick = () => { if (!confirm("Apagar as leituras guardadas neste navegador? A próxima análise vai ler todos os arquivos de novo.")) return; if (!worker) novoWorker(); worker.postMessage({ fase: "limparCache" }); };
+  const procura = () => {
+    const m = ($("inpProcura").value || "").replace(/\D/g, "");
+    if (!m) { toast("Digite a matrícula.", true); return; }
+    if (!analiseNoWorker || !worker) { toast("A busca fica disponível quando a leitura da pasta terminar (↻ Atualizar).", true); return; }
+    $("btnProcura").disabled = true; worker.postMessage({ fase: "procura", matricula: m });
+  };
+  $("btnProcura").onclick = procura;
+  $("inpProcura").onkeydown = (e) => { if (e.key === "Enter") procura(); };
   const bc = $("btnCsvConf");
   if (bc) bc.onclick = () => {
     const l = linhasDe(DADOS.conferencia.linhas);
@@ -1800,6 +1810,7 @@ addEventListener("keydown", (e) => { if (e.key === "Escape" && balaoDe) escondeB
 // ===================== painel lateral: clientes por trás do número e histórico =====================
 const PILHA = [];
 const COLS_CORTES = [["matricula", "Matrícula"], ["cliente", "Cliente"], ["cidade", "Cidade"], ["tipo", "Tipo"], ["data", "Corte"], ["data_religacao", "Religação"], ["dias", "Dias"], ["data_pos", "Pós-corte"], ["regua", "Régua"], ["situacao", "Situação"], ["economias", "Economias"]];
+const COLS_PROCURA = [["data_txt", "Data"], ["servico", "Código/Descrição"], ["categoria", "Categoria"], ["status", "Status"], ["arquivo", "Arquivo"], ["id", "ID da OS"], ["matricula_lida", "Matrícula no arquivo"], ["obs", "O que o painel fez"]];
 const COLS_CONF = [["matricula", "Matrícula"], ["data", "Corte"], ["tipo", "Diferença"], ["campo", "Campo"], ["excel", "Planilha"], ["painel", "Painel"], ["motivo", "Motivo"]];
 const COLS_EVENTOS = [["matricula", "Matrícula"], ["data", "Data"], ["categoria", "Categoria"], ["tipo", "Tipo"], ["economias", "Economias"], ["cidade", "Cidade"], ["recurso", "Recurso"]];
 // painel lateral dinâmico: entra deslizando, fundo escurecido (clique fora fecha), busca, chips por tipo, ordenação e "mostrar mais"
@@ -1809,15 +1820,15 @@ function abreGaveta(titulo, nota, cols, linhas, extra = "") {
   const g = $("gaveta"), novo = g.hidden || g.classList.contains("saindo");
   g.classList.remove("saindo");
   Object.assign(GAV, { titulo, cols, linhas, busca: "", chip: null, ordem: null, n: 200 });
-  const campoChip = cols === COLS_EVENTOS ? "categoria" : "tipo";
+  const campoChip = cols === COLS_EVENTOS || cols === COLS_PROCURA ? "categoria" : "tipo";
   const cont = {}; linhas.forEach((l) => { const k = l[campoChip] || "(vazio)"; cont[k] = (cont[k] || 0) + 1; });
   const chips = Object.entries(cont).sort((a, b) => b[1] - a[1]);
   GAV.campoChip = campoChip;
   const eco = soma(linhas.map((l) => l.economias || 0));
-  g.hidden = false; $("gFundo").hidden = false; g.classList.toggle("larga", cols === COLS_CONF);
+  g.hidden = false; $("gFundo").hidden = false; g.classList.toggle("larga", cols === COLS_CONF || cols === COLS_PROCURA);
   if (novo) { g.classList.remove("saindo"); g.classList.add("entrando"); $("gFundo").classList.add("visivel"); setTimeout(() => g.classList.remove("entrando"), 260); }
   g.innerHTML = `<div class="g-topo"><h2>${esc(titulo)}</h2>${PILHA.length > 1 ? `<button type="button" class="btn-just" data-acao="voltar">← Voltar</button>` : ""}<button type="button" class="btn-just btn-down" id="gCsv" title="Baixar o analítico (CSV) das linhas da busca/filtro atual" aria-label="Baixar em CSV">⬇</button><button type="button" class="btn-just" data-acao="fechar" aria-label="Fechar" title="Fechar (Esc ou clique fora)">✕</button></div>
-    <div class="g-corpo"><div class="g-resumo"><span class="g-kpi"><b>${fmtN(linhas.length)}</b> ${cols === COLS_CONF ? "diferença(s)" : (cols === COLS_EVENTOS ? "evento(s)" : "corte(s)")}</span>${cols === COLS_CONF ? "" : `<span class="g-kpi"><b>${fmtN(eco)}</b> economia(s)</span>`}</div>
+    <div class="g-corpo"><div class="g-resumo"><span class="g-kpi"><b>${fmtN(linhas.length)}</b> ${cols === COLS_CONF ? "diferença(s)" : cols === COLS_PROCURA ? "linha(s) lida(s)" : (cols === COLS_EVENTOS ? "evento(s)" : "corte(s)")}</span>${cols === COLS_CONF || cols === COLS_PROCURA ? "" : `<span class="g-kpi"><b>${fmtN(eco)}</b> economia(s)</span>`}</div>
     <p class="g-nota">${esc(nota)}</p>${extra}
     ${linhas.length > 5 ? `<div class="g-ferr"><input id="gBusca" type="search" placeholder="Buscar matrícula, cliente, cidade…" aria-label="Buscar no painel">${chips.length > 1 ? `<div class="g-chips">${chips.map(([k, n]) => `<button type="button" class="g-chip" data-gchip="${esc(k)}">${esc(k)} <span>${fmtN(n)}</span></button>`).join("")}</div>` : ""}</div>` : ""}
     <div class="tabela-wrap"><table><thead><tr>${cols.map(([k, t]) => `<th data-gord="${k}" tabindex="0" title="Ordenar">${esc(t)}</th>`).join("")}</tr></thead><tbody id="gCorpo"></tbody></table></div>
@@ -2040,6 +2051,12 @@ function novoWorker() {
       guardaUltimo(m.dados);
     } else if (m.tipo === "cacheLimpo") {
       toast("Leituras guardadas apagadas. Clique em ↻ Atualizar para ler tudo de novo.");
+    } else if (m.tipo === "procura") {
+      const b = $("btnProcura"); if (b) b.disabled = false;
+      const d = m.dados, ls = d.linhas.map((x) => ({ ...x, data_txt: x.data ? dataRot(x.data) : "(" + (x.data_lida || "vazia") + ")", obs: x.obs || "usada" }));
+      const cs = d.cortes.map((c) => `<tr><td class="txt">${dataRot(c.data)}</td><td>${c.data_pos ? dataRot(c.data_pos) + (c.status_pos ? " · " + esc(c.status_pos) : "") : "-"}</td><td>${c.data_religacao ? dataRot(c.data_religacao) : "-"}</td><td>${c.prox_corte ? dataRot(c.prox_corte) : "-"}</td><td class="txt">${esc(c.regua || "")}</td></tr>`).join("");
+      const extra = `<h3 style="font-size:13px;margin:12px 0 4px;color:var(--marinho)">Cortes desta matrícula no painel</h3>` + (cs ? `<div class="tabela-wrap"><table><thead><tr><th>Corte</th><th>1º pós-corte depois do corte</th><th>Religação</th><th>Próximo corte</th><th>Régua</th></tr></thead><tbody>${cs}</tbody></table></div>` : `<p class="g-nota">Nenhum corte Finalizado desta matrícula.</p>`);
+      abreGaveta(`Matrícula ${d.matricula || ""} — tudo o que foi lido`, ls.length ? `${fmtN(ls.length)} linha(s) nos arquivos lidos (antes de tirar as repetidas). O pós-corte vale para o corte se vier no dia do corte ou depois e antes do próximo corte; só a 1ª vistoria conta.` : "Nenhuma linha com essa matrícula nos arquivos lidos: confira se o arquivo está na pasta e aparece como “atividades” em Bases carregadas.", COLS_PROCURA, ls, extra);
     } else if (m.tipo === "excel") {
       escondeProgresso(); const b = $("btnExcel"); if (b) b.disabled = false;
       baixa(new Blob([m.conteudo], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), "Base_Cortes_calculada.xlsx");

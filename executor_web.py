@@ -25,6 +25,10 @@ def analisar(pasta, progresso):
     return json.dumps(analise.executar(), ensure_ascii=False)
 
 
+def procura(mat):
+    return json.dumps(_estado["analise"].procura(mat), ensure_ascii=False, default=str)
+
+
 def excel(destino):
     with open(destino, "wb") as f:
         f.write(_estado["analise"].excel())
