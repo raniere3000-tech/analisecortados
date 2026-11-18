@@ -266,5 +266,9 @@
         "SIT_LIG"
       ]
     }
+  },
+  "cortes": {
+    "_leia": "Corte seguido de outro corte da mesma matrícula sem religação Finalizada no meio: as análises usam só o último corte (o anterior sai da base de cortes). O saldo de economias não muda.",
+    "so_ultimo_corte_sem_religacao": true
   }
 }

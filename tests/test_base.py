@@ -39,11 +39,11 @@ def test_sem_religacao_mas_ativa_no_cadastro(resultado):
     assert c["permanencia"] == "Sem Religação"
 
 
-def test_religacao_so_vale_antes_do_proximo_corte(resultado):
-    primeiro = _corte(resultado, 400, "2026-01-01")
+def test_corte_seguido_de_corte_sem_religacao_vale_so_o_ultimo(resultado):
+    cortes = resultado[0].cortes
+    datas_400 = cortes[cortes["matricula"] == "400"]["data"].dt.strftime("%Y-%m-%d").tolist()
+    assert datas_400 == ["2026-03-01"]                       # o de janeiro (sem religação antes do novo corte) sai
     segundo = _corte(resultado, 400, "2026-03-01")
-    assert pd.isna(primeiro["data_religacao"])
-    assert primeiro["mes_religacao"] == "Sem Religação"      # ATIVA hoje, mas foi cortada de novo depois
     assert segundo["data_religacao"] == pd.Timestamp("2026-03-05")
     assert segundo["tipo_religacao"] == "AUTORELIGAÇÃO" and segundo["dias"] == 4
 

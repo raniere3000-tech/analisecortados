@@ -119,7 +119,7 @@ def test_religou_sem_os_so_com_cadastro_ativa(tmp_path):
                     ["01/06/2026", "300", "Z", "CORTADA", "RES", "1", "A"]])
     a = Analise(str(tmp_path)); d = a.executar("2026-06-10")
     c = a.cortes.sort_values(["matricula", "data"])
-    assert c["religou_sem_os"].tolist() == [False, False, True, False]
+    assert c["religou_sem_os"].tolist() == [False, True, False]
     assert "religou_sem_os" in d["cortes"]
 
 

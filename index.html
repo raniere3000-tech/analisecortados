@@ -322,7 +322,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 <header class="top">
   <div class="top-linha">
     <div>
-      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v57</span></div>
+      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v58</span></div>
       <h1 id="titulo">Análise de Corte e Religação</h1>
     </div>
     <div class="ferramentas">
@@ -395,7 +395,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 
 <script>
 "use strict";
-const VERSAO_SITE = "v57-20261118";
+const VERSAO_SITE = "v58-20261118";
 
 // ===================== utilidades =====================
 const $ = (id) => document.getElementById(id);
@@ -1081,7 +1081,7 @@ function abaCruzada({ f, cortes: todos, per }) {
     ["Linha: mês do corte", (c) => mesRot(c.mes)], ["Coluna: mês da religação", (c) => mesRot(c.mes_religacao)],
     ["Destino (gráfico)", (c) => (c.data_religacao ? (mesDe(c.data_religacao) === c.mes ? "Religou no mesmo mês" : "Religou nos meses seguintes") : (c.mes_religacao === T.ativa ? "Ativa (sem OS)" : "Sem religação"))],
     ["Filtro pós-corte da tela", () => ({ todos: "Todos", com: "Com", sem: "Sem" }[CTL.posCruzada])]]);
-  const nota = `Cada corte (matrícula + data, OS Finalizada) na linha do mês em que foi feito e na coluna do mês da 1ª religação depois dele (antes do próximo corte da mesma matrícula). <b>Ativa</b>: não há OS de religação, mas o cadastro mostra a ligação ATIVA (só no último corte da matrícula). <b>Sem Religação</b>: sem OS de religação e não ATIVA no cadastro. O fundo azul mostra onde se concentram as religações. <b>Clique num número</b> para ver os clientes.
+  const nota = `Cada corte (matrícula + data, OS Finalizada) na linha do mês em que foi feito e na coluna do mês da 1ª religação depois dele (antes do próximo corte da mesma matrícula). <b>Corte seguido de outro corte</b> sem religação Finalizada no meio: vale só o último corte (o anterior sai das análises). <b>Ativa</b>: não há OS de religação, mas o cadastro mostra a ligação ATIVA (só no último corte da matrícula). <b>Sem Religação</b>: sem OS de religação e não ATIVA no cadastro. O fundo azul mostra onde se concentram as religações. <b>Clique num número</b> para ver os clientes.
     <br><b>Período</b>: ${perAmbos ? "o mês inicial e final valem para o mês do corte <b>e</b> para o mês da religação — religação fora do período tira o corte da conta (como filtrar as duas colunas na tabela dinâmica)" : "o período vale só para o mês do corte; as religações podem cair em meses depois do mês final"}.
     <br><b>Medida</b>: <i>Matrículas</i> conta os cortes (igual à “Contagem de Matrícula” da tabela dinâmica); <i>Economias</i> soma o <code>TOTAL_ECO</code> do cadastro de cada corte. A tabela de baixo mostra os mesmos números em % da linha. Linhas da base sem data do corte não entram — na tabela dinâmica do Excel elas aparecem como <i>(vazio)</i>.`;
   const ctlGraf = seletor("posCruzada", "Pós-corte", [["todos", "Todos"], ["com", "Com"], ["sem", "Sem"]], CTL.posCruzada) + seletor("modoCruzada", "Medida", [["qtd", "Matrículas"], ["eco", "Economias"]], porEco ? "eco" : "qtd");

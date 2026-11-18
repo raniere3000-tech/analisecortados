@@ -66,6 +66,7 @@ O link compartilhável guarda os itens escolhidos separados por `|`.
 ## Recursos do painel
 
 - **Explicações no `?`**: os textos de como ler e como foi calculado ficam no `?` ao lado do título de cada cartão, gráfico e KPI. Aparecem ao passar o mouse, no foco do teclado ou ao tocar no celular.
+- **Corte seguido de corte**: se a matrícula foi cortada de novo sem religação Finalizada entre os dois cortes, as análises (Corte × Religação, Pós-corte, Permanência) usam só o último corte (`cortes.so_ultimo_corte_sem_religacao` no `regras.json`). O saldo de economias não muda. Vistoria e religação no mesmo dia: a vistoria conta como antes da religação ("Religado após pós corte").
 - **🔎 Procurar matrícula** (aba Dados): mostra todas as OS lidas da matrícula, com arquivo, ID, categoria, status e o que o painel fez com cada uma, e os cortes dela no painel (1º pós-corte, religação, próximo corte e régua). Serve para descobrir por que uma OS não entrou.
 - **Reporte semanal** (topo da aba Dados): as três tabelas do reporte semanal com os filtros atuais.
   - Corte × Religação em quantidade e em %, sem a coluna Ativa, com a medida e o período da aba.

@@ -373,6 +373,9 @@ def monta_cortes(ativ, cad, hoje=None):
     # Religou sem OS (usado pelo filtro "Ativas = religadas"): só sem OS de religação E com a ligação ATIVA no cadastro
     # (último corte da matrícula). CORTADA, INATIVA ou contrato encerrado não contam, mesmo cortada de novo depois
     df["religou_sem_os"] = (~religado) & ativa
+    if REGRAS.get("cortes", {}).get("so_ultimo_corte_sem_religacao"):
+        # corte seguido de outro corte sem religação no meio: a medição usa só o último corte da sequência
+        df = df[~(df["prox_corte"].notna() & df["data_religacao"].isna())].reset_index(drop=True)
     return df
 
 
