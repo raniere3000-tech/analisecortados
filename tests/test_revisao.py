@@ -121,3 +121,14 @@ def test_religou_sem_os_so_com_cadastro_ativa(tmp_path):
     c = a.cortes.sort_values(["matricula", "data"])
     assert c["religou_sem_os"].tolist() == [False, False, True, False]
     assert "religou_sem_os" in d["cortes"]
+
+
+def test_catalogo_da_pasta_completa_com_padrao_e_aceita_categoria_sem_acento():
+    import pandas as pd
+    from cortes import base
+    df = pd.DataFrame({"SERVICO": ["100001", "110011"], "CODIGO/DESCRICAO": ["100001 - CORTE X", "110011 - VISTORIA"],
+                       "CATEGORIA": ["CORTE", "Vistoria pos-corte"], "Abertura": ["", ""]})
+    cat, origem = base.catalogo(df)
+    assert cat["110010"]["categoria"] == base.CAT["pos_corte"]      # não estava na planilha: vem do padrão
+    assert cat["110011"]["categoria"] == base.CAT["pos_corte"]      # escrita diferente na planilha
+    assert "padrão" in origem

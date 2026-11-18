@@ -72,16 +72,22 @@ def catalogo(df_pasta=None):
     """{código: {categoria, descricao, abertura}} — da planilha da pasta, se houver; senão a cópia do site."""
     if df_pasta is None or df_pasta.empty:
         return dict(CATALOGO_PADRAO), "padrão do site"
+    canonica = {normaliza(v): v for v in CAT.values()}         # 'VISTORIA POS CORTE', 'Vistoria pós-corte' = VISTORIA PÓS CORTE
     cat = {}
     for _, r in df_pasta.iterrows():
         cod = re.sub(r"\D", "", str(r["SERVICO"]))
         if not cod or cod in cat:
             continue
         desc = str(r.get("CODIGO/DESCRICAO") or "")
-        cat[cod] = {"categoria": str(r["CATEGORIA"]).strip(),
+        c = str(r["CATEGORIA"]).strip()
+        cat[cod] = {"categoria": canonica.get(normaliza(c).replace("-", " "), canonica.get(normaliza(c), c)),
                     "descricao": re.sub(r"^\s*\d+\s*-\s*", "", desc).strip(),
                     "abertura": str(r.get("Abertura") or "").strip()}
-    return cat, "planilha da pasta"
+    # código que a planilha não traz (ou traz sem categoria do painel) vem do catálogo padrão: 110010 VISTORIA PÓS CORTE etc.
+    for cod, v in CATALOGO_PADRAO.items():
+        if cod not in cat or cat[cod]["categoria"] not in CAT.values():
+            cat[cod] = dict(v)
+    return cat, "planilha da pasta + padrão do site"
 
 
 def tipo_servico(texto):
