@@ -2,6 +2,13 @@
   "_leia": "Regras de negócio do painel. As partes 'arquivos', 'colunas_atividades' e 'religacao_lisc' definem a leitura: mudá-las descarta sozinho as leituras guardadas no navegador.",
   "arquivos": {
     "prefixo_atividades": "Atividades-",
+    "colunas_atividades_minimas": [
+      "Matrícula",
+      "Código/Descrição",
+      "Data",
+      "Status da Atividade"
+    ],
+    "_leia_atividades": "Arquivo que não começa com 'Atividades-' também é lido como atividades se tiver todas as colunas de 'colunas_atividades_minimas' (ex.: a base do dia exportada com outro nome).",
     "colunas_cadastro": [
       "NUM_LIGACAO",
       "SIT_LIG",

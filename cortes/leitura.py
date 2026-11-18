@@ -295,6 +295,8 @@ def tipo_arquivo(caminho):
         return "conferencia"
     _, nomes = _cabecalho(caminho)
     nomes = {chave(n) for n in nomes}
+    if all(chave(c) in nomes for c in arq.get("colunas_atividades_minimas", [])) and arq.get("colunas_atividades_minimas"):
+        return "atividades"                         # base do dia com outro nome, mas com as colunas das atividades
     if not _colunas_lisc(nomes)[1]:
         return "religacao_lisc"
     if all(chave(c) in nomes for c in arq["colunas_cadastro"]):

@@ -132,3 +132,13 @@ def test_catalogo_da_pasta_completa_com_padrao_e_aceita_categoria_sem_acento():
     assert cat["110010"]["categoria"] == base.CAT["pos_corte"]      # não estava na planilha: vem do padrão
     assert cat["110011"]["categoria"] == base.CAT["pos_corte"]      # escrita diferente na planilha
     assert "padrão" in origem
+
+
+def test_base_do_dia_com_outro_nome_entra_como_atividades(tmp_path):
+    _ativ(tmp_path, [["R", "1", "100607645", CORTE, "20/05/26", "Finalizada", "A"]])
+    pd.DataFrame([["100607645", 4, 56, "110010-VISTORIA PÓS CORTE", "12/11/26", "Finalizada"]],
+                 columns=["Matrícula", "Setor", "Número da Quadra", "Código/Descrição", "Data", "Status da Atividade"]) \
+        .to_excel(os.path.join(tmp_path, "Base dia 12.xlsx"), index=False)
+    a = Analise(str(tmp_path)); d = a.executar("2026-11-18")
+    assert str(a.cortes["data_pos"].iloc[0])[:10] == "2026-11-12"
+    assert {x["arquivo"]: x["tipo"] for x in d["arquivos"]}["Base dia 12.xlsx"] == "atividades"
