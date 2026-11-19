@@ -305,6 +305,9 @@ def monta_cortes(ativ, cad, hoje=None):
     relig = ativ[fin & ok & (ativ["categoria"] == CAT["religacao"])][["matricula", "data", "tipo", "id"]]
     relig = relig.rename(columns={"tipo": "tipo_religacao", "id": "id_religacao"}).drop_duplicates(subset=["matricula", "data"])
     r = _proximo(cortes, relig, "religacao")
+    pend = ativ[ativ["status"].isin(REGRAS["status"].get("religacao_pendente", [])) & ok & (ativ["categoria"] == CAT["religacao"])]
+    pend = pend[["matricula", "data"]].drop_duplicates()
+    rp = _proximo(cortes, pend, "relig_pendente")
     pos_ok = ativ["status"].isin(REGRAS["status"]["pos_corte_aceitos"])
     pos = ativ[pos_ok & ok & (ativ["categoria"] == CAT["pos_corte"])][["matricula", "data", "status", "id", "parecer"]]
     pos = pos.rename(columns={"status": "status_pos", "id": "id_pos", "parecer": "parecer_pos"})
@@ -313,13 +316,13 @@ def monta_cortes(ativ, cad, hoje=None):
     pos_fin = pos[pos["status_pos"] == REGRAS["status"]["finalizada"]][["matricula", "data"]]
     pf = _proximo(cortes, pos_fin, "pos_finalizada")
 
-    df = pd.concat([cortes, r, p, pf], axis=1)
+    df = pd.concat([cortes, r, p, pf, rp], axis=1)
     janela = df["prox_corte"]
     for col, extras in (("data_religacao", ["tipo_religacao", "id_religacao"]),
                         ("data_pos", ["status_pos", "id_pos", "parecer_pos"]),
-                        ("data_pos_finalizada", [])):
+                        ("data_pos_finalizada", []), ("data_relig_pendente", [])):
         # religação no mesmo dia do próximo corte fica com o corte anterior (o novo corte veio depois dela)
-        fora = janela.notna() & df[col].notna() & ((df[col] > janela) if col == "data_religacao" else (df[col] >= janela))
+        fora = janela.notna() & df[col].notna() & ((df[col] > janela) if col in ("data_religacao", "data_relig_pendente") else (df[col] >= janela))
         df.loc[fora, [col] + extras] = None
         df[col] = pd.to_datetime(df[col])
     usada = df["data_religacao"].notna() & df.duplicated(subset=["matricula", "data_religacao"], keep="first")
@@ -327,6 +330,7 @@ def monta_cortes(ativ, cad, hoje=None):
     df["data_religacao"] = pd.to_datetime(df["data_religacao"])
 
     religado = df["data_religacao"].notna()
+    df.loc[religado, "data_relig_pendente"] = pd.NaT            # pendente só vale para quem não tem religação Finalizada
     com_pos = df["data_pos"].notna()
     df["mes_corte"] = mes(df["data"])
     df["dias"] = (df["data_religacao"] - df["data"]).dt.days

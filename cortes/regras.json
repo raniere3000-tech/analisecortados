@@ -46,7 +46,11 @@
       "Finalizada",
       "Encerrada com Ocorrência"
     ],
-    "pos_corte_sem_sucesso": "Encerrada com Ocorrência"
+    "pos_corte_sem_sucesso": "Encerrada com Ocorrência",
+    "religacao_pendente": [
+      "Pendente"
+    ],
+    "_leia_religacao_pendente": "Status da OS de religação que conta como religado quando o filtro 'Pendentes = religadas' está ligado (só para corte sem religação Finalizada)."
   },
   "tipos": {
     "_leia": "Tipo do corte/religação pela descrição do serviço, na ordem: o primeiro termo encontrado vale.",

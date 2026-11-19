@@ -151,3 +151,16 @@ def test_procura_matricula_mostra_linhas_e_cortes(tmp_path):
     r = a.procura("100607645")
     assert [l["categoria"] for l in r["linhas"]] == ["CORTE", "VISTORIA PÓS CORTE"]
     assert r["cortes"][0]["data_pos"] == "2026-11-12"
+
+
+def test_religacao_pendente_fica_disponivel_para_o_filtro(tmp_path):
+    _ativ(tmp_path, [["R", "1", "100", CORTE, "05/02/26", "Finalizada", "A"],
+                     ["R", "2", "100", "111001-RELIGAÇÃO DE ÁGUA NO CAVALETE - DÉBITO", "10/02/26", "Pendente", "A"],
+                     ["R", "3", "200", CORTE, "05/02/26", "Finalizada", "A"],
+                     ["R", "4", "200", "111001-RELIGAÇÃO DE ÁGUA NO CAVALETE - DÉBITO", "08/02/26", "Pendente", "A"],
+                     ["R", "5", "200", "111001-RELIGAÇÃO DE ÁGUA NO CAVALETE - DÉBITO", "09/02/26", "Finalizada", "A"]])
+    a = Analise(str(tmp_path)); d = a.executar("2026-03-01")
+    c = a.cortes.set_index("matricula")
+    assert str(c.loc["100", "data_relig_pendente"])[:10] == "2026-02-10" and pd.isna(c.loc["100", "data_religacao"])
+    assert pd.isna(c.loc["200", "data_relig_pendente"])        # já tem religação Finalizada
+    assert "data_relig_pendente" in d["cortes"]

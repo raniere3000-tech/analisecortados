@@ -322,7 +322,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 <header class="top">
   <div class="top-linha">
     <div>
-      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v58</span></div>
+      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v59</span></div>
       <h1 id="titulo">Análise de Corte e Religação</h1>
     </div>
     <div class="ferramentas">
@@ -342,6 +342,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
     <div class="fsel" data-f="tipo"><span>Tipo de corte</span><div class="msel" id="fTipo" data-rotulo="tipos"><button type="button" class="msel-btn" aria-haspopup="listbox" aria-label="Tipo de corte">Todos</button><div class="msel-pop" hidden></div></div></div>
     <span class="f-sep" aria-hidden="true"></span>
     <label class="fsel f-check" data-f="ativas" title="Liga: a ligação cortada que está ATIVA no cadastro conta como religada, mesmo sem OS de religação"><input type="checkbox" id="fAtivas" aria-label="Ativas contam como religadas"><span>Ativas = religadas</span></label>
+    <label class="fsel f-check" data-f="ativas" title="Liga: o corte sem religação Finalizada que tem OS de religação Pendente (depois do corte e antes do próximo) conta como religado na data dessa OS"><input type="checkbox" id="fPend" aria-label="Religação pendente conta como religado"><span>Pendentes = religadas</span></label>
     <button type="button" class="f-limpar" id="btnLimpar" title="Volta todos os filtros ao padrão">Limpar filtros</button>
   </div>
   <div class="fonte-status" id="status" role="status"></div>
@@ -395,7 +396,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 
 <script>
 "use strict";
-const VERSAO_SITE = "v58-20261118";
+const VERSAO_SITE = "v59-20261119";
 
 // ===================== utilidades =====================
 const $ = (id) => document.getElementById(id);
@@ -470,7 +471,7 @@ const COLS_ANALITICO_CORTE = [
   ["Dias até religar", (c) => c.dias], ["Meses até religar", (c) => difMeses(c.mes, mesDe(c.data_religacao))],
   ["Religou no mesmo mês", (c) => (c.data_religacao ? simNao(mesDe(c.data_religacao) === c.mes) : "")],
   ["Coluna da referência cruzada", (c) => mesRot(c.mes_religacao)],
-  ["Religou sem OS (ATIVA no cadastro)", (c) => simNao(c.ativa_os)], ["Contado como religado (Ativas = religadas)", (c) => simNao(c.data_religacao || (CTX && CTX.f.ativas && c.ativa_os))],
+  ["Religou sem OS (ATIVA no cadastro)", (c) => simNao(c.ativa_os)], ["OS de religação Pendente", (c) => dataRot((c.data_relig_pendente || "").slice(0, 10))], ["Contado como religado (Pendentes = religadas)", (c) => simNao(c.rel_pendente)], ["Contado como religado (Ativas = religadas)", (c) => simNao(c.data_religacao || (CTX && CTX.f.ativas && c.ativa_os))],
   ["Tem pós-corte", (c) => simNao(c.data_pos)], ["Data 1ª visita pós-corte", (c) => dataRot(c.data_pos)], ["Status 1ª visita pós-corte", (c) => c.status_pos],
   ["Observação pós-corte", (c) => c.obs_pos], ["Data 1º pós-corte Finalizado", (c) => dataRot(c.data_pos_finalizada)],
   ["Dias do corte ao pós-corte", (c) => (c.data_pos && c.data ? Math.round((Date.parse(c.data_pos) - Date.parse(c.data)) / 864e5) : null)],
@@ -739,6 +740,7 @@ function carregaDados(d) {
       if (id === "fSup") preencheCidades();
     }
     if (HASH_PENDENTE.ativas != null) $("fAtivas").checked = HASH_PENDENTE.ativas === "1";
+    if (HASH_PENDENTE.pend != null) $("fPend").checked = HASH_PENDENTE.pend === "1";
     if (HASH_PENDENTE.aba && FILTROS_DA_ABA[HASH_PENDENTE.aba]) abaAtual = HASH_PENDENTE.aba;
     HASH_PENDENTE = null;
   }
@@ -801,15 +803,25 @@ function preencheCidades() {
 const bateLocal = (x, f) => (!f.sup || x.sup === f.sup) && (!f.cidade.length || f.cidade.includes(x.cidade));
 function filtro() {
   if ($("fDe").value && $("fAte").value && $("fDe").value > $("fAte").value) { const d = $("fDe").value; $("fDe").value = $("fAte").value; $("fAte").value = d; }   // período invertido
-  return { de: $("fDe").value, ate: $("fAte").value, sup: $("fSup").value, cidade: [...MS.fCidade.sel], recurso: "", tipo: [...MS.fTipo.sel], ativas: $("fAtivas").checked };
+  return { de: $("fDe").value, ate: $("fAte").value, sup: $("fSup").value, cidade: [...MS.fCidade.sel], recurso: "", tipo: [...MS.fTipo.sel], ativas: $("fAtivas").checked, pend: $("fPend").checked };
 }
 // "Ativas = religadas": o corte sem OS de religação cuja ligação está ATIVA no cadastro passa a valer como religado (sem data)
 let VISAO = { on: null, lista: null };
+// "Pendentes = religadas": o corte sem religação Finalizada com OS de religação Pendente vale como religado na data dela
+const faixaPerm = (d) => (R.permanencia.faixas.find((x) => x.ate == null || d <= x.ate) || {}).nome;
+function comPendente(c) {
+  const d = c.data_relig_pendente; if (!d || c.data_religacao) return c;
+  const dias = Math.round((Date.parse(d.slice(0, 10)) - Date.parse(c.data.slice(0, 10))) / 864e5);
+  return { ...c, data_religacao: d, mes_religacao: d.slice(0, 7), tipo_religacao: "PENDENTE", dias, dias_cortado: null, permanencia: faixaPerm(dias), ativa_os: false, rel_pendente: true,
+    regua: c.data_pos && c.data_pos.slice(0, 10) <= d.slice(0, 10) ? R.regua.religado_apos_pos : R.regua.religado };
+}
 function cortesBase() {
-  const on = $("fAtivas").checked;
-  if (VISAO.lista && VISAO.on === on) return VISAO.lista;
+  const on = $("fAtivas").checked, pend = $("fPend").checked, chave = on + "|" + pend;
+  if (VISAO.lista && VISAO.on === chave) return VISAO.lista;
+  let l = pend ? CORTES.map(comPendente) : CORTES;
   // ligado: todo corte que religou sem OS sai de "Sem Religação" e vai para a coluna "Ativa" (não aparece nas duas)
-  VISAO = { on, lista: on ? CORTES.map((c) => (c.ativa_os ? { ...c, mes_religacao: R.textos.ativa, regua: ROT_ATIVA_OS, permanencia: ROT_PERM_ATIVA } : c)) : CORTES };
+  if (on) l = l.map((c) => (c.ativa_os ? { ...c, mes_religacao: R.textos.ativa, regua: ROT_ATIVA_OS, permanencia: ROT_PERM_ATIVA } : c));
+  VISAO = { on: chave, lista: l };
   return VISAO.lista;
 }
 function periodo(f) { if (!f.de || !f.ate) return ""; return f.de === f.ate ? mesRot(f.de) : `${mesRot(f.de)} a ${mesRot(f.ate)}`; }
@@ -834,6 +846,10 @@ function setFiltro(ids, valor, rotulo) {
 document.addEventListener("change", (e) => {                 // calendários da evolução (Data A × Data B)
   const ev = e.target.closest && e.target.closest("[data-evo]");
   if (ev && ev.value) { CTL[ev.dataset.evo] = ev.value; desenha(); }
+});
+$("fPend").addEventListener("change", (e) => {
+  guarda("cortes_pend", e.target.checked); CTL.verTodos = false; desenha();
+  toast(e.target.checked ? "Pendentes = religadas: corte com OS de religação Pendente conta como religado na data dela." : "Pendentes = religadas desligado.");
 });
 $("fAtivas").addEventListener("change", (e) => {
   guarda("cortes_ativas", e.target.checked); CTL.verTodos = false; desenha();
@@ -868,7 +884,7 @@ function desenha() {
   DET.length = 0; fechaGaveta();                              // os números mudaram: a lista aberta ao lado ficaria velha
   ABAS.forEach((a) => { sujo[a] = true; });
   $("titulo").textContent = "Análise de Corte e Religação" + (CTX.per ? " — " + CTX.per : "");
-  $("soImpressao").textContent = "Análise de Corte e Religação" + (CTX.per ? " — " + CTX.per : "") + (f.sup ? " · " + rotSup(f.sup) : "") + (f.cidade.length ? " · " + f.cidade.join(", ") : "") + (f.recurso ? " · " + f.recurso : "") + (f.tipo.length ? " · " + f.tipo.join(", ") : "") + (f.ativas ? " · Ativas = religadas" : "");
+  $("soImpressao").textContent = "Análise de Corte e Religação" + (CTX.per ? " — " + CTX.per : "") + (f.sup ? " · " + rotSup(f.sup) : "") + (f.cidade.length ? " · " + f.cidade.join(", ") : "") + (f.recurso ? " · " + f.recurso : "") + (f.tipo.length ? " · " + f.tipo.join(", ") : "") + (f.ativas ? " · Ativas = religadas" : "") + (f.pend ? " · Pendentes = religadas" : "");
   ativaAba(abaAtual);
 }
 const RENDER = { saldo: abaSaldo, cruzada: abaCruzada, pos: abaPos, perm: abaPermanencia, dados: abaDados };
@@ -1481,7 +1497,7 @@ function topico(id, titulo, corpo) {
 const btnAnalitico = (id, aba, nome, rot) => `<button type="button" class="btn-just btn-baixar" data-csv="${id}" data-aba="${aba}" data-nome="${esc(nome)}" title="Baixa em CSV as linhas usadas, com os filtros atuais">⬇ ${esc(rot)}</button>`;
 function abaDados() {
   const f = CTX.f, T = R.textos, rg = R.regua, P = R.permanencia, S = R.status, C = R.categorias, cortes = CTX.cortes;
-  const filtrosTxt = [CTX.per, f.sup && rotSup(f.sup), f.cidade.join(", "), f.recurso, f.tipo.join(", "), f.ativas && "Ativas = religadas"].filter(Boolean).join(" · ") || "sem filtros";
+  const filtrosTxt = [CTX.per, f.sup && rotSup(f.sup), f.cidade.join(", "), f.recurso, f.tipo.join(", "), f.ativas && "Ativas = religadas", f.pend && "Pendentes = religadas"].filter(Boolean).join(" · ") || "sem filtros";
 
   // avisos
   const avisos = [];
@@ -2000,7 +2016,7 @@ function atualizaHash() {
   if (!DADOS) return;
   const f = filtro(), p = new URLSearchParams();
   p.set("aba", abaAtual);
-  for (const [k, v] of Object.entries(f)) if (k === "ativas") p.set(k, v ? "1" : "0"); else if (Array.isArray(v)) { if (v.length) p.set(k, v.join("|")); } else if (v) p.set(k, v);   // ativas vai sempre: quem abre o link vê o mesmo
+  for (const [k, v] of Object.entries(f)) if (k === "ativas" || k === "pend") p.set(k, v ? "1" : "0"); else if (Array.isArray(v)) { if (v.length) p.set(k, v.join("|")); } else if (v) p.set(k, v);   // ativas vai sempre: quem abre o link vê o mesmo
   try { history.replaceState(null, "", "#" + p.toString()); } catch (e) { /* sem histórico */ }
 }
 
@@ -2143,6 +2159,7 @@ $("inputPasta").addEventListener("change", (e) => {
 });
 
 $("fAtivas").checked = le("cortes_ativas", false) === true;
+$("fPend").checked = le("cortes_pend", false) === true;
 HASH_PENDENTE = lerHash();
 // ===== ao abrir a página: mostra a última leitura e já começa a ler a pasta de novo =====
 async function guardaUltimo(dados) {                      // último resultado, para aparecer na hora ao reabrir a página
