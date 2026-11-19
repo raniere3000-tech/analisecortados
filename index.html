@@ -322,7 +322,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 <header class="top">
   <div class="top-linha">
     <div>
-      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v59</span></div>
+      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v60</span></div>
       <h1 id="titulo">Análise de Corte e Religação</h1>
     </div>
     <div class="ferramentas">
@@ -396,7 +396,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 
 <script>
 "use strict";
-const VERSAO_SITE = "v59-20261119";
+const VERSAO_SITE = "v60-20261119";
 
 // ===================== utilidades =====================
 const $ = (id) => document.getElementById(id);
@@ -1548,7 +1548,7 @@ function abaDados() {
   html += topico("conferencia", "Conferência rápida — filtros atuais", `<p>Os números principais de cada página com os filtros de agora, e como chegar neles pelo analítico.</p>${tabConf}`);
   html += topicoConferencia();
   html += topico("bases", "Bases carregadas", lido + `<p>Atividades, religação LISC/autoreligação, cadastro e catálogo são reconhecidos sozinhos (pelo nome “Atividades-” ou pelas colunas); os demais aparecem como “não usado”, com o motivo.</p>`
-    + tabela("arquivos", ["Arquivo", "Tipo", "Linhas", "Observação"], DADOS.arquivos.map((a) => ({ celulas: [a.arquivo, a.tipo === "erro" ? { v: "erro", txt: "erro", selo: "atencao" } : txt({ religacao_lisc: "religação LISC" }[a.tipo] || a.tipo), a.linhas, txt(a.obs)] })), { longa: true })
+    + tabela("arquivos", ["Arquivo", "Tipo", "Linhas", "Observação"], [...DADOS.arquivos, ...IGNORADOS.filter((g) => !DADOS.arquivos.some((a) => a.arquivo === g.arquivo))].map((a) => ({ celulas: [a.arquivo, a.tipo === "erro" ? { v: "erro", txt: "erro", selo: "atencao" } : txt({ religacao_lisc: "religação LISC" }[a.tipo] || a.tipo), a.linhas, txt(a.obs)] })), { longa: true })
     + `<div class="linha-botoes">${botaoTxt("arquivos", "Arquivos da pasta", "⬇ Lista de arquivos (CSV)")}</div>`
     + (log ? `<details class="acc-log"><summary>Detalhes técnicos da leitura</summary><pre>${esc(log)}</pre></details>` : ""));
   html += topico("parametros", "Parâmetros e contagens da leitura", tabela("info", ["Parâmetro", "Valor"], info, { semOrd: true }) + `<div class="linha-botoes">${botaoTxt("info", "Parametros da analise", "⬇ Parâmetros (CSV)")}</div>`);
@@ -2094,12 +2094,17 @@ function escondeProgresso() { $("progresso").hidden = true; mostraEtapas(null); 
 function habilita(sim) { for (const id of ["btnConectar", "btnConectar2"]) $(id).disabled = !sim; $("btnAtualizar").disabled = !sim || !pastaHandle; }
 $("btnCopiar").addEventListener("click", async () => { try { await navigator.clipboard.writeText($("log").textContent); toast("Detalhes copiados."); } catch (e) { toast("Não foi possível copiar.", true); } });
 
-const EXT = /\.(xlsx|xlsm|xls|csv)$/i;
+const EXT = /\.(xlsx|xlsm|xlsb|xls|csv)$/i;
+let IGNORADOS = [];                                             // arquivos da pasta que não são planilha lida (aparecem em Bases carregadas)
+const motivoIgnorado = (nome) => { const m = nome.match(/\.([^./\\]+)$/); return m ? `formato .${m[1]} não é lido (salve como .xlsx${/crdownload|part|tmp/i.test(m[1]) ? "; parece um download que não terminou" : ""})` : "arquivo sem extensão: salve como .xlsx"; };
+const ignorar = (nome) => nome.startsWith("~$") || nome.startsWith(".") || /^(desktop\.ini|thumbs\.db)$/i.test(nome) || /^Base_Cortes/i.test(nome);
 async function arquivosDaPasta(handle, prefixo = "") {
   const lista = [];
+  if (!prefixo) IGNORADOS = [];
   for await (const [nome, item] of handle.entries()) {
     if (item.kind === "directory") lista.push(...await arquivosDaPasta(item, prefixo + nome + "/"));
-    else if (EXT.test(nome) && !nome.startsWith("~$") && !/^Base_Cortes/i.test(nome)) {
+    else if (!EXT.test(nome) && !ignorar(nome)) IGNORADOS.push({ arquivo: prefixo + nome, tipo: "não usado", linhas: 0, obs: motivoIgnorado(nome) });
+    else if (EXT.test(nome) && !ignorar(nome)) {
       const f = await item.getFile();
       lista.push({ nome: prefixo + nome, arquivo: f, tamanho: f.size, modificado: f.lastModified });
     }
@@ -2107,7 +2112,7 @@ async function arquivosDaPasta(handle, prefixo = "") {
   return lista;
 }
 function analisa(arquivos) {
-  if (!arquivos.length) { aviso("A pasta não tem planilhas (.xlsx, .xls ou .csv)."); return; }
+  if (!arquivos.length) { aviso("A pasta não tem planilhas (.xlsx, .xlsb, .xls ou .csv)."); return; }
   if (!arquivos.some((a) => /^atividades-/i.test(a.nome.split("/").pop()))) {
     aviso("Nenhum arquivo começando com “Atividades-” foi encontrado na pasta escolhida."); return;
   }
@@ -2152,6 +2157,7 @@ $("btnConectar").addEventListener("click", conecta);
 $("btnConectar2").addEventListener("click", (e) => { if (!$("btnConectar2").onclick) conecta(e); });
 $("btnAtualizar").addEventListener("click", () => { if (pastaHandle) lePastaHandle(); });
 $("inputPasta").addEventListener("change", (e) => {
+  IGNORADOS = [...e.target.files].filter((f) => !EXT.test(f.name) && !ignorar(f.name)).map((f) => ({ arquivo: (f.webkitRelativePath || f.name).split("/").slice(1).join("/") || f.name, tipo: "não usado", linhas: 0, obs: motivoIgnorado(f.name) }));
   const arquivos = [...e.target.files].filter((f) => EXT.test(f.name) && !f.name.startsWith("~$")).map((f) => ({
     nome: (f.webkitRelativePath || f.name).split("/").slice(1).join("/") || f.name, arquivo: f, tamanho: f.size, modificado: f.lastModified }));
   pastaNome = arquivos.length ? (e.target.files[0].webkitRelativePath || "").split("/")[0] : "";

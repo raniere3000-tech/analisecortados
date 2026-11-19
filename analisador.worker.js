@@ -119,6 +119,11 @@ async function idArquivo(chave) {                   // id curto e seguro para no
 
 async function faseAnalisar(arquivos) {
   const pyodide = await iniciaPyodide();
+  if (arquivos.some((a) => /\.xlsb$/i.test(a.nome)) && !pyodide.runPython(`import importlib.util; importlib.util.find_spec("pyxlsb") is not None`)) {
+    avisa("etapa", { texto: "Instalando o leitor de .xlsb…" });   // só quando a pasta tem Excel binário
+    try { await pyodide.pyimport("micropip").install("pyxlsb"); }
+    catch (e) { avisa("log", { linha: `Aviso: não foi possível instalar pyxlsb (${String(e.message || e).split("\n").pop()}); arquivos .xlsb ficam com erro.` }); }
+  }
   const FS = pyodide.FS;
   avisa("etapa", { texto: "Copiando os arquivos para análise…" });
   limpaDir(FS, PASTA);

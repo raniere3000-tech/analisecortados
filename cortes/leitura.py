@@ -19,7 +19,7 @@ import pandas as pd
 from . import cache_arquivos
 from .config import REGRAS
 
-EXTENSOES = (".xlsx", ".xlsm", ".xls", ".csv")
+EXTENSOES = (".xlsx", ".xlsm", ".xlsb", ".xls", ".csv")
 COLUNAS_CADASTRO = ["REFERENCIA", "NUM_LIGACAO", "NOM_CLIENTE", "SIT_LIG", "SUB_CATEGORIA", "TOTAL_ECO",
                     "CIDADE", "NOM_BAIRRO"]
 COLUNAS_CATALOGO = ["CODIGO/DESCRICAO", "SERVICO", "CATEGORIA", "Abertura"]
@@ -79,6 +79,8 @@ def _motor(caminho):
     c = caminho.lower() if isinstance(caminho, str) else ""
     if c.endswith((".xlsx", ".xlsm")):
         return "openpyxl"
+    if c.endswith(".xlsb"):
+        return "pyxlsb"                             # Excel binário (precisa do pacote pyxlsb)
     return "xlrd" if c.endswith(".xls") else None
 
 
