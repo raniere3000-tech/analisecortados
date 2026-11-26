@@ -305,9 +305,15 @@ def monta_cortes(ativ, cad, hoje=None):
     relig = ativ[fin & ok & (ativ["categoria"] == CAT["religacao"])][["matricula", "data", "tipo", "id"]]
     relig = relig.rename(columns={"tipo": "tipo_religacao", "id": "id_religacao"}).drop_duplicates(subset=["matricula", "data"])
     r = _proximo(cortes, relig, "religacao")
-    pend = ativ[ativ["status"].isin(REGRAS["status"].get("religacao_pendente", [])) & ok & (ativ["categoria"] == CAT["religacao"])]
-    pend = pend[["matricula", "data"]].drop_duplicates()
+    # religação em aberto: qualquer status fora dos fechados (Pendente, Iniciada, Em Rota, Paralisada, não agendada…)
+    fechados = {normaliza(s) for s in REGRAS["status"].get("religacao_fechada", [])}
+    aberta = ativ["matricula"].notna() & (ativ["categoria"] == CAT["religacao"]) & ~ativ["status"].fillna("").map(normaliza).isin(fechados)
+    pend = ativ[aberta & ativ["data"].notna()][["matricula", "data"]].drop_duplicates()
     rp = _proximo(cortes, pend, "relig_pendente")
+    # sem data (arquivo de não agendados): vale para o último corte da matrícula, na data da leitura
+    sem_data = set(ativ.loc[aberta & ativ["data"].isna(), "matricula"])
+    ultimo = cortes["prox_corte"].isna() & cortes["matricula"].isin(sem_data)
+    rp.loc[ultimo.to_numpy() & rp["data_relig_pendente"].isna().to_numpy(), "data_relig_pendente"] = hoje
     pos_ok = ativ["status"].isin(REGRAS["status"]["pos_corte_aceitos"])
     pos = ativ[pos_ok & ok & (ativ["categoria"] == CAT["pos_corte"])][["matricula", "data", "status", "id", "parecer"]]
     pos = pos.rename(columns={"status": "status_pos", "id": "id_pos", "parecer": "parecer_pos"})

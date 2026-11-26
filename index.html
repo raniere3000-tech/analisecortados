@@ -322,7 +322,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 <header class="top">
   <div class="top-linha">
     <div>
-      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v60</span></div>
+      <div class="eyebrow">Águas do Rio • Relatório Executivo <span class="versao" id="versao">v61</span></div>
       <h1 id="titulo">Análise de Corte e Religação</h1>
     </div>
     <div class="ferramentas">
@@ -342,7 +342,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
     <div class="fsel" data-f="tipo"><span>Tipo de corte</span><div class="msel" id="fTipo" data-rotulo="tipos"><button type="button" class="msel-btn" aria-haspopup="listbox" aria-label="Tipo de corte">Todos</button><div class="msel-pop" hidden></div></div></div>
     <span class="f-sep" aria-hidden="true"></span>
     <label class="fsel f-check" data-f="ativas" title="Liga: a ligação cortada que está ATIVA no cadastro conta como religada, mesmo sem OS de religação"><input type="checkbox" id="fAtivas" aria-label="Ativas contam como religadas"><span>Ativas = religadas</span></label>
-    <label class="fsel f-check" data-f="ativas" title="Liga: o corte sem religação Finalizada que tem OS de religação Pendente (depois do corte e antes do próximo) conta como religado na data dessa OS"><input type="checkbox" id="fPend" aria-label="Religação pendente conta como religado"><span>Pendentes = religadas</span></label>
+    <label class="fsel f-check" data-f="ativas" title="Liga: o corte sem religação Finalizada que tem OS de religação em aberto (Pendente, Iniciada, Em Rota, Paralisada, não agendada; depois do corte e antes do próximo) conta como religado na data dessa OS — sem data, na data da leitura"><input type="checkbox" id="fPend" aria-label="Religação pendente conta como religado"><span>Pendentes = religadas</span></label>
     <button type="button" class="f-limpar" id="btnLimpar" title="Volta todos os filtros ao padrão">Limpar filtros</button>
   </div>
   <div class="fonte-status" id="status" role="status"></div>
@@ -396,7 +396,7 @@ body.imprimindo main { max-width:1020px; margin:0 auto; }                       
 
 <script>
 "use strict";
-const VERSAO_SITE = "v60-20261119";
+const VERSAO_SITE = "v61-20261126";
 
 // ===================== utilidades =====================
 const $ = (id) => document.getElementById(id);
@@ -848,8 +848,8 @@ document.addEventListener("change", (e) => {                 // calendários da 
   if (ev && ev.value) { CTL[ev.dataset.evo] = ev.value; desenha(); }
 });
 $("fPend").addEventListener("change", (e) => {
-  guarda("cortes_pend", e.target.checked); CTL.verTodos = false; desenha();
-  toast(e.target.checked ? "Pendentes = religadas: corte com OS de religação Pendente conta como religado na data dela." : "Pendentes = religadas desligado.");
+  guarda("cortes_pend2", e.target.checked); CTL.verTodos = false; desenha();
+  toast(e.target.checked ? "Pendentes = religadas: corte com OS de religação em aberto conta como religado (e sai da lista de pós-corte)." : "Pendentes = religadas desligado.");
 });
 $("fAtivas").addEventListener("change", (e) => {
   guarda("cortes_ativas", e.target.checked); CTL.verTodos = false; desenha();
@@ -2165,7 +2165,7 @@ $("inputPasta").addEventListener("change", (e) => {
 });
 
 $("fAtivas").checked = le("cortes_ativas", false) === true;
-$("fPend").checked = le("cortes_pend", false) === true;
+$("fPend").checked = le("cortes_pend2", true) !== false;          // ligado por padrão: OS de religação aberta dispensa o pós-corte
 HASH_PENDENTE = lerHash();
 // ===== ao abrir a página: mostra a última leitura e já começa a ler a pasta de novo =====
 async function guardaUltimo(dados) {                      // último resultado, para aparecer na hora ao reabrir a página

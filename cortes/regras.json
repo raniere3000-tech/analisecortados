@@ -47,10 +47,12 @@
       "Encerrada com Ocorrência"
     ],
     "pos_corte_sem_sucesso": "Encerrada com Ocorrência",
-    "religacao_pendente": [
-      "Pendente"
+    "religacao_fechada": [
+      "Finalizada",
+      "Cancelada",
+      "Encerrada com Ocorrência"
     ],
-    "_leia_religacao_pendente": "Status da OS de religação que conta como religado quando o filtro 'Pendentes = religadas' está ligado (só para corte sem religação Finalizada)."
+    "_leia_religacao_fechada": "OS de religação com qualquer status FORA desta lista (Pendente, Iniciada, Em Rota, Paralisada, não agendada…) é religação em aberto: com o filtro 'Pendentes = religadas' o corte conta como religado. Sem data (arquivo 'Não agendado'), vale para o último corte da matrícula, na data da leitura."
   },
   "tipos": {
     "_leia": "Tipo do corte/religação pela descrição do serviço, na ordem: o primeiro termo encontrado vale.",

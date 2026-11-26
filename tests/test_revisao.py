@@ -164,3 +164,18 @@ def test_religacao_pendente_fica_disponivel_para_o_filtro(tmp_path):
     assert str(c.loc["100", "data_relig_pendente"])[:10] == "2026-02-10" and pd.isna(c.loc["100", "data_religacao"])
     assert pd.isna(c.loc["200", "data_relig_pendente"])        # já tem religação Finalizada
     assert "data_relig_pendente" in d["cortes"]
+
+
+def test_religacao_em_aberto_sem_data_ou_iniciada_conta_como_pendente(tmp_path):
+    REL = "111001-RELIGAÇÃO DE ÁGUA NO CAVALETE - DÉBITO"
+    _ativ(tmp_path, [["R", "1", "100", CORTE, "05/02/26", "Finalizada", "A"],
+                     ["R", "2", "100", REL, "", "Pendente", "A"],                    # não agendada: sem data
+                     ["R", "3", "200", CORTE, "05/02/26", "Finalizada", "A"],
+                     ["R", "4", "200", REL, "12/02/26", "Iniciada", "A"],
+                     ["R", "5", "300", CORTE, "05/02/26", "Finalizada", "A"],
+                     ["R", "6", "300", REL, "12/02/26", "Cancelada", "A"]])
+    a = Analise(str(tmp_path)); a.executar("2026-03-01")
+    c = a.cortes.set_index("matricula")
+    assert str(c.loc["100", "data_relig_pendente"])[:10] == "2026-03-01"
+    assert str(c.loc["200", "data_relig_pendente"])[:10] == "2026-02-12"
+    assert pd.isna(c.loc["300", "data_relig_pendente"])
